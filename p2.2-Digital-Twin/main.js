@@ -3,6 +3,10 @@ window.onload = setup;
 var measure;
 var viewer;
 
+function setupSetups(){
+    UIsetup();
+}
+
 function setup() {
     const west = 5.798212900532118;
     const south = 53.19304584690279;
@@ -27,9 +31,11 @@ function setup() {
         imageryProvider: false,
         infoBox: false,
         selectionIndicator: false,
-        shadows: true,
-        shouldAnimate: true,
+        shadows: false,
+        shouldAnimate: false,
     });
+
+    setupSetups();
 
     viewer.imageryLayers.removeAll();
     viewer.imageryLayers.addImageryProvider(osm);
@@ -39,9 +45,10 @@ function setup() {
 
     // console.log(viewer.scene.globe.maximumScreenSpaceError);
 
-    const condo1 = createBox(200, 300, 50, 40, 70, 0, "building_tex.jpg");
-    measure = createBox(0, 0, 3, 3, 30, 0, Cesium.Color.RED);
+    //const condo1 = createBox(200, 300, 50, 40, 70, 0, "building_tex.jpg");
+   // measure = createBox(0, 0, 3, 3, 30, 0, Cesium.Color.RED);
 
+   /*
     var carX = 230;
     var carY = 78;
 
@@ -65,6 +72,8 @@ function setup() {
         [520, 175] //midden-links-onder
     ], Cesium.Color.WHITE);
 
+    */
+    
     const redPolygon = viewer.entities.add({
         name: "Spoordok",
         polygon: {
@@ -80,13 +89,15 @@ function setup() {
             material: Cesium.Color.LIGHTGRAY,
         },
     });
+    
 
-    createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
+   // createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
 
-    createModel("strange_building.glb", latlonFromXY(240, 70), 0);
+   // createModel("strange_building.glb", latlonFromXY(240, 70), 0);
 
     setupInputActions();
 }
+
 
 function createPoint(worldPosition) {
     const point = viewer.entities.add({
@@ -100,7 +111,8 @@ function createPoint(worldPosition) {
     return point;
 }
 
-let drawingMode = "polygon"; //Deze kun je aanpassen als je een GUI-element hiervoor maakt.
+
+let drawingMode = "line"; //Deze kun je aanpassen als je een GUI-element hiervoor maakt.
 
 function drawShape(positionData) {
     let shape;
@@ -113,11 +125,18 @@ function drawShape(positionData) {
             },
         });
     } else if (drawingMode === "polygon") {
+        const randomColor = new Cesium.Color(
+            Math.random(), // R 0–1
+            Math.random(), // G 0–1
+            Math.random(), // B 0–1
+            1.0            // A
+        );
+
         shape = viewer.entities.add({
             polygon: {
                 hierarchy: positionData,
                 material: new Cesium.ColorMaterialProperty(
-                    Cesium.Color.RED.withAlpha(0.7),
+                    randomColor,
                 ),
             },
         });
@@ -343,19 +362,6 @@ function snapToGrid(position) {
     const snappedZ = Math.round(position.z / gridSize) * gridSize;
 
     return new Cesium.Cartesian3(snappedX, position.y, snappedZ);
-}
-
-function handleMouseClick(event) {
-    const mousePosition = new Cesium.Cartesian2(event.clientX, event.clientY);
-    //const ray = viewer.camera.getPickRay(mousePosition);
-    const hitPosition = viewer.scene.pickPosition(mousePosition);
-
-    // Check if the ray intersects the globe
-    if (hitPosition) {
-        var snappedPosition = snapToGrid(hitPosition);
-
-        createBoxXYZ(snappedPosition, 1, 1, 1, 0, Cesium.Color.RED);
-    }
 }
 
 function create3DObject(basePolygon, height) {
