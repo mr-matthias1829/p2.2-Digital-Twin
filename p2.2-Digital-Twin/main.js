@@ -19,11 +19,11 @@ function subscribeToStateChangesSetup() {
     });
 
     onUIStateChange('color', (color) => {
-        color = color;
+        stringColor = color;
     });
 }
 
-let color = "#ffffff";
+let stringColor = "#ffffff";
 let drawingMode = "none";
 
 function setup() {
@@ -117,7 +117,7 @@ function drawShape(positionData) {
             },
         });
     } else if (drawingMode === "polygon") {
-        let cesiumColor = Cesium.Color.fromCssColorString(color);
+        let cesiumColor = Cesium.Color.fromCssColorString(stringColor);
        shape = viewer.entities.add({
             polygon: {
                 hierarchy: positionData,
