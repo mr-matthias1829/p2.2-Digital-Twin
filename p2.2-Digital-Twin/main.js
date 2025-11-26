@@ -4,8 +4,13 @@ var measure;
 var viewer;
 
 function setupSetups(){
-    UIsetup();
+    UIsetup((newMode) => {
+        console.log("Dropdown changed! New mode:", newMode);
+        drawingMode = newMode;
+    })
 }
+
+let drawingMode = "none";
 
 function setup() {
     const west = 5.798212900532118;
@@ -112,7 +117,6 @@ function createPoint(worldPosition) {
 }
 
 
-let drawingMode = "line"; //Deze kun je aanpassen als je een GUI-element hiervoor maakt.
 
 function drawShape(positionData) {
     let shape;
