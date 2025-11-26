@@ -1,9 +1,7 @@
 const UIState = {};
+const stateChangeListeners = {};
 
-
-
-function UIsetup(onChangeCallback) {
-    // 1️⃣ Create a container div for your UI
+function UIsetup() {
     const uiContainer = document.createElement("div");
     uiContainer.id = "myUI";
     uiContainer.style.position = "absolute";
@@ -13,33 +11,27 @@ function UIsetup(onChangeCallback) {
     uiContainer.style.color = "white";
     uiContainer.style.padding = "10px";
     uiContainer.style.borderRadius = "5px";
-    uiContainer.style.zIndex = "100"; // Make sure it appears above Cesium
+    uiContainer.style.zIndex = "100";
 
-    // 2️⃣ Add content (buttons, labels, etc.)
     const button = document.createElement("button");
     button.textContent = "Button";
     button.style.marginRight = "25px";
 
+    const dropdowns = [
+        createDropdown("modeSelect", ["None", "Line", "Polygon"], "Mode:")
+    ];
+    dropdowns.forEach(dd => uiContainer.appendChild(dd));
 
-   const dropdowns = [
-    createDropdown("modeSelect", ["None", "Line", "Polygon"], "Mode:")
-];
-dropdowns.forEach(dd => uiContainer.appendChild(dd));
+    const colorPickers = [
+        createColorPicker("color", "Color:")
+    ];
+    colorPickers.forEach(cp => uiContainer.appendChild(cp));
 
-
-
-    // Append elements
     uiContainer.appendChild(button);
-
-    // 5️⃣ Add the container to the body
     document.body.appendChild(uiContainer);
-
-    if (onChangeCallback) {
-        modeSelect.addEventListener("change", () => {
-            onChangeCallback(modeSelect.value);
-        });
-    }
 }
+
+
 
 
 
@@ -65,11 +57,53 @@ function createDropdown(id, options, labeltxt) {
     select.addEventListener("change", () => {
         UIState[id] = select.value;
         console.log("UIState updated:", UIState);
-        handleUIChange(id, select.value);
+        
+        // Notify all listeners for this state key
+        if (stateChangeListeners[id]) {
+            stateChangeListeners[id].forEach(callback => callback(select.value));
+        }
     });
 
     container.appendChild(dropLabel);
     container.appendChild(select);
-
-    return container; // returns the full wrapper
+    return container;
 }
+
+function createColorPicker(id, labeltxt) {
+    const container = document.createElement("div");
+    container.style.marginBottom = "5px";
+
+    const colorLabel = document.createElement("label");
+    colorLabel.textContent = labeltxt;
+    colorLabel.htmlFor = id;
+    colorLabel.style.marginRight = "5px";
+
+    const input = document.createElement("input");
+    input.type = "color";
+    input.id = id;
+    input.value = "#ffffff"; // default color
+
+    // Update UIState and notify listeners
+    input.addEventListener("input", () => {
+        UIState[id] = input.value;
+        console.log("UIState updated:", UIState);
+
+        if (stateChangeListeners[id]) {
+            stateChangeListeners[id].forEach(callback => callback(input.value));
+        }
+    });
+
+    container.appendChild(colorLabel);
+    container.appendChild(input);
+    return container;
+}
+
+// Subscribe to state changes
+function onUIStateChange(key, callback) {
+    if (!stateChangeListeners[key]) {
+        stateChangeListeners[key] = [];
+    }
+    stateChangeListeners[key].push(callback);
+}
+
+

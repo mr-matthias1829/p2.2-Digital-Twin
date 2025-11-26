@@ -3,13 +3,27 @@ window.onload = setup;
 var measure;
 var viewer;
 
-function setupSetups(){
-    UIsetup((newMode) => {
-        console.log("Dropdown changed! New mode:", newMode);
-        drawingMode = newMode;
-    })
+function setupSetups() {
+    UIsetup();
+
+    subscribeToStateChangesSetup();
 }
 
+function subscribeToStateChangesSetup() {
+    // Subscribe to state changes
+    onUIStateChange('modeSelect', (newMode) => {
+        if (drawingMode !== "none" && activeShapePoints.length > 0){
+        terminateShape(); // "finish" current shape to prevent errors
+        }
+        drawingMode = newMode;
+    });
+
+    onUIStateChange('color', (color) => {
+        color = color;
+    });
+}
+
+let color = "#ffffff";
 let drawingMode = "none";
 
 function setup() {
@@ -50,34 +64,8 @@ function setup() {
 
     // console.log(viewer.scene.globe.maximumScreenSpaceError);
 
-    //const condo1 = createBox(200, 300, 50, 40, 70, 0, "building_tex.jpg");
-   // measure = createBox(0, 0, 3, 3, 30, 0, Cesium.Color.RED);
-
-   /*
-    var carX = 230;
-    var carY = 78;
-
-    const car = createBox(carX, carY, 5, 2, 1.5, 0, Cesium.Color.BLUE);
-
-    function moveCar() {
-        carX++;
-        carY += 0.35;
-        moveEntity(car, carX, carY);
-        setTimeout(() => {
-            moveCar();
-        }, 150);
-    }
-
-    moveCar();
-
-    createPolygonFromXYs([
-        [250, 72], //linksonder-onder
-        [230, 85], //linksonder-boven
-        [510, 185], //midden-links-boven
-        [520, 175] //midden-links-onder
-    ], Cesium.Color.WHITE);
-
-    */
+    const condo1 = createBox(200, 300, 50, 40, 70, 0, "RICKMOCK.png");
+    measure = createBox(0, 0, 3, 3, 30, 0, Cesium.Color.RED);
     
     const redPolygon = viewer.entities.add({
         name: "Spoordok",
@@ -96,7 +84,7 @@ function setup() {
     });
     
 
-   // createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
+   createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
 
    // createModel("strange_building.glb", latlonFromXY(240, 70), 0);
 
@@ -129,18 +117,12 @@ function drawShape(positionData) {
             },
         });
     } else if (drawingMode === "polygon") {
-        const randomColor = new Cesium.Color(
-            Math.random(), // R 0–1
-            Math.random(), // G 0–1
-            Math.random(), // B 0–1
-            1.0            // A
-        );
-
-        shape = viewer.entities.add({
+        let cesiumColor = Cesium.Color.fromCssColorString(color);
+       shape = viewer.entities.add({
             polygon: {
                 hierarchy: positionData,
                 material: new Cesium.ColorMaterialProperty(
-                    randomColor,
+                    cesiumColor,
                 ),
             },
         });
@@ -148,20 +130,16 @@ function drawShape(positionData) {
     return shape;
 }
 
+    let activeShapePoints = [];
+    let activeShape;
+    let floatingPoint;
+
 function setupInputActions() {
     viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
         Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK,
     );
 
-    //Deze variabelen worden binnen deze functie gedeclareerd. Dit is vreemd, want je zou zeggen dat
-    //wanneer de functie voorbij is, de variabelen uit het geheugen worden verwijderd. Dit is in dit
-    //geval niet zo, omdat de variabelen worden gebruikt in de inline functies hieronder. Daardoor
-    //blijven ze bestaan. Op zich is dit handig, omdat de variabelen nu niet vanuit de globale
-    //scope bereikbaar zijn. Wel moet je letten op leesbaarheid. Soms is het handiger om de variabelen
-    //wel globaal te zetten.
-    let activeShapePoints = [];
-    let activeShape;
-    let floatingPoint;
+
 
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
 
@@ -212,7 +190,13 @@ function setupInputActions() {
         }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-    // Redraw the shape so it's not dynamic and remove the dynamic shape.
+
+    handler.setInputAction(function (event) {
+        terminateShape();
+    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+}
+
+// Redraw the shape so it's not dynamic and remove the dynamic shape.
     function terminateShape() {
         activeShapePoints.pop();
         drawShape(activeShapePoints);
@@ -222,10 +206,6 @@ function setupInputActions() {
         activeShape = undefined;
         activeShapePoints = [];
     }
-    handler.setInputAction(function (event) {
-        terminateShape();
-    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-}
 
 // x = verplaatsing in meters noord (+) / zuid (-)
 // y = verplaatsing in meters oost (+) / west (-)
@@ -300,14 +280,6 @@ function createPolygonFromXYs(xyArray, color) {
         const cords = latlonFromXY(element[0], element[1]);
         degreeArray.push(cords.lat);
         degreeArray.push(cords.lon);
-    });
-
-    const redPolygon = viewer.entities.add({
-        name: "Polygon_" + _polygon++,
-        polygon: {
-            hierarchy: Cesium.Cartesian3.fromDegreesArray(degreeArray),
-            material: color,
-        },
     });
 }
 
