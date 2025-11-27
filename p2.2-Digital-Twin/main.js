@@ -7,6 +7,7 @@ function setupSetups() {
     UIsetup();
 
     subscribeToStateChangesSetup();
+    preloadModels();
 }
 
 function subscribeToStateChangesSetup() {
@@ -18,12 +19,19 @@ function subscribeToStateChangesSetup() {
         drawingMode = newMode;
     });
 
-    onUIStateChange('color', (color) => {
-        color = color;
+    onUIStateChange('color', (newColor) => {
+        stringColor = newColor;
+    });
+
+    onUIStateChange('modelselect', (newModel) => {
+        modelToCreate = newModel;
     });
 }
 
-let color = "#ffffff";
+
+// make sure these are the same defaults as in UI.js to prevent offsets
+let modelToCreate = "man";
+let stringColor = "#ffffff";
 let drawingMode = "none";
 
 function setup() {
@@ -97,7 +105,7 @@ function createPoint(worldPosition) {
         position: worldPosition,
         point: {
             color: Cesium.Color.BLUE,
-            pixelSize: 5,
+            pixelSize: 0,
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         },
     });
@@ -117,7 +125,7 @@ function drawShape(positionData) {
             },
         });
     } else if (drawingMode === "polygon") {
-        let cesiumColor = Cesium.Color.fromCssColorString(color);
+        let cesiumColor = Cesium.Color.fromCssColorString(stringColor);
        shape = viewer.entities.add({
             polygon: {
                 hierarchy: positionData,
@@ -150,6 +158,16 @@ function setupInputActions() {
         const earthPosition = viewer.scene.globe.pick(ray, viewer.scene);
         // `earthPosition` will be undefined if our mouse is not over the globe.
         if (Cesium.defined(earthPosition)) {
+
+            if (drawingMode === "model") {
+                const cartographic = Cesium.Cartographic.fromCartesian(earthPosition);
+                const lon = Cesium.Math.toDegrees(cartographic.longitude);
+                const lat = Cesium.Math.toDegrees(cartographic.latitude);
+
+               // createModel("Cesium_Man.glb", { lon, lat }, 0);
+                spawnModel(modelToCreate,{ lon, lat }, 0 )
+            }
+            
             if (activeShapePoints.length === 0) {
                 floatingPoint = createPoint(earthPosition);
                 activeShapePoints.push(earthPosition);
@@ -207,27 +225,27 @@ function setupInputActions() {
         activeShapePoints = [];
     }
 
-// x = verplaatsing in meters noord (+) / zuid (-)
-// y = verplaatsing in meters oost (+) / west (-)
-// top_right_lat = referentie-latitude (graden)
-// top_left_lon = referentie-longitude (graden)
+// x = verplaatsing in meters oost (+) / west (-)
+// y = verplaatsing in meters noord (+) / zuid (-)
+// reference_lon = referentie-longitude (graden)
+// reference_lat = referentie-latitude (graden)
 
-const top_right_lat = 5.77465380114684;
-const top_left_lon = 53.194528716741345;
+const reference_lon = 5.77465380114684;
+const reference_lat = 53.194528716741345;
 
 function latlonFromXY(xMeters, yMeters) {
     // gemiddelde meters per graad latitude ~111320
     const metersPerDegLat = 111320.0;
 
     // bereken nieuwe latitude (in graden)
-    const newLat = top_right_lat + (xMeters / metersPerDegLat);
+    const newLat = reference_lat + (yMeters / metersPerDegLat);
 
     // meters per graad longitude = ~111320 * cos(latitude_in_radians)
     const latRad = newLat * Math.PI / 180.0;
     const metersPerDegLon = 111320.0 * Math.cos(latRad);
 
     // voorkom deling door 0 vlak bij polen
-    const newLon = top_left_lon + (yMeters / (metersPerDegLon || 1e-9));
+    const newLon = reference_lon + (xMeters / (metersPerDegLon || 1e-9));
 
     return { lat: newLat, lon: newLon };
 }
@@ -247,7 +265,7 @@ function createBox(x, y, width, depth, height, rotation, color) {
 function createBoxLatLon(cords, width, depth, height, rotation, color) {
     return viewer.entities.add({
         name: "Box_" + _box++,
-        position: Cesium.Cartesian3.fromDegrees(cords.lat, cords.lon, height / 2.0),
+        position: Cesium.Cartesian3.fromDegrees(cords.lon, cords.lat, height / 2.0),
         box: {
             dimensions: new Cesium.Cartesian3(width, depth, height),
             material: color
@@ -269,7 +287,7 @@ function createBoxXYZ(position, width, depth, height, rotation, color) {
 
 function moveEntity(entity, x, y) {
     const cords = latlonFromXY(x, y);
-    entity.position = Cesium.Cartesian3.fromDegrees(cords.lat, cords.lon, entity.box.dimensions._value.z);
+    entity.position = Cesium.Cartesian3.fromDegrees(cords.lon, cords.lat, entity.box.dimensions._value.z);
 }
 
 var _polygon = 1;
@@ -278,8 +296,8 @@ function createPolygonFromXYs(xyArray, color) {
     var degreeArray = [];
     xyArray.forEach(element => {
         const cords = latlonFromXY(element[0], element[1]);
-        degreeArray.push(cords.lat);
         degreeArray.push(cords.lon);
+        degreeArray.push(cords.lat);
     });
 }
 
@@ -292,8 +310,8 @@ function createPolygonFromXYs(xyArray, color) {
 function createModel(url, position, height) {
 
     const full_position = Cesium.Cartesian3.fromDegrees(
-        position.lat,
         position.lon,
+        position.lat,
         height
     );
 
@@ -316,7 +334,7 @@ function createModel(url, position, height) {
             maximumScale: 1,
         },
     });
-    viewer.trackedEntity = entity;
+   // viewer.trackedEntity = entity;
 }
 
 // Function to convert Cartesian coordinates to latitude and longitude

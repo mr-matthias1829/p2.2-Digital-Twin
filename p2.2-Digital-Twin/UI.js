@@ -13,27 +13,58 @@ function UIsetup() {
     uiContainer.style.borderRadius = "5px";
     uiContainer.style.zIndex = "100";
 
+    document.body.appendChild(uiContainer);
+
+    // Build static UI
+    createStaticUI();
+
+    // Build initial dynamic UI
+    refreshDynamicUI();
+}
+
+function createStaticUI() {
+    const uiContainer = document.getElementById("myUI");
+
+    // Example: always present button
     const button = document.createElement("button");
     button.textContent = "Button";
     button.style.marginRight = "25px";
-
-    const dropdowns = [
-        createDropdown("modeSelect", ["None", "Line", "Polygon"], "Mode:")
-    ];
-    dropdowns.forEach(dd => uiContainer.appendChild(dd));
-
-    const colorPickers = [
-        createColorPicker("color", "Color:")
-    ];
-    colorPickers.forEach(cp => uiContainer.appendChild(cp));
-
     uiContainer.appendChild(button);
-    document.body.appendChild(uiContainer);
+
+    // Example: dropdown that triggers dynamic UI change
+    const modeDropdown = createDropdown("modeSelect", ["None", "Line", "Polygon", "Model"], "Mode:");
+    uiContainer.appendChild(modeDropdown);
+
+    // Subscribe to mode changes to refresh dynamic UI
+    onUIStateChange("modeSelect", refreshDynamicUI);
 }
 
+function refreshDynamicUI() {
+    const uiContainer = document.getElementById("myUI");
 
+    // Remove old dynamic UI elements
+    const dynamicContainer = document.getElementById("dynamicUI");
+    if (dynamicContainer) uiContainer.removeChild(dynamicContainer);
 
+    // Create a new container for dynamic UI
+    const newDynamicContainer = document.createElement("div");
+    newDynamicContainer.id = "dynamicUI";
 
+    // show color picker only if drawing polygon (since color only applies to polygons)
+    if (UIState.modeSelect === "polygon") {
+        const colorPicker = createColorPicker("color", "Color:");
+        newDynamicContainer.appendChild(colorPicker);
+    }
+
+    if (UIState.modeSelect === "model") {
+        const modeDropdown = createDropdown("modelselect", ["Man", "building"], "Model:");
+        newDynamicContainer.appendChild(modeDropdown);
+    }
+
+    uiContainer.appendChild(newDynamicContainer);
+}
+
+// --- Helpers ---
 
 function createDropdown(id, options, labeltxt) {
     const container = document.createElement("div");
@@ -57,8 +88,7 @@ function createDropdown(id, options, labeltxt) {
     select.addEventListener("change", () => {
         UIState[id] = select.value;
         console.log("UIState updated:", UIState);
-        
-        // Notify all listeners for this state key
+
         if (stateChangeListeners[id]) {
             stateChangeListeners[id].forEach(callback => callback(select.value));
         }
@@ -81,9 +111,8 @@ function createColorPicker(id, labeltxt) {
     const input = document.createElement("input");
     input.type = "color";
     input.id = id;
-    input.value = "#ffffff"; // default color
+    input.value = "#ffffff";
 
-    // Update UIState and notify listeners
     input.addEventListener("input", () => {
         UIState[id] = input.value;
         console.log("UIState updated:", UIState);
@@ -98,12 +127,7 @@ function createColorPicker(id, labeltxt) {
     return container;
 }
 
-// Subscribe to state changes
 function onUIStateChange(key, callback) {
-    if (!stateChangeListeners[key]) {
-        stateChangeListeners[key] = [];
-    }
+    if (!stateChangeListeners[key]) stateChangeListeners[key] = [];
     stateChangeListeners[key].push(callback);
 }
-
-
