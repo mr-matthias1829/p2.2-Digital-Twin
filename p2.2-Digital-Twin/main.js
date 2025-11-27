@@ -7,6 +7,7 @@ var polygonEditor; // New: polygon editor instance
 function setupSetups() {
     UIsetup();
     subscribeToStateChangesSetup();
+    preloadModels();
 }
 
 function subscribeToStateChangesSetup() {
@@ -16,12 +17,18 @@ function subscribeToStateChangesSetup() {
         }
         drawingMode = newMode;
     });
+    onUIStateChange('color', (newColor) => {
+        stringColor = newColor;
+    });
 
-    onUIStateChange('color', (color) => {
-        stringColor = color;
+    onUIStateChange('modelselect', (newModel) => {
+        modelToCreate = newModel;
     });
 }
 
+
+// make sure these are the same defaults as in UI.js to prevent offsets
+let modelToCreate = "man";
 let stringColor = "#ffffff";
 let drawingMode = "none";
 
@@ -88,7 +95,7 @@ function createPoint(worldPosition) {
         position: worldPosition,
         point: {
             color: Cesium.Color.BLUE,
-            pixelSize: 5,
+            pixelSize: 0,
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         },
     });
@@ -164,7 +171,17 @@ function setupInputActions() {
             const earthPosition = viewer.scene.globe.pick(ray, viewer.scene);
             
             if (Cesium.defined(earthPosition)) {
-                if (activeShapePoints.length === 0) {
+    
+            if (drawingMode === "model") {
+                const cartographic = Cesium.Cartographic.fromCartesian(earthPosition);
+                const lon = Cesium.Math.toDegrees(cartographic.longitude);
+                const lat = Cesium.Math.toDegrees(cartographic.latitude);
+
+               // createModel("Cesium_Man.glb", { lon, lat }, 0);
+                spawnModel(modelToCreate,{ lon, lat }, 0 )
+            }
+            
+            if (activeShapePoints.length === 0) {
                     floatingPoint = createPoint(earthPosition);
                     activeShapePoints.push(earthPosition);
                     const dynamicPositions = new Cesium.CallbackProperty(function () {
@@ -236,15 +253,27 @@ function terminateShape() {
     activeShapePoints = [];
 }
 
-const top_right_lat = 5.77465380114684;
-const top_left_lon = 53.194528716741345;
+// x = verplaatsing in meters oost (+) / west (-)
+// y = verplaatsing in meters noord (+) / zuid (-)
+// reference_lon = referentie-longitude (graden)
+// reference_lat = referentie-latitude (graden)
+
+const reference_lon = 5.77465380114684;
+const reference_lat = 53.194528716741345;
 
 function latlonFromXY(xMeters, yMeters) {
     const metersPerDegLat = 111320.0;
-    const newLat = top_right_lat + (xMeters / metersPerDegLat);
+
+    // bereken nieuwe latitude (in graden)
+    const newLat = reference_lat + (yMeters / metersPerDegLat);
+
+    // meters per graad longitude = ~111320 * cos(latitude_in_radians)
     const latRad = newLat * Math.PI / 180.0;
     const metersPerDegLon = 111320.0 * Math.cos(latRad);
-    const newLon = top_left_lon + (yMeters / (metersPerDegLon || 1e-9));
+
+    // voorkom deling door 0 vlak bij polen
+    const newLon = reference_lon + (xMeters / (metersPerDegLon || 1e-9));
+
     return { lat: newLat, lon: newLon };
 }
 
@@ -258,7 +287,7 @@ function createBox(x, y, width, depth, height, rotation, color) {
 function createBoxLatLon(cords, width, depth, height, rotation, color) {
     return viewer.entities.add({
         name: "Box_" + _box++,
-        position: Cesium.Cartesian3.fromDegrees(cords.lat, cords.lon, height / 2.0),
+        position: Cesium.Cartesian3.fromDegrees(cords.lon, cords.lat, height / 2.0),
         box: {
             dimensions: new Cesium.Cartesian3(width, depth, height),
             material: color
@@ -280,7 +309,7 @@ function createBoxXYZ(position, width, depth, height, rotation, color) {
 
 function moveEntity(entity, x, y) {
     const cords = latlonFromXY(x, y);
-    entity.position = Cesium.Cartesian3.fromDegrees(cords.lat, cords.lon, entity.box.dimensions._value.z);
+    entity.position = Cesium.Cartesian3.fromDegrees(cords.lon, cords.lat, entity.box.dimensions._value.z);
 }
 
 var _polygon = 1;
@@ -289,15 +318,21 @@ function createPolygonFromXYs(xyArray, color) {
     var degreeArray = [];
     xyArray.forEach(element => {
         const cords = latlonFromXY(element[0], element[1]);
-        degreeArray.push(cords.lat);
         degreeArray.push(cords.lon);
+        degreeArray.push(cords.lat);
     });
 }
 
+//Werkt alleen met glTF modellen!
+//Als je OBJ-modellen wilt laden, moet je ze eerst naar glTF converten. Dit kan met Blender,
+//maar ook via de volgende tool van Cesium: https://github.com/CesiumGS/obj2gltf
+//!Let op bij gebruik van Blender! 3D-modellen die als .blend bestand worden opgeslagen kunnen
+//embedded Python-code bevatten. Pas op dat dit niet tijdens het openen automatisch uitgevoerd
+//wordt, want dit is een bekende attack vector voor exploits, etc.
 function createModel(url, position, height) {
     const full_position = Cesium.Cartesian3.fromDegrees(
-        position.lat,
         position.lon,
+        position.lat,
         height
     );
 
@@ -320,7 +355,7 @@ function createModel(url, position, height) {
             maximumScale: 1,
         },
     });
-    viewer.trackedEntity = entity;
+   // viewer.trackedEntity = entity;
 }
 
 function cartesianToLatLon(cartesianPosition) {
