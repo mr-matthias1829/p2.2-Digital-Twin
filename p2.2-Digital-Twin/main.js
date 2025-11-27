@@ -2,11 +2,7 @@ window.onload = setup;
 
 var measure;
 var viewer;
-var editMode = false;
-var editingEntity = null;
-var vertexEntities = [];
-var originalPolygonMaterial = null;
-var draggedVertex = null;
+var polygonEditor; // New: polygon editor instance
 
 function setupSetups() {
     UIsetup();
@@ -81,8 +77,10 @@ function setup() {
     
     createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
 
+    // Initialize polygon editor
+    polygonEditor = new PolygonEditor(viewer);
+
     setupInputActions();
-    setupKeyboardControls();
 }
 
 function createPoint(worldPosition) {
@@ -123,123 +121,6 @@ let activeShapePoints = [];
 let activeShape;
 let floatingPoint;
 
-// Custom polygon editing functions
-function startEditingPolygon(entity) {
-    if (!entity.polygon) {
-        console.log("No polygon found on entity");
-        return;
-    }
-    
-    if (editMode) {
-        stopEditingPolygon();
-    }
-    
-    editMode = true;
-    editingEntity = entity;
-    
-    originalPolygonMaterial = entity.polygon.material;
-    entity.polygon.material = Cesium.Color.YELLOW.withAlpha(0.5);
-    
-    let hierarchy = entity.polygon.hierarchy;
-    
-    if (hierarchy instanceof Cesium.CallbackProperty) {
-        hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
-    }
-    
-    if (typeof hierarchy.getValue === 'function') {
-        hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
-    }
-    
-    let positions = [];
-    
-    if (hierarchy instanceof Cesium.PolygonHierarchy) {
-        positions = hierarchy.positions;
-    } else if (hierarchy.positions) {
-        positions = hierarchy.positions;
-    } else if (Array.isArray(hierarchy)) {
-        positions = hierarchy;
-    }
-    
-    if (positions.length === 0) {
-        console.error("No positions found!");
-        stopEditingPolygon();
-        return;
-    }
-    
-    positions.forEach((position, index) => {
-        const vertexEntity = viewer.entities.add({
-            position: position,
-            point: {
-                pixelSize: 20,
-                color: Cesium.Color.RED,
-                outlineColor: Cesium.Color.WHITE,
-                outlineWidth: 3,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            },
-            properties: {
-                isVertex: true,
-                vertexIndex: index,
-            }
-        });
-        vertexEntities.push(vertexEntity);
-    });
-    
-    console.log("EDIT MODE ON - Drag red vertices to reshape. Use arrow keys UP/DOWN to change height. Right-click to finish.");
-}
-
-function stopEditingPolygon() {
-    if (!editMode) return;
-    
-    editMode = false;
-    
-    if (editingEntity && originalPolygonMaterial) {
-        editingEntity.polygon.material = originalPolygonMaterial;
-    }
-    
-    vertexEntities.forEach(vertex => {
-        viewer.entities.remove(vertex);
-    });
-    vertexEntities = [];
-    
-    editingEntity = null;
-    originalPolygonMaterial = null;
-    draggedVertex = null;
-    
-    console.log("EDIT MODE OFF");
-}
-
-function updatePolygonFromVertices() {
-    if (!editingEntity || vertexEntities.length === 0) return;
-    
-    const newPositions = vertexEntities.map(v => {
-        const pos = v.position;
-        if (pos.getValue) {
-            return pos.getValue(Cesium.JulianDate.now());
-        }
-        return pos;
-    });
-    editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(newPositions);
-}
-
-function setupKeyboardControls() {
-    document.addEventListener('keydown', function(e) {
-        if (!editMode || !editingEntity) return;
-        
-        const currentHeight = editingEntity.polygon.extrudedHeight || 0;
-        
-        if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            editingEntity.polygon.extrudedHeight = currentHeight + 5;
-            console.log("Height increased to:", editingEntity.polygon.extrudedHeight);
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            editingEntity.polygon.extrudedHeight = Math.max(0, currentHeight - 5);
-            console.log("Height decreased to:", editingEntity.polygon.extrudedHeight);
-        }
-    });
-}
-
 function setupInputActions() {
     viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
         Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK,
@@ -247,46 +128,23 @@ function setupInputActions() {
 
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
 
-    // LEFT DOWN - Start dragging vertex
+    // LEFT DOWN
     handler.setInputAction(function (event) {
-        if (!editMode) return;
-        
-        const pickedObject = viewer.scene.pick(event.position);
-        
-        if (Cesium.defined(pickedObject) && pickedObject.id) {
-            const entity = pickedObject.id;
-            
-            // Check if it's a vertex
-            if (entity.properties && entity.properties.isVertex) {
-                draggedVertex = entity;
-                viewer.scene.screenSpaceCameraController.enableRotate = false;
-                viewer.scene.screenSpaceCameraController.enableTranslate = false;
-                console.log("Started dragging vertex");
-            }
-        }
+        polygonEditor.handleLeftDown(event);
     }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
-    // LEFT UP - Stop dragging vertex
+    // LEFT UP
     handler.setInputAction(function (event) {
-        if (draggedVertex) {
-            console.log("Stopped dragging vertex");
-            draggedVertex = null;
-            viewer.scene.screenSpaceCameraController.enableRotate = true;
-            viewer.scene.screenSpaceCameraController.enableTranslate = true;
-        }
+        polygonEditor.handleLeftUp(event);
     }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
-    // MOUSE MOVE - Update vertex position while dragging
+    // MOUSE MOVE
     handler.setInputAction(function (event) {
-        if (draggedVertex) {
-            const ray = viewer.camera.getPickRay(event.endPosition);
-            const newPosition = viewer.scene.globe.pick(ray, viewer.scene);
-            
-            if (Cesium.defined(newPosition)) {
-                draggedVertex.position = newPosition;
-                updatePolygonFromVertices();
-            }
-        } else if (Cesium.defined(floatingPoint)) {
+        // Let polygon editor handle its move logic first
+        polygonEditor.handleMouseMove(event);
+        
+        // Handle drawing mode floating point
+        if (!polygonEditor.editMode && !polygonEditor.moveMode && Cesium.defined(floatingPoint)) {
             const ray = viewer.camera.getPickRay(event.endPosition);
             const newPosition = viewer.scene.globe.pick(ray, viewer.scene);
             if (Cesium.defined(newPosition)) {
@@ -299,7 +157,7 @@ function setupInputActions() {
 
     // LEFT CLICK - Drawing mode
     handler.setInputAction(function (event) {
-        if (editMode) return; // Don't draw while editing
+        if (polygonEditor.editMode || polygonEditor.moveMode) return;
         
         if (drawingMode !== "none") {
             const ray = viewer.camera.getPickRay(event.position);
@@ -323,45 +181,44 @@ function setupInputActions() {
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // CTRL+Click: Extrude polygon to 3D
+    // CTRL+Click - Add vertex or extrude
     handler.setInputAction(function (event) {
-        var pickedObject = viewer.scene.pick(event.position);
-        if (Cesium.defined(pickedObject) && pickedObject.id) {
-            const entity = pickedObject.id;
-            if (entity.polygon && !entity.properties?.isVertex) {
-                create3DObject(entity, 20);
-                console.log("Extruded:", entity.name || entity.id);
+        // Let polygon editor try to handle it first
+        const handled = polygonEditor.handleCtrlClick(event);
+        
+        if (!handled) {
+            // Original extrude functionality when not in edit mode
+            var pickedObject = viewer.scene.pick(event.position);
+            if (Cesium.defined(pickedObject) && pickedObject.id) {
+                const entity = pickedObject.id;
+                if (entity.polygon && !entity.properties?.isVertex) {
+                    create3DObject(entity, 20);
+                    console.log("Extruded:", entity.name || entity.id);
+                }
             }
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.CTRL);
 
-    // ALT+Click: Start editing polygon
+    // ALT+Click - Start editing polygon vertices
     handler.setInputAction(function (event) {
-        var pickedObject = viewer.scene.pick(event.position);
-        if (Cesium.defined(pickedObject) && pickedObject.id) {
-            const entity = pickedObject.id;
-            if (entity.polygon && !entity.properties?.isVertex) {
-                startEditingPolygon(entity);
-            }
-        }
+        polygonEditor.handleAltClick(event);
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.ALT);
 
-    // DOUBLE CLICK: Start editing polygon
+    // SHIFT+Click - Start moving polygon
     handler.setInputAction(function (event) {
-        var pickedObject = viewer.scene.pick(event.position);
-        if (Cesium.defined(pickedObject) && pickedObject.id) {
-            const entity = pickedObject.id;
-            if (entity.polygon && !entity.properties?.isVertex) {
-                startEditingPolygon(entity);
-            }
-        }
+        polygonEditor.handleShiftClick(event);
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.SHIFT);
+
+    // DOUBLE CLICK - Start editing polygon
+    handler.setInputAction(function (event) {
+        polygonEditor.handleDoubleClick(event);
     }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
-    // RIGHT CLICK - Finish drawing or editing
+    // RIGHT CLICK - Finish drawing, editing, or moving
     handler.setInputAction(function (event) {
-        if (editMode) {
-            stopEditingPolygon();
-        } else if (activeShapePoints.length > 0) {
+        const editorHandled = polygonEditor.handleRightClick(event);
+        
+        if (!editorHandled && activeShapePoints.length > 0) {
             terminateShape();
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
