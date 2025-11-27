@@ -89,6 +89,21 @@ function setup() {
     polygonEditor = new PolygonEditor(viewer);
 
     setupInputActions();
+
+    setTimeout(() => {
+        window.ollamaAnalyzer = new OllamaAnalyzer(viewer, {
+            ollamaUrl: 'http://localhost:11434',
+            model: 'gemma3:4b',
+            interval: 30000,
+            prompt: "You are viewing this scene from the Cesium Man's perspective in Leeuwarden. Describe what you see and give your opinion."
+        });
+
+        console.log('Ollama analyzer ready! Use these commands:');
+        console.log('  ollamaAnalyzer.start()  - Start analysis');
+        console.log('  ollamaAnalyzer.stop()   - Stop analysis');
+        console.log('  ollamaAnalyzer.analyzeWithOllama() - Run once');
+        console.log('  ollamaAnalyzer.setInterval(ms) - Change interval');
+    }, 2000);
 }
 
 function createPoint(worldPosition) {
