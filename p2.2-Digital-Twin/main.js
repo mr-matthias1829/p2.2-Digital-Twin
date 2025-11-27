@@ -18,7 +18,6 @@ function subscribeToStateChangesSetup() {
         }
         drawingMode = newMode;
     });
-
     onUIStateChange('color', (newColor) => {
         stringColor = newColor;
     });
