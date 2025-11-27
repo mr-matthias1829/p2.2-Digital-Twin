@@ -31,12 +31,15 @@ function createStaticUI() {
     button.style.marginRight = "25px";
     uiContainer.appendChild(button);
 
-    // Example: dropdown that triggers dynamic UI change
+
+    // Mode select
     const modeDropdown = createDropdown("modeSelect", ["None", "Line", "Polygon", "Model"], "Mode:");
     uiContainer.appendChild(modeDropdown);
 
-    // Subscribe to mode changes to refresh dynamic UI
+    // Refresh dynamic UI on mode change
     onUIStateChange("modeSelect", refreshDynamicUI);
+    // Can add more cases here if needed
+    // Note: try to not add cases that also activate other cases or activate automatically
 }
 
 function refreshDynamicUI() {
@@ -50,7 +53,7 @@ function refreshDynamicUI() {
     const newDynamicContainer = document.createElement("div");
     newDynamicContainer.id = "dynamicUI";
 
-    // show color picker only if drawing polygon (since color only applies to polygons)
+    // Show color picker only if drawing polygon (since color only applies to polygons)
     if (UIState.modeSelect === "polygon") {
         const colorPicker = createColorPicker("color", "Color:");
         newDynamicContainer.appendChild(colorPicker);
@@ -64,7 +67,10 @@ function refreshDynamicUI() {
     uiContainer.appendChild(newDynamicContainer);
 }
 
-// --- Helpers ---
+
+
+// Below are methods that make individual UI components easy
+// TODO: The appends are currently very hardcoded per method, could be it's own dynamic method
 
 function createDropdown(id, options, labeltxt) {
     const container = document.createElement("div");

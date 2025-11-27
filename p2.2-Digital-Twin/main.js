@@ -2,7 +2,7 @@ window.onload = setup;
 
 var measure;
 var viewer;
-var polygonEditor; // New: polygon editor instance
+var polygonEditor;
 
 function setupSetups() {
     UIsetup();
@@ -27,10 +27,11 @@ function subscribeToStateChangesSetup() {
 }
 
 
-// make sure these are the same defaults as in UI.js to prevent offsets
+// Make sure these are the same defaults as in UI.js to prevent offsets with UI!
 let modelToCreate = "man";
 let stringColor = "#ffffff";
 let drawingMode = "none";
+
 
 function setup() {
     const west = 5.798212900532118;

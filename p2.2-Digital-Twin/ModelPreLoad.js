@@ -2,12 +2,18 @@
 const modelCache = {};
 const preloadPromises = {};
 
+// Preload models in this method
+// Use ID's to reference them later
 function preloadModels() {
     preloadModel("man", "./Cesium_Man.glb");
     preloadModel("building", "./strange_building.glb");
 }
 
 
+
+// In general: this script doesn't work very effectievely
+// but it does help slightly and allows easy id's per model
+// sooo.... ¯\_(ツ)_/¯
 
 
 function preloadModel(key, uri) {
