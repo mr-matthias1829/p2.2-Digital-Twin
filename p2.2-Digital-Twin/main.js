@@ -62,6 +62,12 @@ function setup() {
 
     setupSetups();
 
+    // Start connection polling to the polygons API
+    startConnectionPolling();
+
+    // Load polygons from server (if available)
+    loadPolygonsFromServer();
+
     viewer.imageryLayers.removeAll();
     viewer.imageryLayers.addImageryProvider(osm);
 
@@ -92,6 +98,21 @@ function setup() {
     polygonEditor = new PolygonEditor(viewer);
 
     setupInputActions();
+
+    setTimeout(() => {
+        window.ollamaAnalyzer = new OllamaAnalyzer(viewer, {
+            ollamaUrl: 'http://localhost:11434',
+            model: 'gemma3:4b',
+            interval: 30000,
+            prompt: "You are a citizen giving an opinion about the environment. This image is your Point of view. Describe what you see and give your opinion about it in 2-3 sentences. Dont do startup talk like: 'here is a perspective of cesium man.' You have your own personality. Also dont prepare that you're going to talk just talk.",
+        });
+
+        console.log('Ollama analyzer ready! Use these commands:');
+        console.log('  ollamaAnalyzer.start()  - Start analysis');
+        console.log('  ollamaAnalyzer.stop()   - Stop analysis');
+        console.log('  ollamaAnalyzer.analyzeWithOllama() - Run once');
+        console.log('  ollamaAnalyzer.setInterval(ms) - Change interval');
+    }, 2000);
 }
 
 function createPoint(worldPosition) {
@@ -384,3 +405,136 @@ function create3DObject(basePolygon, height) {
         basePolygon.polygon.extrudedHeight *= 1.5;
     }
 }
+
+// Connection check and polling for API at http://localhost:8080/api/polygons
+let connectionPollIntervalId = undefined;
+function startConnectionPolling() {
+    // Run an initial check immediately
+    if (window.checkPolygonsConnection) {
+        window.checkPolygonsConnection();
+    } else {
+        checkPolygonsConnection();
+    }
+
+    // Poll every 10 seconds
+    if (connectionPollIntervalId) clearInterval(connectionPollIntervalId);
+    connectionPollIntervalId = setInterval(checkPolygonsConnection, 10000);
+}
+
+async function checkPolygonsConnection(manualTrigger = false) {
+    const url = 'http://localhost:8080/api/polygons';
+    const timeoutMs = 4000;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const resp = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(id);
+        if (!resp.ok) {
+            const msg = `HTTP ${resp.status}`;
+            if (window.setConnectionStatus) window.setConnectionStatus('Disconnected', msg);
+            console.warn('Polygons API responded with non-OK:', resp.status);
+            return false;
+        }
+
+        // try to parse and show minimal info
+        let bodyText = '';
+        try {
+            const json = await resp.json();
+            if (Array.isArray(json)) bodyText = `Items: ${json.length}`;
+            else if (json && typeof json === 'object') bodyText = `Object keys: ${Object.keys(json).length}`;
+            else bodyText = 'OK';
+        } catch (e) {
+            bodyText = 'OK (non-JSON)';
+        }
+
+        if (window.setConnectionStatus) window.setConnectionStatus('Connected', bodyText + (manualTrigger ? ' (manual)' : ''));
+        return true;
+    } catch (err) {
+        clearTimeout(id);
+        let message = '';
+        if (err.name === 'AbortError') {
+            message = `Timeout after ${timeoutMs}ms`;
+        } else {
+            message = err.message || String(err);
+        }
+
+        // If it's a network error (often CORS or server down), surface reasonable hint.
+        if (window.setConnectionStatus) {
+            let userMsg = message;
+            if (message.toLowerCase().includes('failed to fetch') || message.toLowerCase().includes('networkrequestfailed')) {
+                userMsg = message + ' — Spring Boot server not detected';
+            }
+            window.setConnectionStatus('Disconnected', userMsg + (manualTrigger ? ' (manual)' : ''));
+        }
+        console.warn('Error checking polygons API:', err);
+        return false;
+    }
+}
+
+// Expose to the UI button
+window.checkPolygonsConnection = checkPolygonsConnection;
+
+// Map of server polygon id -> Cesium entity (so we don't duplicate on repeated loads)
+window.serverPolygonEntities = new Map();
+
+async function loadPolygonsFromServer() {
+    const url = 'http://localhost:8080/api/polygons';
+    try {
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) {
+            console.warn('Failed to load polygons from server:', resp.status);
+            return;
+        }
+        const polygons = await resp.json();
+        if (!Array.isArray(polygons)) return;
+
+        // Render or update each polygon
+        polygons.forEach(p => {
+            if (!p || !p.coordinates) return;
+            const id = p.id != null ? p.id : Math.random();
+            // If entity exists already, remove and replace to reflect server state
+            if (window.serverPolygonEntities.has(id)) {
+                const existing = window.serverPolygonEntities.get(id);
+                try { viewer.entities.remove(existing); } catch (e) {}
+                window.serverPolygonEntities.delete(id);
+            }
+
+            const degreesArray = [];
+            p.coordinates.forEach(c => {
+                // server uses { longitude, latitude }
+                const lon = c.longitude != null ? c.longitude : c.lng || c.lon;
+                const lat = c.latitude != null ? c.latitude : c.lat;
+                if (lon != null && lat != null) {
+                    degreesArray.push(lon);
+                    degreesArray.push(lat);
+                }
+            });
+
+            if (degreesArray.length < 6) return; // need at least 3 points
+
+            const entity = viewer.entities.add({
+                id: 'server-polygon-' + id,
+                name: (p.type ? p.type : 'server-polygon') + (p.id ? ` (${p.id})` : ''),
+                polygon: {
+                    hierarchy: Cesium.Cartesian3.fromDegreesArray(degreesArray),
+                    material: new Cesium.ColorMaterialProperty(Cesium.Color.fromCssColorString('#eeff00ff').withAlpha(1)),
+                    extrudedHeight: (p.height && !isNaN(p.height)) ? p.height : undefined,
+                    height: 0,
+                    classificationType: Cesium.ClassificationType.BOTH
+                },
+                properties: {
+                    isServerPolygon: true,
+                    serverId: id
+                }
+            });
+
+            window.serverPolygonEntities.set(id, entity);
+        });
+    } catch (err) {
+        console.warn('Error fetching polygons from server:', err);
+    }
+}
+
+// Expose for manual reload
+window.loadPolygonsFromServer = loadPolygonsFromServer;

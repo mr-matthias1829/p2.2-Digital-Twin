@@ -18,6 +18,9 @@ function UIsetup() {
     // Build static UI
     createStaticUI();
 
+    // Create separate top-right connection/status panel
+    createConnectionUI();
+
     // Build initial dynamic UI
     refreshDynamicUI();
 }
@@ -25,13 +28,7 @@ function UIsetup() {
 function createStaticUI() {
     const uiContainer = document.getElementById("myUI");
 
-    // Example: always present button
-    const button = document.createElement("button");
-    button.textContent = "Button";
-    button.style.marginRight = "25px";
-    uiContainer.appendChild(button);
-
-
+    
     // Mode select
     const modeDropdown = createDropdown("modeSelect", ["None", "Line", "Polygon", "Model", "Edit"], "Mode:");
     uiContainer.appendChild(modeDropdown);
@@ -168,4 +165,72 @@ function createColorPicker(id, labeltxt) {
 function onUIStateChange(key, callback) {
     if (!stateChangeListeners[key]) stateChangeListeners[key] = [];
     stateChangeListeners[key].push(callback);
+}
+
+// Update the connection status UI from other scripts.
+function setConnectionStatus(status, message) {
+    const el = document.getElementById('connectionStatus');
+    const info = document.getElementById('connectionStatusInfo');
+    if (!el) return;
+    el.textContent = status || 'Unknown';
+    // colour coding
+    if (status === 'Connected') {
+        el.style.color = '#4CAF50'; // green
+    } else if (status === 'Disconnected') {
+        el.style.color = '#F44336'; // red
+    } else {
+        el.style.color = '#FFA500'; // orange
+    }
+    if (info) info.textContent = message || '';
+}
+
+window.setConnectionStatus = setConnectionStatus;
+
+// Create a separate top-right connection/status panel.
+function createConnectionUI() {
+    const conn = document.createElement('div');
+    conn.id = 'connectionUI';
+    conn.style.position = 'absolute';
+    conn.style.top = '10px';
+    conn.style.right = '10px';
+    conn.style.backgroundColor = 'rgba(32,32,32,0.85)';
+    conn.style.color = 'white';
+    conn.style.padding = '10px';
+    conn.style.borderRadius = '5px';
+    conn.style.zIndex = '150';
+    conn.style.minWidth = '180px';
+
+    const title = document.createElement('div');
+    title.textContent = 'Status';
+    title.style.fontWeight = '600';
+    title.style.marginBottom = '6px';
+    conn.appendChild(title);
+
+    const statusContainer = document.createElement('div');
+    statusContainer.style.display = 'flex';
+    statusContainer.style.alignItems = 'center';
+
+    const statusLabel = document.createElement('span');
+    statusLabel.textContent = 'Server:';
+    statusLabel.style.marginRight = '8px';
+    statusContainer.appendChild(statusLabel);
+
+    const statusValue = document.createElement('span');
+    statusValue.id = 'connectionStatus';
+    statusValue.textContent = 'Unknown';
+    statusValue.style.fontWeight = 'bold';
+    statusValue.style.color = '#FFA500';
+    statusContainer.appendChild(statusValue);
+
+    // No manual check button: the client auto-checks periodically.
+
+    conn.appendChild(statusContainer);
+
+    const statusInfo = document.createElement('div');
+    statusInfo.id = 'connectionStatusInfo';
+    statusInfo.style.fontSize = '11px';
+    statusInfo.style.marginTop = '6px';
+    conn.appendChild(statusInfo);
+
+    document.body.appendChild(conn);
 }
