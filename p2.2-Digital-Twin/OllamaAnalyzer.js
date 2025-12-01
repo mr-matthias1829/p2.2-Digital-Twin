@@ -3,7 +3,7 @@ class OllamaAnalyzer{
         this.viewer = viewer;
         this.ollamaUrl = options.ollamaUrl || 'http://localhost:11434';
         this.model = options.model || 'gemma3:4b';
-        this.interval = options.interval || 30000;
+        this.interval = options.interval || 120000;
         this.prompt = options.prompt || "You are viewing this scene from the Cesium Man's perspective in Leeuwarden. Describe what you see in the environment and give your opinion about it in 2-3 sentences.";
         this.intervalId = null;
         this.isRunning = false;
@@ -21,7 +21,7 @@ class OllamaAnalyzer{
 
     async analyzeWithOllama(){
         try{
-            console.log("Capturing screenshot...");
+            console.log("   Capturing screenshot...");
             const screenshot = await this.captureScreenshot();
 
             if (!screenshot) {
@@ -30,6 +30,8 @@ class OllamaAnalyzer{
             }
 
             const reader = new FileReader();
+            reader.readAsDataURL(screenshot);
+            
             reader.onloadend = async () => {
                 const base64Image = reader.result.split(',')[1];
 

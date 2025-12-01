@@ -95,7 +95,7 @@ function setup() {
             ollamaUrl: 'http://localhost:11434',
             model: 'gemma3:4b',
             interval: 30000,
-            prompt: "You are viewing this scene from the Cesium Man's perspective in Leeuwarden. Describe what you see and give your opinion."
+            prompt: "You are viewing this scene from the Cesium Man's perspective in Leeuwarden. Describe what you see and give your opinion about it in 2-3 sentences.."
         });
 
         console.log('Ollama analyzer ready! Use these commands:');
