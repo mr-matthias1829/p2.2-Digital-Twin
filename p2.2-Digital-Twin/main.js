@@ -537,4 +537,53 @@ async function loadPolygonsFromServer() {
 }
 
 // Expose for manual reload
+// Utility: extract coordinates from a polygon entity's hierarchy
+function _getPositionsFromHierarchy(hierarchy) {
+    if (!hierarchy) return [];
+    if (typeof hierarchy.getValue === 'function') {
+        hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
+    }
+    if (hierarchy instanceof Cesium.PolygonHierarchy) {
+        return hierarchy.positions || [];
+    }
+    if (Array.isArray(hierarchy)) return hierarchy;
+    if (hierarchy.positions) return hierarchy.positions;
+    return [];
+}
+
+// Show polygon coordinates in the bottom-right container (if present)
+window.showPolygonInfo = function (entity) {
+    try {
+        const el = document.getElementById('polygonInfo');
+        if (!el) return;
+        if (!entity || !entity.polygon) {
+            el.innerHTML = '<b>Geen polygon geselecteerd</b>';
+            return;
+        }
+
+        const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
+        if (!positions || positions.length === 0) {
+            el.innerHTML = '<b>Geen coordinaten beschikbaar</b>';
+            return;
+        }
+
+        let html = '<b>Polygon coordinates</b><br/><small>(' + positions.length + ' punten)</small><hr/>';
+        positions.forEach((cartesian, i) => {
+            const carto = Cesium.Cartographic.fromCartesian(cartesian);
+            const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(6);
+            const lat = Cesium.Math.toDegrees(carto.latitude).toFixed(6);
+            html += `${i + 1}: ${lat}, ${lon}<br/>`;
+        });
+        el.innerHTML = html;
+    } catch (e) {
+        console.warn('showPolygonInfo error', e);
+    }
+};
+
+window.clearPolygonInfo = function () {
+    const el = document.getElementById('polygonInfo');
+    if (!el) return;
+    el.innerHTML = '';
+};
+
 window.loadPolygonsFromServer = loadPolygonsFromServer;

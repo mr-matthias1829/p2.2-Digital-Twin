@@ -124,6 +124,7 @@ class PolygonEditor {
         this.viewer.scene.screenSpaceCameraController.enableRotate = true;
         this.viewer.scene.screenSpaceCameraController.enableTranslate = true;
         console.log("EDIT MODE OFF");
+        if (window.clearPolygonInfo) window.clearPolygonInfo();
     }
 
     distanceToSegment(point, segmentStart, segmentEnd) {
@@ -196,6 +197,7 @@ class PolygonEditor {
             }));
         });
         console.log("EDIT MODE ON");
+        if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
     }
 
     rotatePolygon(degrees) {
@@ -231,6 +233,10 @@ class PolygonEditor {
             v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
         );
         this.editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(positions);
+        // If a UI info panel exists, refresh it so coordinates stay in sync while dragging/moving
+        if (window.showPolygonInfo) {
+            try { window.showPolygonInfo(this.editingEntity); } catch (e) { /* ignore UI errors */ }
+        }
     }
 
     addVertexBetween(index1, index2) {

@@ -12,8 +12,27 @@
 
         <!-- scripts below main that don't invoke window.onload or similair are fine -->
         <script src="polygonEditor.js"></script>
+        <style>
+            #polygonInfo {
+                position: fixed;
+                right: 12px;
+                bottom: 12px;
+                width: 320px;
+                max-height: 40vh;
+                overflow: auto;
+                background: rgba(0, 0, 0, 0.75);
+                color: #e6e6e6;
+                padding: 8px 10px;
+                font-family: monospace;
+                font-size: 12px;
+                border-radius: 6px;
+                z-index: 9999;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            }
+        </style>
     </head>
     <body style="margin: 0px; padding: 0px;">
         <div id="cesiumContainer" style="margin: 0px; padding: 0px;"></div>
+        <div id="polygonInfo" aria-live="polite" title="Polygon informatie"></div>
     </body>
 </html>
