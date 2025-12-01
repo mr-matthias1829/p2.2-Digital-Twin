@@ -1,8 +1,11 @@
-window.onload = setup;
+document.addEventListener('DOMContentLoaded', () => {
+    setup();          // mainPreSetup.js
+    laterSetup();     // main.js
+});
 
 var measure;
 var viewer;
-var polygonEditor;
+var Editor;
 
 function setupSetups() {
     UIsetup();
@@ -16,7 +19,7 @@ function subscribeToStateChangesSetup() {
             terminateShape();
         }
         if (drawingMode == "edit" && newMode != "edit") {
-           polygonEditor.stopEditingPolygon();
+           Editor.stopEditingPolygon();
         }
         drawingMode = newMode;
     });
@@ -35,85 +38,10 @@ let modelToCreate = "man";
 let stringColor = "#ffffff";
 let drawingMode = "none";
 
-
-function setup() {
-    const west = 5.798212900532118;
-    const south = 53.19304584690279;
-    const east = 5.798212900532118;
-    const north = 53.19304584690279;
-
-    var rectangle = Cesium.Rectangle.fromDegrees(west, south, east, north);
-
-    Cesium.Camera.DEFAULT_VIEW_FACTOR = 0.0005;
-    Cesium.Camera.DEFAULT_VIEW_RECTANGLE = rectangle;
-
-    const osm = new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://tile.openstreetmap.org/'
-    });
-
-    viewer = new Cesium.Viewer("cesiumContainer", {
-        baseLayerPicker: false,
-        imageryProvider: false,
-        infoBox: false,
-        selectionIndicator: false,
-        shadows: false,
-        shouldAnimate: false,
-    });
-
+function laterSetup(){
     setupSetups();
-
-    // Start connection polling to the polygons API
-    startConnectionPolling();
-
-    // Load polygons from server (if available)
-    loadPolygonsFromServer();
-
-    viewer.imageryLayers.removeAll();
-    viewer.imageryLayers.addImageryProvider(osm);
-
-    viewer.scene.globe.maximumScreenSpaceError = 1;
-
-    const condo1 = createBox(200, 300, 50, 40, 70, 0, "RICKMOCK.png");
-    measure = createBox(0, 0, 3, 3, 30, 0, Cesium.Color.RED);
-    
-    const redPolygon = viewer.entities.add({
-        name: "Spoordok",
-        polygon: {
-            hierarchy: Cesium.Cartesian3.fromDegreesArray([
-                5.787759928698073, 53.197831145908,
-                5.789123554275904, 53.19763995957844,
-                5.788934967759822, 53.19602353198474,
-                5.776937964005922, 53.194528716741345,
-                5.774587885853288, 53.196901277127026,
-                5.774703939093954, 53.1976225789762,
-                5.786410809746187, 53.19704032421097,
-            ]),
-            material: Cesium.Color.LIGHTGRAY,
-        },
-    });
-    
-    createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
-
-    // Initialize polygon editor
-    polygonEditor = new PolygonEditor(viewer);
-
-    setupInputActions();
-
-    setTimeout(() => {
-        window.ollamaAnalyzer = new OllamaAnalyzer(viewer, {
-            ollamaUrl: 'http://localhost:11434',
-            model: 'gemma3:4b',
-            interval: 30000,
-            prompt: "You are a citizen giving an opinion about the environment. This image is your Point of view. Describe what you see and give your opinion about it in 2-3 sentences. Dont do startup talk like: 'here is a perspective of cesium man.' You have your own personality. Also dont prepare that you're going to talk just talk.",
-        });
-
-        console.log('Ollama analyzer ready! Use these commands:');
-        console.log('  ollamaAnalyzer.start()  - Start analysis');
-        console.log('  ollamaAnalyzer.stop()   - Stop analysis');
-        console.log('  ollamaAnalyzer.analyzeWithOllama() - Run once');
-        console.log('  ollamaAnalyzer.setInterval(ms) - Change interval');
-    }, 2000);
 }
+
 
 function createPoint(worldPosition) {
     const point = viewer.entities.add({
@@ -162,21 +90,21 @@ function setupInputActions() {
 
     // LEFT DOWN
     handler.setInputAction(function (event) {
-        polygonEditor.handleLeftDown(event);
+        Editor.handleLeftDown(event);
     }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
     // LEFT UP
     handler.setInputAction(function (event) {
-        polygonEditor.handleLeftUp(event);
+        Editor.handleLeftUp(event);
     }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
     // MOUSE MOVE
     handler.setInputAction(function (event) {
         // Let polygon editor handle its move logic first
-        polygonEditor.handleMouseMove(event);
+        Editor.handleMouseMove(event);
         
         // Handle drawing mode floating point
-        if (!polygonEditor.editMode && !polygonEditor.moveMode && Cesium.defined(floatingPoint)) {
+        if (!Editor.editMode && !Editor.moveMode && Cesium.defined(floatingPoint)) {
             const ray = viewer.camera.getPickRay(event.endPosition);
             const newPosition = viewer.scene.globe.pick(ray, viewer.scene);
             if (Cesium.defined(newPosition)) {
@@ -189,7 +117,7 @@ function setupInputActions() {
 
     // LEFT CLICK - Drawing mode
     handler.setInputAction(function (event) {
-        if (polygonEditor.editMode || polygonEditor.moveMode) return;
+        if (Editor.editMode || Editor.moveMode) return;
         
         if (drawingMode !== "none") {
             const ray = viewer.camera.getPickRay(event.position);
@@ -226,7 +154,7 @@ function setupInputActions() {
     // CTRL+Click - Add vertex or extrude
     handler.setInputAction(function (event) {
         // Let polygon editor try to handle it first
-        const handled = polygonEditor.handleCtrlClick(event);
+        const handled = Editor.handleCtrlClick(event);
         
         if (!handled) {
             // Original extrude functionality when not in edit mode
@@ -243,22 +171,22 @@ function setupInputActions() {
 
     // ALT+Click - Start editing polygon vertices
     handler.setInputAction(function (event) {
-        polygonEditor.handleAltClick(event);
+        Editor.handleAltClick(event);
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.ALT);
 
     // SHIFT+Click - Start moving polygon
     handler.setInputAction(function (event) {
-        polygonEditor.handleShiftClick(event);
+        Editor.handleShiftClick(event);
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.SHIFT);
 
     // DOUBLE CLICK - Start editing polygon
     handler.setInputAction(function (event) {
-        polygonEditor.handleDoubleClick(event);
+        Editor.handleDoubleClick(event);
     }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
     // RIGHT CLICK - Finish drawing, editing, or moving
     handler.setInputAction(function (event) {
-        const editorHandled = polygonEditor.handleRightClick(event);
+        const editorHandled = Editor.handleRightClick(event);
         
         if (!editorHandled && activeShapePoints.length > 0) {
             terminateShape();

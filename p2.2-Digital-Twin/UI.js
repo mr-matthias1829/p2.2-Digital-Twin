@@ -35,6 +35,14 @@ function createStaticUI() {
 
     // Refresh dynamic UI on mode change
     onUIStateChange("modeSelect", refreshDynamicUI);
+    document.addEventListener('object-editor-editmode-changed', (evt) => {
+    const info = evt.detail;
+    console.log("Edit mode changed (event):", info);
+
+    // Call UI refresh
+    refreshDynamicUI();
+    });
+
     // Can add more cases here if needed
     // Note: try to not add cases that also activate other cases or activate automatically
 }
@@ -59,7 +67,7 @@ function refreshDynamicUI() {
         const modeDropdown = createDropdown("modelselect", ["Man", "building"], "Model:");
         newDynamicContainer.appendChild(modeDropdown);
     }
-if (UIState.modeSelect === "edit") {
+    if (UIState.modeSelect === "edit") {
     const txt = document.createElement("div");
     
     // Enable \n formatting
@@ -81,17 +89,29 @@ if (UIState.modeSelect === "edit") {
     txt.style.lineHeight = "1.3";
     txt.style.color = "white";
 
-    txt.textContent =
-        "Click on a polygon to start editing\n" +
+    txt.textContent = "Double click on a object to start editing\n" +
+    "Press Esc or right-click to stop editing";
+
+
+    console.log('editingWhat:', Editor.editingWhat());
+    const what = Editor.editingWhat();
+
+    if (what === 'polygon' && Editor.editMode) {
+    txt.textContent += 
+        "\n\nEditing polygon:\n" +
         "Drag the selected polygon to move it\n" +
         "Drag the vertices to reshape the polygon\n" +
         "Press R to rotate 90°; arrows rotate freely\n" +
         "Press Delete to remove hovered vertex\n" +
-        "Double click an edge to add a vertex\n" +
-        "Press Esc or right-click to stop editing";
-
+        "Double click an edge to add a vertex\n";
+    } else if (what === 'model' && Editor.editMode) {
+    txt.textContent += 
+        "\n\nEditing model:\n" +
+        "Drag the selected model to move it\n" +
+        "Press R to rotate 90°; arrows rotate freely\n";
+    }
     newDynamicContainer.appendChild(txt);
-}
+    }
 
     uiContainer.appendChild(newDynamicContainer);
 }
