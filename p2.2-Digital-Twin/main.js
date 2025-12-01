@@ -586,7 +586,29 @@ window.showPolygonInfo = function (entity) {
             heightLine = `<small>Base height: ${Number(baseVal).toFixed(2)} m</small>`;
         }
 
-        let html = `<b>Polygon coordinates</b> ${heightLine}<br/><small>(${positions.length} punten)</small><hr/>`;
+        // Compute area (always) and volume (if height present) using polygonUtils
+        let areaLine = '';
+        let volumeLine = '';
+        try {
+            if (window.polygonUtils) {
+                if (typeof window.polygonUtils.computeAreaFromHierarchy === 'function') {
+                    const area = window.polygonUtils.computeAreaFromHierarchy(entity.polygon.hierarchy || positions);
+                    if (typeof area === 'number') {
+                        areaLine = `<small>Area: ${Number(area).toFixed(2)} m²</small>`;
+                    }
+                }
+                if (typeof window.polygonUtils.computeVolumeFromEntity === 'function') {
+                    const vol = window.polygonUtils.computeVolumeFromEntity(entity);
+                    if (vol && typeof vol.volume === 'number') {
+                        volumeLine = `<small>Volume: ${Number(vol.volume).toFixed(2)} m³</small>`;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('polygonUtils error', e);
+        }
+
+        let html = `<b>Polygon coordinates</b> ${heightLine} ${areaLine} ${volumeLine}<br/><small>(${positions.length} punten)</small><hr/>`;
         positions.forEach((cartesian, i) => {
             const carto = Cesium.Cartographic.fromCartesian(cartesian);
             const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(6);
