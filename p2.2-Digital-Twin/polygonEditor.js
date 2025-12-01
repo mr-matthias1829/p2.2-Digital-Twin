@@ -298,7 +298,42 @@ class PolygonEditor {
                     // Deleting vertex
                 } else if (e.key === 'Delete' || e.key === 'Backspace') {
                     e.preventDefault();
-                    if (this.hoveredVertex) this.deleteVertex(this.hoveredVertex);
+                    // If hovering a vertex, delete the vertex. Otherwise offer to delete the whole polygon.
+                    if (this.hoveredVertex) {
+                        this.deleteVertex(this.hoveredVertex);
+                    } else if (this.editingEntity) {
+                        // Confirm destructive action with the user
+                        try {
+                            const ok = window.confirm ? window.confirm('Delete the selected polygon?') : true;
+                            if (!ok) return;
+                        } catch (ignore) {
+                            // In some contexts confirm might not be available - proceed without it
+                        }
+
+                        // Capture reference to entity before stopping edit (stopEditingPolygon will clear editingEntity)
+                        const entityToRemove = this.editingEntity;
+                        // Stop editing which clears vertex markers and UI
+                        this.stopEditingPolygon();
+
+                        try {
+                            // Remove from viewer
+                            this.viewer.entities.remove(entityToRemove);
+                        } catch (e) {
+                            console.warn('Error removing polygon entity:', e);
+                        }
+
+                        try {
+                            // If it was a server polygon, remove mapping so it won't be re-used
+                            const sid = entityToRemove.properties && entityToRemove.properties.serverId;
+                            if (sid != null && window.serverPolygonEntities) {
+                                window.serverPolygonEntities.delete(sid);
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                        // Ensure UI is cleared
+                        if (window.clearPolygonInfo) window.clearPolygonInfo();
+                    }
 
                     // Rotation
                 } else if (e.key === 'r' || e.key === 'R') {
