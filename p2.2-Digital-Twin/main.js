@@ -59,6 +59,9 @@ function setup() {
 
     setupSetups();
 
+    // Start connection polling to the polygons API
+    startConnectionPolling();
+
     viewer.imageryLayers.removeAll();
     viewer.imageryLayers.addImageryProvider(osm);
 
@@ -381,3 +384,78 @@ function create3DObject(basePolygon, height) {
         basePolygon.polygon.extrudedHeight *= 1.5;
     }
 }
+
+// Connection check and polling for API at http://localhost:8080/api/polygons
+let connectionPollIntervalId = undefined;
+let isCheckingPolygons = false;
+function startConnectionPolling() {
+    // Run an initial check immediately
+    if (window.checkPolygonsConnection) {
+        window.checkPolygonsConnection();
+    } else {
+        checkPolygonsConnection();
+    }
+
+    // Poll every 1 second (1000 ms)
+    if (connectionPollIntervalId) clearInterval(connectionPollIntervalId);
+    connectionPollIntervalId = setInterval(checkPolygonsConnection, 1000);
+}
+
+async function checkPolygonsConnection(manualTrigger = false) {
+    if (isCheckingPolygons && !manualTrigger) return false;
+    isCheckingPolygons = true;
+    const url = 'http://localhost:8080/api/polygons';
+    const timeoutMs = 4000;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const resp = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(id);
+        if (!resp.ok) {
+            const msg = `HTTP ${resp.status}`;
+            if (window.setConnectionStatus) window.setConnectionStatus('Disconnected', msg);
+            console.warn('Polygons API responded with non-OK:', resp.status);
+            return false;
+        }
+
+        // try to parse and show minimal info
+        let bodyText = '';
+        try {
+            const json = await resp.json();
+            if (Array.isArray(json)) bodyText = `Items: ${json.length}`;
+            else if (json && typeof json === 'object') bodyText = `Object keys: ${Object.keys(json).length}`;
+            else bodyText = 'OK';
+        } catch (e) {
+            bodyText = 'OK (non-JSON)';
+        }
+
+        if (window.setConnectionStatus) window.setConnectionStatus('Connected', bodyText + (manualTrigger ? ' (manual)' : ''));
+        return true;
+    } catch (err) {
+        clearTimeout(id);
+        let message = '';
+        if (err.name === 'AbortError') {
+            message = `Timeout after ${timeoutMs}ms`;
+        } else {
+            message = err.message || String(err);
+        }
+
+        // If it's a network error (often CORS or server down), surface reasonable hint.
+        if (window.setConnectionStatus) {
+            let userMsg = message;
+            if (message.toLowerCase().includes('failed to fetch') || message.toLowerCase().includes('networkrequestfailed')) {
+                userMsg = message + ' — Spring Boot server not detected';
+            }
+            window.setConnectionStatus('Disconnected', userMsg + (manualTrigger ? ' (manual)' : ''));
+        }
+        console.warn('Error checking polygons API:', err);
+        return false;
+    }
+    finally {
+        isCheckingPolygons = false;
+    }
+}
+
+// Expose to the UI button
+window.checkPolygonsConnection = checkPolygonsConnection;
