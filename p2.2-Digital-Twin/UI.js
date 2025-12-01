@@ -30,7 +30,7 @@ function createStaticUI() {
 
     
     // Mode select
-    const modeDropdown = createDropdown("modeSelect", ["None", "Line", "Polygon", "Model"], "Mode:");
+    const modeDropdown = createDropdown("modeSelect", ["None", "Line", "Polygon", "Model", "Edit"], "Mode:");
     uiContainer.appendChild(modeDropdown);
 
     // Refresh dynamic UI on mode change
@@ -55,11 +55,43 @@ function refreshDynamicUI() {
         const colorPicker = createColorPicker("color", "Color:");
         newDynamicContainer.appendChild(colorPicker);
     }
-
     if (UIState.modeSelect === "model") {
         const modeDropdown = createDropdown("modelselect", ["Man", "building"], "Model:");
         newDynamicContainer.appendChild(modeDropdown);
     }
+if (UIState.modeSelect === "edit") {
+    const txt = document.createElement("div");
+    
+    // Enable \n formatting
+    txt.style.whiteSpace = "pre-line";
+    
+    // Make it a small box
+    txt.style.padding = "8px 10px";
+    txt.style.background = "rgba(0,0,0,0.55)";
+    txt.style.border = "1px solid rgba(255,255,255,0.2)";
+    txt.style.borderRadius = "6px";
+    
+    // Size constraints
+    txt.style.maxWidth = "260px";
+    txt.style.maxHeight = "160px";
+    txt.style.overflowY = "auto";
+    
+    // Smaller text
+    txt.style.fontSize = "12px";
+    txt.style.lineHeight = "1.3";
+    txt.style.color = "white";
+
+    txt.textContent =
+        "Click on a polygon to start editing\n" +
+        "Drag the selected polygon to move it\n" +
+        "Drag the vertices to reshape the polygon\n" +
+        "Press R to rotate 90°; arrows rotate freely\n" +
+        "Press Delete to remove hovered vertex\n" +
+        "Double click an edge to add a vertex\n" +
+        "Press Esc or right-click to stop editing";
+
+    newDynamicContainer.appendChild(txt);
+}
 
     uiContainer.appendChild(newDynamicContainer);
 }

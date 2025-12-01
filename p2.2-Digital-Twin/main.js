@@ -15,6 +15,9 @@ function subscribeToStateChangesSetup() {
         if (drawingMode !== "none" && activeShapePoints.length > 0){
             terminateShape();
         }
+        if (drawingMode == "edit" && newMode != "edit") {
+           polygonEditor.stopEditingPolygon();
+        }
         drawingMode = newMode;
     });
     onUIStateChange('color', (newColor) => {
