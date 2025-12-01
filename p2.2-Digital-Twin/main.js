@@ -567,7 +567,26 @@ window.showPolygonInfo = function (entity) {
             return;
         }
 
-        let html = '<b>Polygon coordinates</b><br/><small>(' + positions.length + ' punten)</small><hr/>';
+        // Compute height (prefer extrudedHeight, fallback to height)
+        let extruded = entity.polygon.extrudedHeight;
+        let baseHeight = entity.polygon.height;
+        function _getNumeric(val) {
+            if (val == null) return undefined;
+            if (typeof val === 'number') return val;
+            if (val && typeof val.getValue === 'function') return val.getValue(Cesium.JulianDate.now());
+            return undefined;
+        }
+        const extrudedVal = _getNumeric(extruded);
+        const baseVal = _getNumeric(baseHeight);
+
+        let heightLine = '';
+        if (typeof extrudedVal === 'number') {
+            heightLine = `<small>Height: ${Number(extrudedVal).toFixed(2)} m</small>`;
+        } else if (typeof baseVal === 'number') {
+            heightLine = `<small>Base height: ${Number(baseVal).toFixed(2)} m</small>`;
+        }
+
+        let html = `<b>Polygon coordinates</b> ${heightLine}<br/><small>(${positions.length} punten)</small><hr/>`;
         positions.forEach((cartesian, i) => {
             const carto = Cesium.Cartographic.fromCartesian(cartesian);
             const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(6);

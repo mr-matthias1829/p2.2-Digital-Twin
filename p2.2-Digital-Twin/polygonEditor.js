@@ -288,10 +288,12 @@ class PolygonEditor {
                     e.preventDefault();
                     this.editingEntity.polygon.extrudedHeight = h + 5;
                     console.log("Height:", h + 5);
+                    if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     this.editingEntity.polygon.extrudedHeight = Math.max(0, h - 5);
                     console.log("Height:", Math.max(0, h - 5));
+                    if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
 
                     // Deleting vertex
                 } else if (e.key === 'Delete' || e.key === 'Backspace') {
