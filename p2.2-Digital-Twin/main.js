@@ -62,6 +62,9 @@ function setup() {
     // Start connection polling to the polygons API
     startConnectionPolling();
 
+    // Load polygons from server (if available)
+    loadPolygonsFromServer();
+
     viewer.imageryLayers.removeAll();
     viewer.imageryLayers.addImageryProvider(osm);
 
@@ -453,3 +456,67 @@ async function checkPolygonsConnection(manualTrigger = false) {
 
 // Expose to the UI button
 window.checkPolygonsConnection = checkPolygonsConnection;
+
+// Map of server polygon id -> Cesium entity (so we don't duplicate on repeated loads)
+window.serverPolygonEntities = new Map();
+
+async function loadPolygonsFromServer() {
+    const url = 'http://localhost:8080/api/polygons';
+    try {
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) {
+            console.warn('Failed to load polygons from server:', resp.status);
+            return;
+        }
+        const polygons = await resp.json();
+        if (!Array.isArray(polygons)) return;
+
+        // Render or update each polygon
+        polygons.forEach(p => {
+            if (!p || !p.coordinates) return;
+            const id = p.id != null ? p.id : Math.random();
+            // If entity exists already, remove and replace to reflect server state
+            if (window.serverPolygonEntities.has(id)) {
+                const existing = window.serverPolygonEntities.get(id);
+                try { viewer.entities.remove(existing); } catch (e) {}
+                window.serverPolygonEntities.delete(id);
+            }
+
+            const degreesArray = [];
+            p.coordinates.forEach(c => {
+                // server uses { longitude, latitude }
+                const lon = c.longitude != null ? c.longitude : c.lng || c.lon;
+                const lat = c.latitude != null ? c.latitude : c.lat;
+                if (lon != null && lat != null) {
+                    degreesArray.push(lon);
+                    degreesArray.push(lat);
+                }
+            });
+
+            if (degreesArray.length < 6) return; // need at least 3 points
+
+            const entity = viewer.entities.add({
+                id: 'server-polygon-' + id,
+                name: (p.type ? p.type : 'server-polygon') + (p.id ? ` (${p.id})` : ''),
+                polygon: {
+                    hierarchy: Cesium.Cartesian3.fromDegreesArray(degreesArray),
+                    material: new Cesium.ColorMaterialProperty(Cesium.Color.fromCssColorString('#eeff00ff').withAlpha(1)),
+                    extrudedHeight: (p.height && !isNaN(p.height)) ? p.height : undefined,
+                    height: 0,
+                    classificationType: Cesium.ClassificationType.BOTH
+                },
+                properties: {
+                    isServerPolygon: true,
+                    serverId: id
+                }
+            });
+
+            window.serverPolygonEntities.set(id, entity);
+        });
+    } catch (err) {
+        console.warn('Error fetching polygons from server:', err);
+    }
+}
+
+// Expose for manual reload
+window.loadPolygonsFromServer = loadPolygonsFromServer;
