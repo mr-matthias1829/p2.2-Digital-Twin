@@ -387,7 +387,6 @@ function create3DObject(basePolygon, height) {
 
 // Connection check and polling for API at http://localhost:8080/api/polygons
 let connectionPollIntervalId = undefined;
-let isCheckingPolygons = false;
 function startConnectionPolling() {
     // Run an initial check immediately
     if (window.checkPolygonsConnection) {
@@ -396,14 +395,12 @@ function startConnectionPolling() {
         checkPolygonsConnection();
     }
 
-    // Poll every 1 second (1000 ms)
+    // Poll every 10 seconds
     if (connectionPollIntervalId) clearInterval(connectionPollIntervalId);
-    connectionPollIntervalId = setInterval(checkPolygonsConnection, 1000);
+    connectionPollIntervalId = setInterval(checkPolygonsConnection, 10000);
 }
 
 async function checkPolygonsConnection(manualTrigger = false) {
-    if (isCheckingPolygons && !manualTrigger) return false;
-    isCheckingPolygons = true;
     const url = 'http://localhost:8080/api/polygons';
     const timeoutMs = 4000;
     const controller = new AbortController();
@@ -451,9 +448,6 @@ async function checkPolygonsConnection(manualTrigger = false) {
         }
         console.warn('Error checking polygons API:', err);
         return false;
-    }
-    finally {
-        isCheckingPolygons = false;
     }
 }
 
