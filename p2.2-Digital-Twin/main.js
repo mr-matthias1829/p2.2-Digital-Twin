@@ -556,6 +556,8 @@ window.showPolygonInfo = function (entity) {
     try {
         const el = document.getElementById('polygonInfo');
         if (!el) return;
+        // Ensure the panel is visible when showing info
+        el.style.display = 'block';
         if (!entity || !entity.polygon) {
             el.innerHTML = '<b>Geen polygon geselecteerd</b>';
             return;
@@ -624,7 +626,9 @@ window.showPolygonInfo = function (entity) {
 window.clearPolygonInfo = function () {
     const el = document.getElementById('polygonInfo');
     if (!el) return;
+    // Hide the empty panel to avoid the thin visible strip when closed
     el.innerHTML = '';
+    el.style.display = 'none';
 };
 
 window.loadPolygonsFromServer = loadPolygonsFromServer;

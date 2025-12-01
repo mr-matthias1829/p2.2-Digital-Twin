@@ -16,19 +16,25 @@
         <style>
             #polygonInfo {
                 position: fixed;
-                right: 12px;
-                bottom: 12px;
-                width: 320px;
-                max-height: 40vh;
+                right: 16px;
+                bottom: 16px;
+                /* Wider panel for longer coordinate lists */
+                width: 420px;
+                min-width: 300px;
+                max-height: 60vh;
                 overflow: auto;
-                background: rgba(0, 0, 0, 0.75);
+                background: rgba(0, 0, 0, 0.85);
                 color: #e6e6e6;
-                padding: 8px 10px;
+                padding: 12px 14px;
                 font-family: monospace;
-                font-size: 12px;
-                border-radius: 6px;
+                /* Slightly larger font for readability */
+                font-size: 15px;
+                line-height: 1.4;
+                border-radius: 8px;
                 z-index: 9999;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+                /* Hidden by default; shown when there is content */
+                display: none;
             }
         </style>
     </head>
