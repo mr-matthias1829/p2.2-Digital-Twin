@@ -18,50 +18,54 @@ function preloadModels() {
 
 function preloadModel(key, uri) {
     if (preloadPromises[key]) return preloadPromises[key];
-
     preloadPromises[key] = Cesium.Model.fromGltfAsync({
         url: uri,
         modelMatrix: Cesium.Matrix4.IDENTITY,
         minimumPixelSize: 128,
         maximumScale: 1
     }).then(model => {
-
         model.show = false; // hide preload instance
         viewer.scene.primitives.add(model);
-
         modelCache[key] = { model, uri };
         console.log(`Model '${key}' preloaded!`);
-
         return model;
     });
-
     return preloadPromises[key];
 }
 
+
 // Spawn model from cache
-async function spawnModel(key, position, height = 0) {
+async function spawnModel(key, position, height = 0, rotationDegrees = 0) {
     await preloadPromises[key]; // ensure preloaded
-
     const pos = Cesium.Cartesian3.fromDegrees(position.lon, position.lat, height);
-    const hpr = Cesium.Transforms.headingPitchRollQuaternion(
-        pos,
-        new Cesium.HeadingPitchRoll(0, 0, 0)
-    );
-
+    
+    // Convert rotation to radians for heading
+    const heading = Cesium.Math.toRadians(rotationDegrees);
+    const hpr = new Cesium.HeadingPitchRoll(heading, 0, 0);
+    const orientation = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
+    
     const clone = await Cesium.Model.fromGltfAsync({
-        url: modelCache[key].uri,     // SAME URI = GPU resources reused
+        url: modelCache[key].uri,
         modelMatrix: Cesium.Matrix4.fromTranslationQuaternionRotationScale(
             pos,
-            hpr,
+            orientation,
             new Cesium.Cartesian3(1, 1, 1)
         ),
         minimumPixelSize: 128,
         maximumScale: 1,
-        asynchronous: true,          // important for performance
+        asynchronous: true,
         allowPicking: true,
-        deferAnimation: true          // no animation pipeline lag
+        deferAnimation: true
     });
-
+    
+    // Store metadata for editing
+    clone.modelKey = key;
+    clone.modelRotation = rotationDegrees;
+    clone.modelPosition = position;
+    clone.modelHeight = height;
+    clone.isEditableModel = true;
+    
     viewer.scene.primitives.add(clone);
+    console.log(`Spawned ${key} at rotation ${rotationDegrees}°`);
     return clone;
 }
