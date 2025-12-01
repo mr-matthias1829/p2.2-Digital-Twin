@@ -266,7 +266,7 @@ class ObjectEditor {
 
     rotatePolygon(degrees) {
         if (!this.editingEntity?.polygon) return;
-        const positions = this.vertexEntices.map(v => 
+        const positions = this.vertexEntities.map(v => 
             v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
         );
         if (!positions.length) return;

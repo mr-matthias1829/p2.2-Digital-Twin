@@ -22,12 +22,6 @@ function setup() {
         shouldAnimate: false,
     });
 
-    // Start connection polling to the polygons API
-    startConnectionPolling();
-
-    // Load polygons from server (if available)
-    loadPolygonsFromServer();
-
     viewer.imageryLayers.removeAll();
     viewer.imageryLayers.addImageryProvider(osm);
 
@@ -70,6 +64,6 @@ function setup() {
         console.log('  ollamaAnalyzer.analyzeWithOllama() - Run once');
         console.log('  ollamaAnalyzer.setInterval(ms) - Change interval');
     }, 2000);
-    
+
     Editor = new ObjectEditor(viewer);
 }
