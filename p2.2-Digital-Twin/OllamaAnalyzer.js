@@ -69,8 +69,9 @@ class OllamaAnalyzer{
             responseDiv.id = 'ollama-response';
             responseDiv.style.cssText = `
                 position: absolute;
-                bottom: 10px;
-                right: 10px;
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
                 background: rgba(0, 0, 0, 0.8);
                 color: white;
                 padding: 15px;
