@@ -211,8 +211,8 @@ function createConnectionUI() {
     const conn = document.createElement('div');
     conn.id = 'connectionUI';
     conn.style.position = 'absolute';
-    conn.style.top = '10px';
-    conn.style.right = '10px';
+    conn.style.top = '40px';
+    conn.style.right = '1px';
     conn.style.backgroundColor = 'rgba(32,32,32,0.85)';
     conn.style.color = 'white';
     conn.style.padding = '10px';
