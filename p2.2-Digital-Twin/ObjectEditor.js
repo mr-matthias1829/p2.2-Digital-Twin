@@ -424,11 +424,21 @@ class ObjectEditor {
                     // Scaling height
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
+                    // Prevent changing height for protected polygons
+                    if (this.isProtectedEntity && this.isProtectedEntity(this.editingEntity)) {
+                        console.log("Protected polygon - cannot change height");
+                        return;
+                    }
                     this.editingEntity.polygon.extrudedHeight = h + 5;
                     console.log("Height:", h + 5);
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
+                    // Prevent changing height for protected polygons
+                    if (this.isProtectedEntity && this.isProtectedEntity(this.editingEntity)) {
+                        console.log("Protected polygon - cannot change height");
+                        return;
+                    }
                     this.editingEntity.polygon.extrudedHeight = Math.max(0, h - 5);
                     console.log("Height:", Math.max(0, h - 5));
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
