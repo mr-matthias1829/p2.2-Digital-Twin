@@ -9,7 +9,7 @@ prep:
 2. have lunix (duh but less obvious)
 3. in the IDE, open CMD inside the /spoordok folder
 
-cmds:
+cmds: (NOTE: these only work in the CMD, NOT in the docker cmd!)
 1. "docker compose up --build", to build the thingy and launch it to docker
 2. "docker compose down", stops and removes it out of docker. DO THIS IF YOU WANT TO COMMIT CHANGES TO DOCKER
 3. logging stuff: "docker compose logs -f app", "docker compose logs -f db" (while docker running)
