@@ -58,9 +58,12 @@ function refreshDynamicUI() {
     const newDynamicContainer = document.createElement("div");
     newDynamicContainer.id = "dynamicUI";
 
-    // Show color picker only if drawing polygon (since color only applies to polygons)
     if (UIState.modeSelect === "polygon") {
-        const colorPicker = createColorPicker("color", "Color:");
+        const Types = ["none", ...getAllTypeIds()]; // Dynamically grabs all types
+
+        const objType = createDropdown("objtype", Types, "Type:");
+        newDynamicContainer.appendChild(objType);
+        const colorPicker = createColorPicker("color", "Default Color:");
         newDynamicContainer.appendChild(colorPicker);
     }
     if (UIState.modeSelect === "model") {

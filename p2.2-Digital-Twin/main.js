@@ -23,8 +23,12 @@ function subscribeToStateChangesSetup() {
         }
         drawingMode = newMode;
     });
+
     onUIStateChange('color', (newColor) => {
         stringColor = newColor;
+    });
+    onUIStateChange('objtype', (newObj) => {
+        objType = newObj;
     });
 
     onUIStateChange('modelselect', (newModel) => {
@@ -37,6 +41,7 @@ function subscribeToStateChangesSetup() {
 let modelToCreate = "man";
 let stringColor = "#ffffff";
 let drawingMode = "none";
+let objType = 'none'
 
 function laterSetup(){
     setupSetups();
@@ -79,11 +84,17 @@ function drawShape(positionData) {
         shape = viewer.entities.add({
             polygon: {
                 hierarchy: positionData,
-                material: new Cesium.ColorMaterialProperty(cesiumColor),
+                material: cesiumColor, // Temporary color
             },
+            properties: {
+                buildType: objType  // Set the type HERE first
+            }
         });
+
+        // NOW apply the dynamic material AFTER properties exist
+        shape.polygon.material = applyTypeInit(shape);
     }
-    return shape;
+ return shape;
 }
 
 let activeShapePoints = [];

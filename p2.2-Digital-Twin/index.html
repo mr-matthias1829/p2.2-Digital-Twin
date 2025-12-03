@@ -4,16 +4,19 @@
         <script src="ModelPreLoad.js"></script>
         <script src="ObjectEditor.js"></script>
         <script src="OllamaAnalyzer.js"></script>
+        
+        <script src="TypeData.js"></script>
 
+        <!-- This is the base setup, which will init some other scripts -->
         <script src="mainPreSetup.js"></script>
+
+        <!-- UI needs the object editor to be CREATED (not init) before it -->
         <script src="UI.js"></script>
 
-
-        <!-- Main should be defined last, as its the script that runs the whole thing and nothing should override it -->
+        <!-- Main shouldn't be overriden -->
         <script src="main.js"></script>
         <link href="Cesium-1.135/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
-        <!-- scripts below main that don't invoke window.onload or similair are fine -->
         <script src="polygonUtils.js"></script>
         <style>
             #polygonInfo {
