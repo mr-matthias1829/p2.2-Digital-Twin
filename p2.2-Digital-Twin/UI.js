@@ -68,49 +68,55 @@ function refreshDynamicUI() {
         newDynamicContainer.appendChild(modeDropdown);
     }
     if (UIState.modeSelect === "edit") {
-    const txt = document.createElement("div");
-    
-    // Enable \n formatting
-    txt.style.whiteSpace = "pre-line";
-    
-    // Make it a small box
-    txt.style.padding = "8px 10px";
-    txt.style.background = "rgba(0,0,0,0.55)";
-    txt.style.border = "1px solid rgba(255,255,255,0.2)";
-    txt.style.borderRadius = "6px";
-    
-    // Size constraints
-    txt.style.maxWidth = "260px";
-    txt.style.maxHeight = "160px";
-    txt.style.overflowY = "auto";
-    
-    // Smaller text
-    txt.style.fontSize = "12px";
-    txt.style.lineHeight = "1.3";
-    txt.style.color = "white";
+        // Don't show the general edit instructions when a protected polygon (e.g. Spoordok) is selected
+        const isProtectedSelected = (typeof Editor !== 'undefined' && Editor && Editor.editingEntity && typeof Editor.isProtectedEntity === 'function')
+            ? Editor.isProtectedEntity(Editor.editingEntity)
+            : false;
 
-    txt.textContent = "Double click on a object to start editing\n" +
-    "Press Esc or right-click to stop editing";
+        if (!isProtectedSelected) {
+            const txt = document.createElement("div");
 
+            // Enable \n formatting
+            txt.style.whiteSpace = "pre-line";
 
-    console.log('editingWhat:', Editor.editingWhat());
-    const what = Editor.editingWhat();
+            // Make it a small box
+            txt.style.padding = "8px 10px";
+            txt.style.background = "rgba(0,0,0,0.55)";
+            txt.style.border = "1px solid rgba(255,255,255,0.2)";
+            txt.style.borderRadius = "6px";
 
-    if (what === 'polygon' && Editor.editMode) {
-    txt.textContent += 
-        "\n\nEditing polygon:\n" +
-        "Drag the selected polygon to move it\n" +
-        "Drag the vertices to reshape the polygon\n" +
-        "Press R to rotate 90°; arrows rotate freely\n" +
-        "Press Delete to remove hovered vertex\n" +
-        "Double click an edge to add a vertex\n";
-    } else if (what === 'model' && Editor.editMode) {
-    txt.textContent += 
-        "\n\nEditing model:\n" +
-        "Drag the selected model to move it\n" +
-        "Press R to rotate 90°; arrows rotate freely\n";
-    }
-    newDynamicContainer.appendChild(txt);
+            // Size constraints
+            txt.style.maxWidth = "260px";
+            txt.style.maxHeight = "160px";
+            txt.style.overflowY = "auto";
+
+            // Smaller text
+            txt.style.fontSize = "12px";
+            txt.style.lineHeight = "1.3";
+            txt.style.color = "white";
+
+            txt.textContent = "Double click on a object to start editing\n" +
+                "Press Esc or right-click to stop editing";
+
+            const what = (Editor && typeof Editor.editingWhat === 'function') ? Editor.editingWhat() : null;
+
+            if (what === 'polygon' && Editor.editMode) {
+                txt.textContent += 
+                    "\n\nEditing polygon:\n" +
+                    "Drag the selected polygon to move it\n" +
+                    "Drag the vertices to reshape the polygon\n" +
+                    "Press R to rotate 90°; arrows rotate freely\n" +
+                    "Press Delete to remove hovered vertex\n" +
+                    "Double click an edge to add a vertex\n";
+            } else if (what === 'model' && Editor.editMode) {
+                txt.textContent += 
+                    "\n\nEditing model:\n" +
+                    "Drag the selected model to move it\n" +
+                    "Press R to rotate 90°; arrows rotate freely\n";
+            }
+
+            newDynamicContainer.appendChild(txt);
+        }
     }
 
     uiContainer.appendChild(newDynamicContainer);
