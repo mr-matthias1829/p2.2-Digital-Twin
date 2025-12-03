@@ -20,6 +20,18 @@ class ObjectEditor {
         this.setupKeyboardControls();
     }
 
+    // Helper: mark certain entities as protected (not editable/moveable)
+    isProtectedEntity(entity) {
+        if (!entity) return false;
+        try {
+            if (entity.properties && entity.properties.isSpoordok) return true;
+            if (typeof entity.name === 'string' && entity.name === 'Spoordok') return true;
+        } catch (e) {
+            // ignore
+        }
+        return false;
+    }
+
     closestPointOnSegment(segmentStart, segmentEnd, point) {
         const v = Cesium.Cartesian3.subtract(segmentEnd, segmentStart, new Cesium.Cartesian3());
         const w = Cesium.Cartesian3.subtract(point, segmentStart, new Cesium.Cartesian3());
@@ -233,19 +245,30 @@ class ObjectEditor {
         if (!entity.polygon) return console.log("No polygon found");
         if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
         if (this.editMode) this.stopEditingPolygon();
-        
+        // If this polygon is marked as protected (e.g., the Spoordok area),
+        // do NOT create vertices, do NOT apply yellow edit material,
+        // and only show the polygon info container.
+        if (this.isProtectedEntity(entity)) {
+            this.editMode = true;
+            this.editingEntity = entity;
+            this._emitEditModeChanged();
+            console.log("Protected polygon selected — showing info only (no edit).");
+            if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
+            return;
+        }
+
         this.editMode = true;
         this.editingEntity = entity;
         this._emitEditModeChanged();
         this.originalMaterial = entity.polygon.material;
         entity.polygon.material = Cesium.Color.YELLOW.withAlpha(0.5);
-        
+
         const positions = this.getPositions(entity.polygon.hierarchy);
         if (!positions.length) {
             console.error("No positions found!");
             return this.stopEditingPolygon();
         }
-        
+
         positions.forEach((position, index) => {
             this.vertexEntities.push(this.viewer.entities.add({
                 position: position,
@@ -362,6 +385,9 @@ class ObjectEditor {
         if (!this.editMode || this.vertexEntities.length <= 3) {
             return console.log("⚠ Cannot delete - minimum 3 vertices required");
         }
+        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
+            return console.log("Protected polygon - cannot delete vertex");
+        }
         const index = this.vertexEntities.indexOf(vertexEntity);
         if (index === -1) return;
         this.viewer.entities.remove(vertexEntity);
@@ -411,6 +437,11 @@ class ObjectEditor {
                 } else if (e.key === 'Delete' || e.key === 'Backspace') {
                     e.preventDefault();
                     // If hovering a vertex, delete the vertex. Otherwise offer to delete the whole polygon.
+                    // Protect certain polygons from deletion/modification
+                    if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
+                        console.log("Protected polygon - cannot delete or modify");
+                        return;
+                    }
                     if (this.hoveredVertex) {
                         this.deleteVertex(this.hoveredVertex);
                     } else if (this.editingEntity) {
@@ -469,7 +500,11 @@ class ObjectEditor {
 
     handleLeftDown(event) {
         if (!this.editMode) return;
-        
+        // If editing a protected polygon, disallow dragging/move actions
+        if (this.editingEntity && this.isProtectedEntity(this.editingEntity) && !this.editingModel) {
+            console.log("Protected polygon - editing not allowed (left down)");
+            return;
+        }
         // Handle model dragging
         if (this.editingModel) {
             const ray = this.viewer.camera.getPickRay(event.position);
@@ -542,6 +577,8 @@ class ObjectEditor {
                 this.updatePolygonFromVertices();
             }
         } else if (this.editMode && this.moveStart && !this.editingModel) {
+            // Prevent moving the protected polygon
+            if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) return;
             const ray = this.viewer.camera.getPickRay(event.endPosition);
             const currentPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
             if (Cesium.defined(currentPos)) {
@@ -555,12 +592,18 @@ class ObjectEditor {
             }
         } else if (this.editMode && !this.editingModel) {
             const picked = this.viewer.scene.pick(event.endPosition);
-            this.hoveredVertex = (Cesium.defined(picked) && picked.id?.properties?.isVertex) ? picked.id : null;
+            // If editing a protected polygon, don't set hovered vertices
+            if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
+                this.hoveredVertex = null;
+            } else {
+                this.hoveredVertex = (Cesium.defined(picked) && picked.id?.properties?.isVertex) ? picked.id : null;
+            }
         }
     }
 
     handleCtrlClick(event) {
         if (!this.editMode || this.editingModel) return false;
+        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) return false;
         const picked = this.viewer.scene.pick(event.position);
         if (Cesium.defined(picked) && picked.id?.properties?.isVertex) {
             const idx = picked.id.properties.vertexIndex;

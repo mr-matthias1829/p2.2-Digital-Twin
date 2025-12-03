@@ -44,6 +44,9 @@ function setup() {
             ]),
             material: Cesium.Color.LIGHTGRAY,
         },
+        properties: {
+            isSpoordok: true
+        },
     });
     
     createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
