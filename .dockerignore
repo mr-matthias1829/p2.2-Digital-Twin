@@ -1,0 +1,6 @@
+springboot/spoordok/target/
+*.log
+*.tmp
+.idea
+.vscode
+.git
