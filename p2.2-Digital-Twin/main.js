@@ -48,6 +48,9 @@ function laterSetup(){
     loadPolygonsFromServer();
 }
 
+// Base URL for the polygons API. Can be overridden by setting `window.POLYGONS_API_BASE` before this script runs.
+const POLYGONS_API_BASE = (window.POLYGONS_API_BASE && String(window.POLYGONS_API_BASE).replace(/\/$/, '')) || 'http://localhost:8081';
+
 
 function createPoint(worldPosition) {
     const point = viewer.entities.add({
@@ -356,7 +359,7 @@ function startConnectionPolling() {
 }
 
 async function checkPolygonsConnection(manualTrigger = false) {
-    const url = 'http://localhost:8080/api/polygons';
+    const url = POLYGONS_API_BASE + '/api/polygons';
     const timeoutMs = 4000;
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -413,11 +416,11 @@ window.checkPolygonsConnection = checkPolygonsConnection;
 window.serverPolygonEntities = new Map();
 
 async function loadPolygonsFromServer() {
-    const url = 'http://localhost:8080/api/polygons';
+    const url = POLYGONS_API_BASE + '/api/polygons';
     try {
         const resp = await fetch(url, { cache: 'no-store' });
         if (!resp.ok) {
-            console.warn('Failed to load polygons from server:', resp.status);
+            console.warn('Failed to load polygons from server:', resp.status, 'url=', url);
             return;
         }
         const polygons = await resp.json();
