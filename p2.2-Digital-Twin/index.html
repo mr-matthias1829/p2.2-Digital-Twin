@@ -1,18 +1,47 @@
 <html> <!-- index.html -->
     <head>
         <script src="Cesium-1.135/Build/Cesium/Cesium.js"></script>
-        <script src="UI.js"></script>
         <script src="ModelPreLoad.js"></script>
+        <script src="ObjectEditor.js"></script>
         <script src="OllamaAnalyzer.js"></script>
+
+        <script src="mainPreSetup.js"></script>
+        <script src="UI.js"></script>
+
 
         <!-- Main should be defined last, as its the script that runs the whole thing and nothing should override it -->
         <script src="main.js"></script>
         <link href="Cesium-1.135/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
         <!-- scripts below main that don't invoke window.onload or similair are fine -->
-        <script src="polygonEditor.js"></script>
+        <script src="polygonUtils.js"></script>
+        <style>
+            #polygonInfo {
+                position: fixed;
+                right: 16px;
+                bottom: 16px;
+                /* Wider panel for longer coordinate lists */
+                width: 420px;
+                min-width: 300px;
+                max-height: 60vh;
+                overflow: auto;
+                background: rgba(0, 0, 0, 0.85);
+                color: #e6e6e6;
+                padding: 12px 14px;
+                font-family: monospace;
+                /* Slightly larger font for readability */
+                font-size: 15px;
+                line-height: 1.4;
+                border-radius: 8px;
+                z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+                /* Hidden by default; shown when there is content */
+                display: none;
+            }
+        </style>
     </head>
     <body style="margin: 0px; padding: 0px;">
         <div id="cesiumContainer" style="margin: 0px; padding: 0px;"></div>
+        <div id="polygonInfo" aria-live="polite" title="Polygon informatie"></div>
     </body>
 </html>
