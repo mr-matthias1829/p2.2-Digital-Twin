@@ -4,7 +4,13 @@ const buildTypes = {
         id: "DEFAULT", // used if a type is requested but obj has no type (or fallback for non-existing property on a type)
                        // This type is filtered and not sent when prompted for all types
                        // NOTE: type 'none' IS A VALID TYPE NOT STATED IN THIS LIST AND IS NOT THIS TYPE!
-        color: Cesium.Color.WHITE,
+
+
+        color: Cesium.Color.WHITE, // Color of the polygon
+        cost: 0, // In euro, for each cubical meter
+        income: 0, // % of cost as financial income per unit
+        people: 0, // Amount of home owners or workers per unit
+        livability: 5, // Score for livability on a scale of 1 to 10
     },
     poly: {
         id: "poly", // The testing value for stuff, should be removed later
@@ -15,25 +21,76 @@ const buildTypes = {
         // cost: 0.04,
         // etc.
     },
-    house: {
-        id: "house",
-        color: Cesium.Color.PINK,
-    },
+
     nature: {
         id: "nature",
         color: Cesium.Color.GREEN,
+        cost: 150,
+        income: 0,
+        livability: 10,
     },
-    water: {
+        water: {
         id: "water",
-        color: Cesium.Color.BLUE,
+        color: Cesium.Color.fromCssColorString("#1E88E5"), // Bright blue (different from commercial)
+        cost: 300,
+        income: 0,
+        livability: 7,
     },
     road: {
         id: "road",
         color: Cesium.Color.DARKGRAY,
+        cost: 100,
+        income: 5,
+        livability: 8,
+    },
+    parking: {
+        id: "parking space",
+        color: Cesium.Color.fromCssColorString("#78909C"), // Blue gray
+        cost: 100,
+        income: 10,
+        livability: 6,
+    },
+    coveredparking: {
+        id: "covered parking space",
+        color: Cesium.Color.fromCssColorString("#8D6E63"), // Brown
+        cost: 1500,
+        income: 15,
+        livability: 10,
+    },
+
+    detachedhouse: {
+        id: "detached house",
+        color: Cesium.Color.fromCssColorString("#E53935"), // Red
+        cost: 500,
+        income: 12,
+        people: 0.005,
+        livability: 4,
+    },
+    townhouse: {
+        id: "townhouse",
+        color: Cesium.Color.fromCssColorString("#FB8C00"), // Deep orange
+        cost: 400,
+        income: 8,
+        people: 0.01,
+        livability: 6,
+    },
+    apartment: {
+        id: "apartment",
+        color: Cesium.Color.fromCssColorString("#8E24AA"), // Purple
+        cost: 300,
+        income: 12,
+        people: 0.006,
+        livability: 5,
+    },
+    commercialbuilding: {
+        id: "commercial building",
+        color: Cesium.Color.fromCssColorString("#039BE5"), // Light blue
+        cost: 200,
+        income: 15,
+        people: 0.018,
+        livability: 2,
     },
     // Add more types here easily!
-
-    //TODO: maybe add default values if a type doesnt have the value defined?
 };
 
 // Helper function to get all existing type IDs
