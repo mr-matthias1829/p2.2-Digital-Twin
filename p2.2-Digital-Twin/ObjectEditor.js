@@ -118,41 +118,43 @@ class ObjectEditor {
 
     // Start editing a model
     startEditingModel(model) {
-        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
-        if (this.editMode) this.stopEditingPolygon();
-        
-        this.editMode = true;
-        this.editingModel = model;
-        this._emitEditModeChanged();
-        
-        // Extract and store current transformation properties
-        const position = new Cesium.Cartesian3();
-        Cesium.Matrix4.getTranslation(model.modelMatrix, position);
-        
-        this.modelScale = new Cesium.Cartesian3();
-        Cesium.Matrix4.getScale(model.modelMatrix, this.modelScale);
-        
-        // Try to extract current rotation or start at 0
-        this.modelRotation = model.modelRotation || 0;
-        
-        this.moveStart = null;
-        
-        // Store original model appearance
-        this.originalModelColor = model.color ? Cesium.Color.clone(model.color) : null;
-        this.originalModelSilhouette = model.silhouetteColor ? Cesium.Color.clone(model.silhouetteColor) : null;
-        this.originalModelSilhouetteSize = model.silhouetteSize || 0;
-        
-        // Apply yellow transparent color for editing
-        model.color = Cesium.Color.YELLOW.withAlpha(0.6);
-        model.silhouetteColor = Cesium.Color.YELLOW;
-        model.silhouetteSize = 3.0;
-        
-        console.log("🎯 MODEL EDIT MODE");
-        console.log("  • Drag to move");
-        console.log("  • Arrow Left/Right to rotate (±15°)");
-        console.log("  • R key to rotate 90°");
-        console.log("  • Right-click or ESC to finish");
-    }
+    if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
+    if (this.editMode) this.stopEditingPolygon();
+    
+    this.editMode = true;
+    this.editingModel = model;
+    this._emitEditModeChanged();
+    
+    // Extract and store current transformation properties
+    const position = new Cesium.Cartesian3();
+    Cesium.Matrix4.getTranslation(model.modelMatrix, position);
+    
+    this.modelScale = new Cesium.Cartesian3();
+    Cesium.Matrix4.getScale(model.modelMatrix, this.modelScale);
+    
+    // Try to extract current rotation or start at 0
+    this.modelRotation = model.modelRotation || 0;
+    
+    this.moveStart = null;
+    
+    // Store original model appearance
+    this.originalModelColor = model.color ? Cesium.Color.clone(model.color) : null;
+    this.originalModelSilhouette = model.silhouetteColor ? Cesium.Color.clone(model.silhouetteColor) : null;
+    this.originalModelSilhouetteSize = model.silhouetteSize || 0;
+    
+    // Apply yellow transparent color for editing
+    model.color = Cesium.Color.YELLOW.withAlpha(0.6);
+    model.silhouetteColor = Cesium.Color.YELLOW;
+    model.silhouetteSize = 3.0;
+    
+    console.log("🎯 MODEL EDIT MODE");
+    console.log("  • Drag to move");
+    console.log("  • Arrow Left/Right to rotate (±15°)");
+    console.log("  • Arrow Up/Down to scale (±10%)");
+    console.log("  • R key to rotate 90°");
+    console.log("  • Right-click or ESC to finish");
+    console.log(`  • Current scale: ${this.modelScale.x.toFixed(2)}`);
+}
 
     stopEditingPolygon() {
         if (!this.editMode) return;
@@ -400,28 +402,40 @@ class ObjectEditor {
     setupKeyboardControls() {
         document.addEventListener('keydown', (e) => {
             if (this.editMode) {
-                // Handle model rotation
-                if (this.editingModel) {
-                    if (e.key === 'ArrowLeft') {
-                        e.preventDefault();
-                        this.rotateModel(-3);
-                    } else if (e.key === 'ArrowRight') {
-                        e.preventDefault();
-                        this.rotateModel(3);
-                    } else if (e.key === 'r' || e.key === 'R') {
-                        e.preventDefault();
-                        this.rotateModel(90);
-                    } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        this.stopEditingPolygon();
-                    }
-                    return;
+                            // Handle model scaling and rotation
+            if (this.editingModel) {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    // Scale up
+                    const currentScale = this.modelScale ? this.modelScale.x : 1.0;
+                    const newScale = Math.max(0.1, currentScale + 0.1); // 10% increase
+                    this.scaleModel(newScale);
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    // Scale down
+                    const currentScale = this.modelScale ? this.modelScale.x : 1.0;
+                    const newScale = Math.max(0.1, currentScale - 0.1); // 10% decrease, min 0.1
+                    this.scaleModel(newScale);
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    this.rotateModel(-3);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    this.rotateModel(3);
+                } else if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    this.rotateModel(90);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.stopEditingPolygon();
                 }
-                
-                // Handle polygon editing
-                if (this.editingEntity) {
-                    const h = this.editingEntity.polygon.extrudedHeight || 0;
-                    // Scaling height
+                return;
+            }
+            
+            // Handle polygon editing (existing code remains unchanged)
+            if (this.editingEntity) {
+                const h = this.editingEntity.polygon.extrudedHeight || 0;
+                // Scaling height
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     // Prevent changing height for protected polygons
@@ -507,6 +521,36 @@ class ObjectEditor {
             }
         }});
     }
+
+    scaleModel(scale) {
+    if (!this.editingModel) return;
+    
+    // Update stored scale
+    this.modelScale = new Cesium.Cartesian3(scale, scale, scale);
+    
+    // Extract current position
+    const position = new Cesium.Cartesian3();
+    Cesium.Matrix4.getTranslation(this.editingModel.modelMatrix, position);
+    
+    // Create orientation with current rotation
+    const heading = Cesium.Math.toRadians(this.modelRotation);
+    const hpr = new Cesium.HeadingPitchRoll(heading, 0, 0);
+    const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+    
+    // Update model matrix with new scale (keeping position and rotation)
+    this.editingModel.modelMatrix = Cesium.Matrix4.fromTranslationQuaternionRotationScale(
+        position,
+        orientation,
+        this.modelScale
+    );
+    
+    // Also update the model's scale property if it exists
+    if (this.editingModel.isEditableModel) {
+        this.editingModel.modelScale = scale;
+    }
+    
+    console.log(`↔ Model scaled to ${scale.toFixed(2)}`);
+}
 
     handleLeftDown(event) {
         if (!this.editMode) return;
@@ -677,6 +721,32 @@ class ObjectEditor {
         object: this.editingModel || this.editingEntity || null,
         timestamp: Date.now()
     };
+
+    // Add polygon type and type change callback if editing a polygon
+    if (this.editingEntity && this.editingEntity.polygon) {
+        // Get current type
+        let currentType = "DEFAULT";
+        if (this.editingEntity.properties && this.editingEntity.properties.buildType) {
+            const buildTypeProp = this.editingEntity.properties.buildType;
+            currentType = (typeof buildTypeProp.getValue === 'function') 
+                ? buildTypeProp.getValue() 
+                : buildTypeProp;
+        }
+        detail.polygonType = currentType;
+        
+        // Add callback to change type
+        detail.setPolygonType = (newType) => {
+            if (this.editingEntity && this.editingEntity.properties) {
+                this.editingEntity.properties.buildType = newType;
+                console.log(`✓ Polygon type changed to: ${newType}`);
+                
+                // Refresh UI if available
+                if (window.showPolygonInfo) {
+                    try { window.showPolygonInfo(this.editingEntity); } catch (e) { /* ignore */ }
+                }
+            }
+        };
+    }
 
     // Dispatch DOM event
     try {

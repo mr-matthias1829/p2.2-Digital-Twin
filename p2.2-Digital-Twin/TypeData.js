@@ -1,5 +1,11 @@
 // Define all types with their properties
 const buildTypes = {
+    DEFAULT: {
+        id: "DEFAULT", // used if a type is requested but obj has no type (or fallback for non-existing property on a type)
+                       // This type is filtered and not sent when prompted for all types
+                       // NOTE: type 'none' IS A VALID TYPE NOT STATED IN THIS LIST AND IS NOT THIS TYPE!
+        color: Cesium.Color.WHITE,
+    },
     poly: {
         id: "poly", // The testing value for stuff, should be removed later
         color: Cesium.Color.GRAY,
@@ -27,20 +33,12 @@ const buildTypes = {
     },
     // Add more types here easily!
 
-    //TODO: maybe add a default type, or default values if a type doesnt have the value defined?
+    //TODO: maybe add default values if a type doesnt have the value defined?
 };
-
-// Helper function to get a type's property
-function getTypeProperty(typeId, propertyName) {
-    if (buildTypes[typeId] && buildTypes[typeId][propertyName] !== undefined) {
-        return buildTypes[typeId][propertyName];
-    }
-    return null;
-}
 
 // Helper function to get all existing type IDs
 function getAllTypeIds() {
-    return Object.keys(buildTypes);
+    return Object.keys(buildTypes).filter(key => key.toUpperCase() !== "DEFAULT");
 }
 
 // Helper function to add a new type dynamically
@@ -51,7 +49,8 @@ function addBuildType(id, properties) {
     };
 }
 
-function applyTypeInit(obj) {
+// Apply type initialization for POLYGONS
+function applyTypeInitPolygon(obj) {
     // Capture the initial color when the function is called
     let initialColor = Cesium.Color.WHITE; // fallback
     
@@ -77,7 +76,7 @@ function applyTypeInit(obj) {
     
     return new Cesium.ColorMaterialProperty(
         new Cesium.CallbackProperty(() => {
-            let type = "poly"; // default
+            let type = "DEFAULT"; // default
             
             if (obj.properties && obj.properties.buildType) {
                 const buildTypeProp = obj.properties.buildType;
@@ -93,8 +92,100 @@ function applyTypeInit(obj) {
     );
 }
 
+// Apply type initialization for MODELS
+function applyTypeInitModel(obj) {
+    // Capture initial values
+    let initialColor = Cesium.Color.WHITE;
+    let initialUri = null;
+    let initialScale = 1.0;
+    
+    // Try to get existing model properties
+    if (obj.model) {
+        if (obj.model.color) {
+            const col = obj.model.color;
+            if (col instanceof Cesium.Color) {
+                initialColor = col.clone();
+            } else if (typeof col.getValue === 'function') {
+                initialColor = col.getValue(Cesium.JulianDate.now()).clone();
+            }
+        }
+        if (obj.model.uri && typeof obj.model.uri.getValue === 'function') {
+            initialUri = obj.model.uri.getValue(Cesium.JulianDate.now());
+        }
+        if (obj.model.scale && typeof obj.model.scale === 'number') {
+            initialScale = obj.model.scale;
+        }
+    }
+}
+
+// Unified function to apply type initialization to any entity
+function applyTypeToEntity(entity) {
+    if (entity.polygon) {
+        entity.polygon.material = applyTypeInit(entity);
+    }
+    
+    if (entity.model) {
+        const modelProps = applyTypeInitModel(entity);
+        entity.model.uri = modelProps.uri;
+        entity.model.color = modelProps.color;
+        entity.model.scale = modelProps.scale;
+    }
+}
+
+// Function to fetch a property of a type
+// Handy because a type might not have a certain value defined, after which it will fallback to the default type
+function getTypeProperty(typeId, propertyName) {
+    const type = buildTypes[typeId];
+
+    // Case 1: Type exists AND property exists
+    if (type && type[propertyName] !== undefined) {
+        return type[propertyName];
+    }
+
+    // Case 1.5: Type is none, fall back to default automatically
+    if (typeId === "none") {
+        const fallback = buildTypes.DEFAULT[propertyName];
+        if (fallback !== undefined) {
+        return fallback;
+        }
+    }
+
+    // Case 2: Type exists but the property is missing
+    if (type) {
+        const fallback = buildTypes.DEFAULT[propertyName];
+        if (fallback !== undefined) {
+            console.warn(
+                `Type "${typeId}" is missing property "${propertyName}". Using DEFAULT fallback.`
+            );
+            return fallback;
+        }
+
+        console.warn(
+            `Type "${typeId}" is missing property "${propertyName}", and DEFAULT also doesn't define it. Returning null.`
+        );
+        return null;
+    }
+
+    // Case 3: Type does NOT exist at all
+    const fallback = buildTypes.DEFAULT[propertyName];
+    if (fallback !== undefined) {
+        console.warn(
+            `Type "${typeId}" does not exist! Using DEFAULT fallback for property "${propertyName}".`
+        );
+        return fallback;
+    }
+
+    console.warn(
+        `Type "${typeId}" does not exist AND DEFAULT does not define property "${propertyName}". Returning null.`
+    );
+    return null;
+}
+
 // Expose helper functions globally if needed
 window.buildTypes = buildTypes;
 window.getTypeProperty = getTypeProperty;
 window.getAllTypeIds = getAllTypeIds;
 window.addBuildType = addBuildType;
+window.applyTypeInit = applyTypeInitPolygon;
+window.applyTypeInitModel = applyTypeInitModel;
+window.applyTypeToEntity = applyTypeToEntity;

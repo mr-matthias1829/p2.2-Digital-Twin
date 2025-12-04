@@ -63,68 +63,18 @@ function refreshDynamicUI() {
 
         const objType = createDropdown("objtype", Types, "Type:");
         newDynamicContainer.appendChild(objType);
-        const colorPicker = createColorPicker("color", "Default Color:");
-        newDynamicContainer.appendChild(colorPicker);
     }
     if (UIState.modeSelect === "model") {
-        const modeDropdown = createDropdown("modelselect", ["Man", "building"], "Model:");
+        const modeDropdown = createDropdown("modelselect", getAllModelIDs(), "Model:");
         newDynamicContainer.appendChild(modeDropdown);
     }
-    if (UIState.modeSelect === "edit") {
-        // Don't show the general edit instructions when a protected polygon (e.g. Spoordok) is selected
-        const isProtectedSelected = (typeof Editor !== 'undefined' && Editor && Editor.editingEntity && typeof Editor.isProtectedEntity === 'function')
-            ? Editor.isProtectedEntity(Editor.editingEntity)
-            : false;
 
-        if (!isProtectedSelected) {
-            const txt = document.createElement("div");
-
-            // Enable \n formatting
-            txt.style.whiteSpace = "pre-line";
-
-            // Make it a small box
-            txt.style.padding = "8px 10px";
-            txt.style.background = "rgba(0,0,0,0.55)";
-            txt.style.border = "1px solid rgba(255,255,255,0.2)";
-            txt.style.borderRadius = "6px";
-
-            // Size constraints
-            txt.style.maxWidth = "260px";
-            txt.style.maxHeight = "160px";
-            txt.style.overflowY = "auto";
-
-            // Smaller text
-            txt.style.fontSize = "12px";
-            txt.style.lineHeight = "1.3";
-            txt.style.color = "white";
-
-            txt.textContent = "Double click on a object to start editing\n" +
-                "Press Esc or right-click to stop editing";
-
-            const what = (Editor && typeof Editor.editingWhat === 'function') ? Editor.editingWhat() : null;
-
-            if (what === 'polygon' && Editor.editMode) {
-                txt.textContent += 
-                    "\n\nEditing polygon:\n" +
-                    "Drag the selected polygon to move it\n" +
-                    "Drag the vertices to reshape the polygon\n" +
-                    "Press R to rotate 90°; arrows rotate freely\n" +
-                    "Press Delete to remove hovered vertex\n" +
-                    "Double click an edge to add a vertex\n";
-            } else if (what === 'model' && Editor.editMode) {
-                txt.textContent += 
-                    "\n\nEditing model:\n" +
-                    "Drag the selected model to move it\n" +
-                    "Press R to rotate 90°; arrows rotate freely\n";
-            }
-
-            newDynamicContainer.appendChild(txt);
-        }
-    }
+    
+    // Editor tab of the dynamic ui got a bit big...
+    editorDynamicContainerContent(newDynamicContainer);
 
     uiContainer.appendChild(newDynamicContainer);
 }
-
 
 
 // Below are methods that make individual UI components easy
@@ -160,34 +110,6 @@ function createDropdown(id, options, labeltxt) {
 
     container.appendChild(dropLabel);
     container.appendChild(select);
-    return container;
-}
-
-function createColorPicker(id, labeltxt) {
-    const container = document.createElement("div");
-    container.style.marginBottom = "5px";
-
-    const colorLabel = document.createElement("label");
-    colorLabel.textContent = labeltxt;
-    colorLabel.htmlFor = id;
-    colorLabel.style.marginRight = "5px";
-
-    const input = document.createElement("input");
-    input.type = "color";
-    input.id = id;
-    input.value = "#ffffff";
-
-    input.addEventListener("input", () => {
-        UIState[id] = input.value;
-        console.log("UIState updated:", UIState);
-
-        if (stateChangeListeners[id]) {
-            stateChangeListeners[id].forEach(callback => callback(input.value));
-        }
-    });
-
-    container.appendChild(colorLabel);
-    container.appendChild(input);
     return container;
 }
 
@@ -262,4 +184,73 @@ function createConnectionUI() {
     conn.appendChild(statusInfo);
 
     document.body.appendChild(conn);
+}
+
+function editorDynamicContainerContent(Con){
+     const what = Editor.editingWhat();
+
+    // ONLY show the polygon dropdown while EDITING a polygon
+    if (what === "polygon" && Editor.editMode) {
+        const Types = ["none", ...getAllTypeIds()]; // dynamically grab all types
+        const objType = createDropdown("objtype", Types, "Type:");
+
+        // Preselect the current polygon type
+        let currentType = "DEFAULT";
+        if (Editor.editingEntity && Editor.editingEntity.properties?.buildType) {
+            const bt = Editor.editingEntity.properties.buildType;
+            currentType = typeof bt.getValue === "function" ? bt.getValue() : bt;
+        }
+        objType.querySelector("select").value = currentType;
+
+        // Update polygon type when user changes dropdown
+        objType.querySelector("select").onchange = (e) => {
+            const newType = e.target.value;
+            if (Editor.editingEntity && Editor.editingEntity.properties) {
+                Editor.editingEntity.properties.buildType = newType;
+                console.log(`✓ Polygon type changed to: ${newType}`);
+                
+                // Optional: refresh info panel
+                if (window.showPolygonInfo) {
+                    try { window.showPolygonInfo(Editor.editingEntity); } catch {}
+                }
+            }
+        };
+
+        Con.appendChild(objType);
+    }
+
+    // Keep the existing info text box for EDIT mode
+    if (UIState.modeSelect === "edit") {
+        const txt = document.createElement("div");
+        txt.style.whiteSpace = "pre-line";
+        txt.style.padding = "8px 10px";
+        txt.style.background = "rgba(0,0,0,0.55)";
+        txt.style.border = "1px solid rgba(255,255,255,0.2)";
+        txt.style.borderRadius = "6px";
+        txt.style.maxWidth = "260px";
+        txt.style.maxHeight = "160px";
+        txt.style.overflowY = "auto";
+        txt.style.fontSize = "12px";
+        txt.style.lineHeight = "1.3";
+        txt.style.color = "white";
+
+        txt.textContent = "Double click on an object to start editing\nPress Esc or right-click to stop editing";
+
+        if (what === 'polygon') {
+            txt.textContent += 
+                "\n\nEditing polygon:\n" +
+                "Drag the selected polygon to move it\n" +
+                "Drag the vertices to reshape the polygon\n" +
+                "Press R to rotate 90°; arrows rotate freely\n" +
+                "Press Delete to remove hovered vertex\n" +
+                "Double click an edge to add a vertex\n";
+        } else if (what === 'model') {
+            txt.textContent += 
+                "\n\nEditing model:\n" +
+                "Drag the selected model to move it\n" +
+                "Press R to rotate 90°; arrows rotate freely\n";
+        }
+
+        Con.appendChild(txt);
+    }
 }

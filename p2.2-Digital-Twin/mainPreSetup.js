@@ -10,7 +10,8 @@ function setup() {
     Cesium.Camera.DEFAULT_VIEW_RECTANGLE = rectangle;
 
     const osm = new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://tile.openstreetmap.org/'
+        url: 'https://tile.openstreetmap.org/',
+        maximumLevel: 19,
     });
 
     viewer = new Cesium.Viewer("cesiumContainer", {
@@ -48,8 +49,6 @@ function setup() {
             isSpoordok: true
         },
     });
-    
-    createModel("Cesium_Man.glb", latlonFromXY(220, 70), 0);
 
     setupInputActions();
 

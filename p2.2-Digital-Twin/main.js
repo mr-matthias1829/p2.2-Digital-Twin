@@ -15,18 +15,20 @@ function setupSetups() {
 
 function subscribeToStateChangesSetup() {
     onUIStateChange('modeSelect', (newMode) => {
+        // Cut off drawing the shape to prevent issues
         if (drawingMode !== "none" && activeShapePoints.length > 0){
             terminateShape();
         }
+        // Cut off editing the obj to prevent issues
         if (drawingMode == "edit" && newMode != "edit") {
            Editor.stopEditingPolygon();
         }
         drawingMode = newMode;
+
+        modelToCreate = modelToCreateDEFAULT;
+        objType = objTypeDEFAULT;
     });
 
-    onUIStateChange('color', (newColor) => {
-        stringColor = newColor;
-    });
     onUIStateChange('objtype', (newObj) => {
         objType = newObj;
     });
@@ -36,12 +38,13 @@ function subscribeToStateChangesSetup() {
     });
 }
 
+const modelToCreateDEFAULT = getAllModelIDs()[0];
+const objTypeDEFAULT = 'none';
 
 // Make sure these are the same defaults as in UI.js to prevent offsets with UI!
-let modelToCreate = "man";
-let stringColor = "#ffffff";
+let modelToCreate = modelToCreateDEFAULT;
 let drawingMode = "none";
-let objType = 'none'
+let objType = objTypeDEFAULT;
 
 function laterSetup(){
     setupSetups();
@@ -80,11 +83,10 @@ function drawShape(positionData) {
             },
         });
     } else if (drawingMode === "polygon") {
-        let cesiumColor = Cesium.Color.fromCssColorString(stringColor);
         shape = viewer.entities.add({
             polygon: {
                 hierarchy: positionData,
-                material: cesiumColor, // Temporary color
+                material: Cesium.Color.WHITE, // Temporary color
             },
             properties: {
                 buildType: objType  // Set the type HERE first
@@ -92,7 +94,7 @@ function drawShape(positionData) {
         });
 
         // NOW apply the dynamic material AFTER properties exist
-        shape.polygon.material = applyTypeInit(shape);
+        shape.polygon.material = applyTypeInitPolygon(shape);
     }
  return shape;
 }
@@ -151,6 +153,8 @@ function setupInputActions() {
                 const lat = Cesium.Math.toDegrees(cartographic.latitude);
 
                // createModel("Cesium_Man.glb", { lon, lat }, 0);
+
+               // NOTE: type is automatically applied inside spawnModel already! refer to ModelPreLoad.js
                 spawnModel(modelToCreate,{ lon, lat }, 0 )
             }
             
