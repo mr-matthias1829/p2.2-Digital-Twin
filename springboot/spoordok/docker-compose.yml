@@ -9,8 +9,8 @@ services:
       MYSQL_DATABASE: mydb
       MYSQL_USER: appuser
       MYSQL_PASSWORD: apppassword
-    #ports:
-    # - "3306:3306"           # optional: expose DB to host for GUI tools
+    ports:
+     - "3307:3306"           # optional: expose DB to host for GUI tools
     volumes:
       - dbdata:/var/lib/mysql
     healthcheck:
