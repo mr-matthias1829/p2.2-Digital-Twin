@@ -1,0 +1,8 @@
+target/
+*.log
+*.iml
+.idea/
+.git/
+**/bin
+**/obj
+**/node_modules
