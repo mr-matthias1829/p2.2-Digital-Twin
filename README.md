@@ -27,4 +27,6 @@ notes:
 upating docker:
 
 1. be on latest commit on main (duh)
-2. docker-compose down; docker-compose up --build -d
+2. filepath\p2.2-Digital-Twin\springboot\spoordok"; docker-compose down; docker-compose up --build -d
+
+example (Djustin) cd "c:\Digital twin\p2.2-Digital-Twin\springboot\spoordok"; docker-compose down; docker-compose up --build -d
