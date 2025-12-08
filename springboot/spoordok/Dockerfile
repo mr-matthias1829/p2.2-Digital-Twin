@@ -4,6 +4,11 @@ WORKDIR /app
 
 # copy only pom first (speeds up rebuilds when only source changes)
 COPY pom.xml .
+
+# download dependencies SEPARATELY (huge cache win!)
+RUN mvn dependency:go-offline -B
+
+# now copy source
 COPY src ./src
 
 # build the fat jar (skip tests for faster build; remove -DskipTests to run tests)

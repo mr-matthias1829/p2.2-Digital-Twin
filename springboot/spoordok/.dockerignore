@@ -1,8 +1,35 @@
+# Build artifacts
 target/
+*.jar
+*.war
+*.ear
+
+# IDE
 *.log
 *.iml
 .idea/
+.vscode/
+.settings/
+.classpath
+.project
+
+# SCM
 .git/
-**/bin
-**/obj
-**/node_modules
+.gitignore
+.gitattributes
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+README.md
+*.md
+bin/
+obj/
+node_modules/
