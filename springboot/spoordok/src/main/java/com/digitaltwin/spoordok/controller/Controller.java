@@ -1,7 +1,12 @@
 package com.digitaltwin.spoordok.controller;
 
+import com.digitaltwin.spoordok.dto.CalculationRequest;
+import com.digitaltwin.spoordok.dto.CalculationResponse;
+import com.digitaltwin.spoordok.dto.OccupationRequest;
+import com.digitaltwin.spoordok.dto.OccupationResponse;
 import com.digitaltwin.spoordok.model.Model;
 import com.digitaltwin.spoordok.model.Polygon;
+import com.digitaltwin.spoordok.service.CalculationService;
 import com.digitaltwin.spoordok.service.ModelService;
 import com.digitaltwin.spoordok.service.PolygonService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +28,9 @@ public class Controller {
 
     @Autowired
     private ModelService modelService;
+
+    @Autowired
+    private CalculationService calculationService;
 
     // GET ALL polygons AND models in one response
     @GetMapping
@@ -105,5 +113,22 @@ public class Controller {
     public ResponseEntity<Void> deleteAllModels() {
         modelService.deleteAllModels();
         return ResponseEntity.noContent().build();
+    }
+
+
+
+
+    // POST calculate area and volume
+    @PostMapping("/calculate")
+    public ResponseEntity<CalculationResponse> calculateAreaAndVolume(@RequestBody CalculationRequest request) {
+        CalculationResponse response = calculationService.calculateAreaAndVolume(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // POST calculate occupation percentage
+    @PostMapping("/occupation")
+    public ResponseEntity<OccupationResponse> calculateOccupation(@RequestBody OccupationRequest request) {
+        OccupationResponse response = calculationService.calculateOccupation(request);
+        return ResponseEntity.ok(response);
     }
 }

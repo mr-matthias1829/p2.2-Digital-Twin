@@ -480,7 +480,7 @@ async function updateOccupationStats() {
         });
 
         // Call backend API
-        const url = POLYGONS_API_BASE + '/api/polygons/occupation';
+        const url = 'http://localhost:8081/api/data/occupation';
         const response = await fetch(url, {
             method: 'POST',
             headers: {
