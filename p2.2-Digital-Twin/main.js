@@ -88,6 +88,7 @@ function drawShape(positionData) {
             polygon: {
                 hierarchy: positionData,
                 material: Cesium.Color.WHITE, // Temporary color
+                extrudedHeight: 0.0, // Set default height to avoid rendering issues
             },
             properties: {
                 buildType: getTypeById(objType)  // Set the type HERE first
