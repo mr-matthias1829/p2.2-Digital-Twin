@@ -92,9 +92,16 @@ const buildTypes = {
     // Add more types here easily!
 };
 
+// Helper function to get all existing type (no id)
+function getAllType() {
+    return Object.keys(buildTypes).filter(key => key.toUpperCase() !== "DEFAULT");
+}
+
 // Helper function to get all existing type IDs (exlcuding default)
 function getAllTypeIds() {
-    return Object.keys(buildTypes).filter(key => key.toUpperCase() !== "DEFAULT");
+    return Object.values(buildTypes)
+        .filter(type => type.id.toUpperCase() !== "DEFAULT")
+        .map(type => type.id);
 }
 
 // Helper function to add a new type dynamically
@@ -281,6 +288,20 @@ function applyTypeToEntity(entity) {
     if (entity.model) {
         applyTypeInitModel(entity);
     }
+}
+
+// Function to get the object key for a build type by its id
+function getTypeById(searchId) {
+    if (!searchId) return null;
+
+    for (const [key, type] of Object.entries(buildTypes)) {
+        if (type.id === searchId) {
+            return key; // Return the object key as a string
+        }
+    }
+
+    console.warn(`No build type found with id "${searchId}"`);
+    return null;
 }
 
 // Expose helper functions globally if needed

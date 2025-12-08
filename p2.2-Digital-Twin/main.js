@@ -90,7 +90,7 @@ function drawShape(positionData) {
                 material: Cesium.Color.WHITE, // Temporary color
             },
             properties: {
-                buildType: objType  // Set the type HERE first
+                buildType: getTypeById(objType)  // Set the type HERE first
             }
         });
         applyTypeInitPolygon(shape);

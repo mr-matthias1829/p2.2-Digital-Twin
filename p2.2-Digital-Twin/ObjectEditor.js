@@ -552,7 +552,7 @@ class ObjectEditor {
         if (this.editingEntity?.polygon) {
             detail.polygonType = getEntityType(this.editingEntity);
             detail.setPolygonType = (newType) => {
-                setEntityType(this.editingEntity, newType);
+                setEntityType(this.editingEntity, getTypeById(newType));
                 if (window.showPolygonInfo) {
                     try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
                 }
@@ -563,7 +563,7 @@ class ObjectEditor {
         if (this.editingModel) {
             detail.modelType = this.editingModel.buildType || "DEFAULT";
             detail.setModelType = (newType) => {
-                updateModelType(this.editingModel, newType);
+                updateModelType(this.editingModel, getTypeById(newType));
             };
         }
 

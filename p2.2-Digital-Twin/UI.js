@@ -187,31 +187,75 @@ function createConnectionUI() {
 }
 
 function editorDynamicContainerContent(Con){
-     const what = Editor.editingWhat();
+    const what = Editor.editingWhat();
 
     // ONLY show the polygon dropdown while EDITING a polygon
     if (what === "polygon" && Editor.editMode) {
-        const Types = ["none", ...getAllTypeIds()]; // dynamically grab all types
+        const Types = ["none", ...getAllTypeIds()]; // dynamically grab all type IDs
         const objType = createDropdown("objtype", Types, "Type:");
 
         // Preselect the current polygon type
-        let currentType = "DEFAULT";
+        let currentTypeKey = "DEFAULT";
         if (Editor.editingEntity && Editor.editingEntity.properties?.buildType) {
             const bt = Editor.editingEntity.properties.buildType;
-            currentType = typeof bt.getValue === "function" ? bt.getValue() : bt;
+            currentTypeKey = typeof bt.getValue === "function" ? bt.getValue() : bt;
         }
-        objType.querySelector("select").value = currentType;
+        
+        // Convert key to ID for display
+        const currentTypeId = buildTypes[currentTypeKey]?.id || "none";
+        objType.querySelector("select").value = currentTypeId;
 
         // Update polygon type when user changes dropdown
         objType.querySelector("select").onchange = (e) => {
-            const newType = e.target.value;
-            if (Editor.editingEntity && Editor.editingEntity.properties) {
-                Editor.editingEntity.properties.buildType = newType;
-                console.log(`✓ Polygon type changed to: ${newType}`);
+            const newTypeId = e.target.value;
+            // Convert ID back to key
+            const newTypeKey = getTypeById(newTypeId);
+            
+            if (Editor.editingEntity && Editor.editingEntity.properties && newTypeKey) {
+                Editor.editingEntity.properties.buildType = newTypeKey;
+                console.log(`✓ Polygon type changed to: ${newTypeId} (key: ${newTypeKey})`);
+                
+                // Force visual update
+                applyTypeToEntity(Editor.editingEntity);
                 
                 // Optional: refresh info panel
                 if (window.showPolygonInfo) {
                     try { window.showPolygonInfo(Editor.editingEntity); } catch {}
+                }
+            }
+        };
+
+        Con.appendChild(objType);
+    }
+
+    // ONLY show the model dropdown while EDITING a model
+    if (what === "model" && Editor.editMode) {
+        const Types = ["none", ...getAllTypeIds()]; // dynamically grab all type IDs
+        const objType = createDropdown("objtype", Types, "Type:");
+
+        // Preselect the current model type
+        let currentTypeKey = "DEFAULT";
+        if (Editor.editingModel && Editor.editingModel.buildType) {
+            currentTypeKey = Editor.editingModel.buildType;
+        }
+        
+        // Convert key to ID for display
+        const currentTypeId = buildTypes[currentTypeKey]?.id || "none";
+        objType.querySelector("select").value = currentTypeId;
+
+        // Update model type when user changes dropdown
+        objType.querySelector("select").onchange = (e) => {
+            const newTypeId = e.target.value;
+            // Convert ID back to key
+            const newTypeKey = getTypeById(newTypeId);
+            
+            if (Editor.editingModel && newTypeKey) {
+                Editor.editingModel.buildType = newTypeKey;
+                console.log(`✓ Model type changed to: ${newTypeId} (key: ${newTypeKey})`);
+                
+                // Force visual update if you have a function for it
+                if (typeof updateModelType === 'function') {
+                    updateModelType(Editor.editingModel, newTypeKey);
                 }
             }
         };
