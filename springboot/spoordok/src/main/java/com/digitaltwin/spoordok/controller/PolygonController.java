@@ -2,6 +2,8 @@ package com.digitaltwin.spoordok.controller;
 
 import com.digitaltwin.spoordok.dto.CalculationRequest;
 import com.digitaltwin.spoordok.dto.CalculationResponse;
+import com.digitaltwin.spoordok.dto.OccupationRequest;
+import com.digitaltwin.spoordok.dto.OccupationResponse;
 import com.digitaltwin.spoordok.model.Polygon;
 import com.digitaltwin.spoordok.service.CalculationService;
 import com.digitaltwin.spoordok.service.PolygonService;
@@ -65,6 +67,13 @@ public class PolygonController {
     @PostMapping("/calculate")
     public ResponseEntity<CalculationResponse> calculateAreaAndVolume(@RequestBody CalculationRequest request) {
         CalculationResponse response = calculationService.calculateAreaAndVolume(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // POST calculate occupation percentage
+    @PostMapping("/occupation")
+    public ResponseEntity<OccupationResponse> calculateOccupation(@RequestBody OccupationRequest request) {
+        OccupationResponse response = calculationService.calculateOccupation(request);
         return ResponseEntity.ok(response);
     }
 }

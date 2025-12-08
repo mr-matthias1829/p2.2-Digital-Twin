@@ -318,6 +318,10 @@ class ObjectEditor {
                             if (sid != null && window.serverPolygonEntities) {
                                 window.serverPolygonEntities.delete(sid);
                             }
+                            // Update occupation stats after deletion
+                            if (typeof window.updateOccupationStats === 'function') {
+                                setTimeout(() => window.updateOccupationStats(), 100);
+                            }
                         } catch (e) {
                             console.warn('Error removing polygon:', e);
                         }
@@ -385,6 +389,11 @@ class ObjectEditor {
             this.moveStart = null;
             this.viewer.scene.screenSpaceCameraController.enableRotate = true;
             this.viewer.scene.screenSpaceCameraController.enableTranslate = true;
+            
+            // Update occupation stats after editing/moving polygon
+            if (typeof window.updateOccupationStats === 'function') {
+                setTimeout(() => window.updateOccupationStats(), 100);
+            }
         }
     }
 

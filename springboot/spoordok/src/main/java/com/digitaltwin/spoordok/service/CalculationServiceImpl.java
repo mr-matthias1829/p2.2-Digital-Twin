@@ -2,6 +2,8 @@ package com.digitaltwin.spoordok.service;
 
 import com.digitaltwin.spoordok.dto.CalculationRequest;
 import com.digitaltwin.spoordok.dto.CalculationResponse;
+import com.digitaltwin.spoordok.dto.OccupationRequest;
+import com.digitaltwin.spoordok.dto.OccupationResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -119,5 +121,77 @@ public class CalculationServiceImpl implements CalculationService {
         double localUp = dx * normRefX + dy * normRefY + dz * normRefZ;
 
         return new double[]{localEast, localNorth, localUp};
+    }
+
+    @Override
+    public OccupationResponse calculateOccupation(OccupationRequest request) {
+        // Calculate the total Spoordok area
+        double spoordokArea = calculateAreaFromPositions(request.getSpoordokPositions());
+        
+        if (spoordokArea == 0.0) {
+            return new OccupationResponse(0.0, 0.0, 0.0);
+        }
+
+        // Calculate total occupied area by summing only polygons completely inside Spoordok
+        double totalOccupiedArea = 0.0;
+        if (request.getPolygonAreas() != null) {
+            for (OccupationRequest.PolygonArea polygon : request.getPolygonAreas()) {
+                // Check if all vertices are inside the Spoordok polygon
+                if (isPolygonInsideSpoordok(polygon.getPositions(), request.getSpoordokPositions())) {
+                    double area = calculateAreaFromPositions(polygon.getPositions());
+                    totalOccupiedArea += area;
+                }
+            }
+        }
+
+        // Calculate percentage
+        double occupationPercentage = (totalOccupiedArea / spoordokArea) * 100.0;
+
+        return new OccupationResponse(spoordokArea, totalOccupiedArea, occupationPercentage);
+    }
+
+    /**
+     * Check if a polygon is completely inside the Spoordok boundary using ray casting algorithm.
+     */
+    private boolean isPolygonInsideSpoordok(List<CalculationRequest.Position> polygonPositions, 
+                                            List<CalculationRequest.Position> spoordokPositions) {
+        if (polygonPositions == null || polygonPositions.isEmpty()) {
+            return false;
+        }
+
+        // All vertices must be inside the Spoordok for the polygon to be counted
+        for (CalculationRequest.Position point : polygonPositions) {
+            if (!isPointInsidePolygon(point, spoordokPositions)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Ray casting algorithm to check if a point is inside a polygon.
+     * Uses 2D projection (x, y coordinates).
+     */
+    private boolean isPointInsidePolygon(CalculationRequest.Position point, 
+                                         List<CalculationRequest.Position> polygon) {
+        int intersections = 0;
+        int n = polygon.size();
+
+        for (int i = 0; i < n; i++) {
+            CalculationRequest.Position p1 = polygon.get(i);
+            CalculationRequest.Position p2 = polygon.get((i + 1) % n);
+
+            // Check if the ray from point to the right intersects the edge
+            if ((p1.getY() > point.getY()) != (p2.getY() > point.getY())) {
+                double xIntersection = (p2.getX() - p1.getX()) * (point.getY() - p1.getY()) / 
+                                       (p2.getY() - p1.getY()) + p1.getX();
+                if (point.getX() < xIntersection) {
+                    intersections++;
+                }
+            }
+        }
+
+        // Odd number of intersections means the point is inside
+        return (intersections % 2) == 1;
     }
 }

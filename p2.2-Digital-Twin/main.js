@@ -54,6 +54,13 @@ function laterSetup(){
 
     // Load polygons from server (if available)
     loadPolygonsFromServer();
+
+    // Initial occupation stats update (after a short delay to ensure entities are loaded)
+    setTimeout(() => {
+        if (typeof updateOccupationStats === 'function') {
+            updateOccupationStats();
+        }
+    }, 2000);
 }
 
 // Base URL for the polygons API. Can be overridden by setting `window.POLYGONS_API_BASE` before this script runs.
@@ -204,6 +211,11 @@ function terminateShape() {
     floatingPoint = undefined;
     activeShape = undefined;
     activeShapePoints = [];
+    
+    // Update occupation stats after drawing a polygon
+    if (typeof updateOccupationStats === 'function') {
+        setTimeout(() => updateOccupationStats(), 100);
+    }
 }
 
 // x = verplaatsing in meters oost (+) / west (-)
@@ -563,5 +575,79 @@ window.clearPolygonInfo = function () {
     el.innerHTML = '';
     el.style.display = 'none';
 };
+
+// Update occupation statistics by calling backend
+async function updateOccupationStats() {
+    try {
+        // Find the Spoordok polygon
+        const spoordokEntity = viewer.entities.values.find(e => 
+            e.properties && e.properties.isSpoordok && e.polygon
+        );
+        
+        if (!spoordokEntity) {
+            console.warn('Spoordok polygon not found');
+            return;
+        }
+
+        // Get Spoordok positions
+        const spoordokPositions = _getPositionsFromHierarchy(spoordokEntity.polygon.hierarchy);
+        const spoordokData = spoordokPositions.map(p => ({
+            x: p.x,
+            y: p.y,
+            z: p.z
+        }));
+
+        // Get all other polygons (excluding Spoordok)
+        const polygonAreas = [];
+        viewer.entities.values.forEach(entity => {
+            if (entity.polygon && 
+                (!entity.properties || !entity.properties.isSpoordok)) {
+                const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
+                if (positions && positions.length >= 3) {
+                    polygonAreas.push({
+                        positions: positions.map(p => ({
+                            x: p.x,
+                            y: p.y,
+                            z: p.z
+                        }))
+                    });
+                }
+            }
+        });
+
+        // Call backend API
+        const url = POLYGONS_API_BASE + '/api/polygons/occupation';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                spoordokPositions: spoordokData,
+                polygonAreas: polygonAreas
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Backend occupation API failed: HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        // Update UI
+        document.getElementById('spoordokArea').textContent = result.spoordokArea.toFixed(2);
+        document.getElementById('occupiedArea').textContent = result.occupiedArea.toFixed(2);
+        document.getElementById('occupationPercentage').textContent = result.occupationPercentage.toFixed(1);
+
+    } catch (error) {
+        console.error('Error updating occupation stats:', error);
+        document.getElementById('spoordokArea').textContent = 'Error';
+        document.getElementById('occupiedArea').textContent = 'Error';
+        document.getElementById('occupationPercentage').textContent = '--';
+    }
+}
+
+// Call updateOccupationStats when polygons change
+window.updateOccupationStats = updateOccupationStats;
 
 window.loadPolygonsFromServer = loadPolygonsFromServer;
