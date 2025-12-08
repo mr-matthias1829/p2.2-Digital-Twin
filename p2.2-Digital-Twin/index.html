@@ -45,8 +45,8 @@
             }
             #occupationInfo {
                 position: fixed;
-                left: 16px;
-                bottom: 16px;
+                right: 1px;
+                top: 130px;
                 width: 280px;
                 background: rgba(0, 0, 0, 0.85);
                 color: #e6e6e6;
@@ -57,12 +57,40 @@
                 border-radius: 8px;
                 z-index: 9999;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+                transition: transform 0.3s ease;
+            }
+            #occupationInfo.collapsed {
+                transform: translateX(calc(100% + 16px));
             }
             #occupationInfo h3 {
                 margin: 0 0 10px 0;
                 font-size: 16px;
                 font-weight: 600;
                 color: #4CAF50;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            #occupationToggle {
+                position: fixed;
+                right: 1px;
+                top: 130px;
+                background: rgba(0, 0, 0, 0.85);
+                color: #4CAF50;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 20px;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+                transition: transform 0.3s ease;
+            }
+            #occupationToggle.open {
+                transform: translateX(calc(-296px));
+            }
+            #occupationToggle:hover {
+                background: rgba(0, 0, 0, 0.95);
             }
             #occupationInfo .stat {
                 margin: 6px 0;
@@ -78,11 +106,22 @@
     <body style="margin: 0px; padding: 0px;">
         <div id="cesiumContainer" style="margin: 0px; padding: 0px;"></div>
         <div id="polygonInfo" aria-live="polite" title="Polygon informatie"></div>
-        <div id="occupationInfo">
+        
+        <button id="occupationToggle" onclick="toggleOccupation()">📊</button>
+        <div id="occupationInfo" class="collapsed">
             <h3>Spoordok Occupation</h3>
             <div class="stat">Spoordok Area: <span id="spoordokArea">--</span> m²</div>
             <div class="stat">Occupied Area: <span id="occupiedArea">--</span> m²</div>
             <div class="percentage"><span id="occupationPercentage">--</span>%</div>
         </div>
+
+        <script>
+            function toggleOccupation() {
+                const panel = document.getElementById('occupationInfo');
+                const btn = document.getElementById('occupationToggle');
+                panel.classList.toggle('collapsed');
+                btn.classList.toggle('open');
+            }
+        </script>
     </body>
 </html>
