@@ -30,7 +30,7 @@ function createStaticUI() {
 
     
     // Mode select
-    const modeDropdown = createDropdown("modeSelect", ["None", "Line", "Polygon", "Model", "Edit"], "Mode:");
+    const modeDropdown = createDropdown("modeSelect", ["None", "Polygon", "Model", "Edit"], "Mode:");
     uiContainer.appendChild(modeDropdown);
 
     // Refresh dynamic UI on mode change

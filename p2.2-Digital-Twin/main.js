@@ -21,7 +21,7 @@ function subscribeToStateChangesSetup() {
         }
         // Cut off editing the obj to prevent issues
         if (drawingMode == "edit" && newMode != "edit") {
-           Editor.stopEditingPolygon();
+           Editor.stopEditing();
         }
         drawingMode = newMode;
 
@@ -74,6 +74,8 @@ function createPoint(worldPosition) {
 
 function drawShape(positionData) {
     let shape;
+
+    // Line drawing mode is unused, but still here if you want to use it later anyway
     if (drawingMode === "line") {
         shape = viewer.entities.add({
             polyline: {
@@ -92,9 +94,7 @@ function drawShape(positionData) {
                 buildType: objType  // Set the type HERE first
             }
         });
-
-        // NOW apply the dynamic material AFTER properties exist
-        shape.polygon.material = applyTypeInitPolygon(shape);
+        applyTypeInitPolygon(shape);
     }
  return shape;
 }
@@ -156,6 +156,9 @@ function setupInputActions() {
 
                // NOTE: type is automatically applied inside spawnModel already! refer to ModelPreLoad.js
                 spawnModel(modelToCreate,{ lon, lat }, 0 )
+
+                // alternate version where you can define type from the caller:
+                // const building = await spawnModel("building", {lon, lat}, 0, 0, {buildType: "commercial_building"});
             }
             
             if (activeShapePoints.length === 0) {
@@ -175,38 +178,11 @@ function setupInputActions() {
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // CTRL+Click - Add vertex or extrude
-    handler.setInputAction(function (event) {
-        // Let polygon editor try to handle it first
-        const handled = Editor.handleCtrlClick(event);
-        
-        if (!handled) {
-            // Original extrude functionality when not in edit mode
-            var pickedObject = viewer.scene.pick(event.position);
-            if (Cesium.defined(pickedObject) && pickedObject.id) {
-                const entity = pickedObject.id;
-                if (entity.polygon && !entity.properties?.isVertex) {
-                    create3DObject(entity, 20);
-                    console.log("Extruded:", entity.name || entity.id);
-                }
-            }
-        }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.CTRL);
-
-    // ALT+Click - Start editing polygon vertices
-    handler.setInputAction(function (event) {
-        Editor.handleAltClick(event);
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.ALT);
-
-    // SHIFT+Click - Start moving polygon
-    handler.setInputAction(function (event) {
-        Editor.handleShiftClick(event);
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK, Cesium.KeyboardEventModifier.SHIFT);
-
     // DOUBLE CLICK - Start editing polygon
     handler.setInputAction(function (event) {
         Editor.handleDoubleClick(event);
     }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    
 
     // RIGHT CLICK - Finish drawing, editing, or moving
     handler.setInputAction(function (event) {

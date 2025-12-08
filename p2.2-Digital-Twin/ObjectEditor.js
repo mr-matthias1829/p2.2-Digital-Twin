@@ -4,19 +4,12 @@ class ObjectEditor {
         this.editMode = false;
         this.editingEntity = null;
         this.editingModel = null;
-        this.modelRotation = 0; // Store rotation separately
-        this.modelScale = null; // Store scale separately
-        this.originalModelColor = null; // Store original model color
-        this.originalModelSilhouette = null; // Store original silhouette
-        this.originalModelSilhouetteSize = 0; // Store original silhouette size
         this.vertexEntities = [];
         this.originalMaterial = null;
         this.draggedVertex = null;
         this.hoveredVertex = null;
         this.moveStart = null;
-
         this.onEditModeChanged = null;
-
         this.setupKeyboardControls();
     }
 
@@ -24,251 +17,39 @@ class ObjectEditor {
     isProtectedEntity(entity) {
         if (!entity) return false;
         try {
-            if (entity.properties && entity.properties.isSpoordok) return true;
-            if (typeof entity.name === 'string' && entity.name === 'Spoordok') return true;
-        } catch (e) {
-            // ignore
-        }
+            if (entity.properties?.isSpoordok) return true;
+            if (entity.name === 'Spoordok') return true;
+        } catch (e) {}
         return false;
     }
 
-    closestPointOnSegment(segmentStart, segmentEnd, point) {
-        const v = Cesium.Cartesian3.subtract(segmentEnd, segmentStart, new Cesium.Cartesian3());
-        const w = Cesium.Cartesian3.subtract(point, segmentStart, new Cesium.Cartesian3());
-        const segLenSq = Cesium.Cartesian3.dot(v, v);
-        if (segLenSq === 0) {
-            return Cesium.Cartesian3.clone(segmentStart);
-        }
-        const dot = Cesium.Cartesian3.dot(w, v);
-        const t = Math.max(0, Math.min(1, dot / segLenSq));
-        const proj = Cesium.Cartesian3.add(
-            segmentStart,
-            Cesium.Cartesian3.multiplyByScalar(v, t, new Cesium.Cartesian3()),
-            new Cesium.Cartesian3()
-        );
-        return proj;
-    }
-
-    addVertexAtPosition(position, screenPosition) {
-        if (!this.editMode || !this.vertexEntities.length || this.editingModel) return;
-
-        const scene = this.viewer.scene;
-        const positions = this.vertexEntities.map(v => 
-            v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
-        );
-
-        const positionsForEdges = [...positions, positions[0]];
-
-        let closestEdgeIndex = -1;
-        let minScreenDistSq = Number.MAX_VALUE;
-        let closestProjection = null;
-
-        const PIXEL_TOLERANCE = 12;
-        const pixelTolSq = PIXEL_TOLERANCE * PIXEL_TOLERANCE;
-
-        for (let i = 0; i < positionsForEdges.length - 1; i++) {
-            const edgeStart = positionsForEdges[i];
-            const edgeEnd = positionsForEdges[i + 1];
-
-            const projection = this.closestPointOnSegment(edgeStart, edgeEnd, position);
-
-            try {
-                const projScreen = scene.cartesianToCanvasCoordinates(projection);
-                if (!projScreen) continue;
-                
-                const dx = projScreen.x - screenPosition.x;
-                const dy = projScreen.y - screenPosition.y;
-                const distSq = dx * dx + dy * dy;
-
-                if (distSq < minScreenDistSq) {
-                    minScreenDistSq = distSq;
-                    closestEdgeIndex = i;
-                    closestProjection = projection;
-                }
-            } catch (e) {
-                continue;
-            }
-        }
-
-        if (minScreenDistSq === Number.MAX_VALUE || minScreenDistSq > pixelTolSq) {
-            console.log("Click not close enough to any polygon edge (screen tolerance).");
-            return;
-        }
-
-        const insertIndex = (closestEdgeIndex + 1) % this.vertexEntities.length;
-        const newVertexPos = closestProjection || position;
-
-        this.vertexEntities.splice(insertIndex, 0, this.viewer.entities.add({
-            position: newVertexPos,
-            point: {
-                pixelSize: 20,
-                color: Cesium.Color.RED,
-                outlineColor: Cesium.Color.WHITE,
-                outlineWidth: 3,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            },
-            properties: { isVertex: true, vertexIndex: insertIndex }
-        }));
-
-        this.vertexEntities.forEach((v, i) => v.properties.vertexIndex = i);
-        this.updatePolygonFromVertices();
-        console.log(`Added vertex at closest edge (edge ${closestEdgeIndex})`);
-    }
-
-    // Start editing a model
-    startEditingModel(model) {
-    if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
-    if (this.editMode) this.stopEditingPolygon();
-    
-    this.editMode = true;
-    this.editingModel = model;
-    this._emitEditModeChanged();
-    
-    // Extract and store current transformation properties
-    const position = new Cesium.Cartesian3();
-    Cesium.Matrix4.getTranslation(model.modelMatrix, position);
-    
-    this.modelScale = new Cesium.Cartesian3();
-    Cesium.Matrix4.getScale(model.modelMatrix, this.modelScale);
-    
-    // Try to extract current rotation or start at 0
-    this.modelRotation = model.modelRotation || 0;
-    
-    this.moveStart = null;
-    
-    // Store original model appearance
-    this.originalModelColor = model.color ? Cesium.Color.clone(model.color) : null;
-    this.originalModelSilhouette = model.silhouetteColor ? Cesium.Color.clone(model.silhouetteColor) : null;
-    this.originalModelSilhouetteSize = model.silhouetteSize || 0;
-    
-    // Apply yellow transparent color for editing
-    model.color = Cesium.Color.YELLOW.withAlpha(0.6);
-    model.silhouetteColor = Cesium.Color.YELLOW;
-    model.silhouetteSize = 3.0;
-    
-    console.log("🎯 MODEL EDIT MODE");
-    console.log("  • Drag to move");
-    console.log("  • Arrow Left/Right to rotate (±15°)");
-    console.log("  • Arrow Up/Down to scale (±10%)");
-    console.log("  • R key to rotate 90°");
-    console.log("  • Right-click or ESC to finish");
-    console.log(`  • Current scale: ${this.modelScale.x.toFixed(2)}`);
-}
-
-    stopEditingPolygon() {
-        if (!this.editMode) return;
-        this.editMode = false;
-        this._emitEditModeChanged();
-        
-        // Clean up polygon editing
-        if (this.editingEntity && this.originalMaterial) {
-            this.editingEntity.polygon.material = this.originalMaterial;
-        }
-        this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
-        this.vertexEntities = [];
-        this.editingEntity = null;
-        this.originalMaterial = null;
-        
-        // Save model rotation and restore appearance if editing model
-        if (this.editingModel) {
-            this.editingModel.modelRotation = this.modelRotation;
-            
-            // Restore original model appearance
-            if (this.originalModelColor !== null) {
-                this.editingModel.color = this.originalModelColor;
-            } else {
-                this.editingModel.color = undefined;
-            }
-            
-            if (this.originalModelSilhouette !== null) {
-                this.editingModel.silhouetteColor = this.originalModelSilhouette;
-            } else {
-                this.editingModel.silhouetteColor = undefined;
-            }
-            
-            this.editingModel.silhouetteSize = this.originalModelSilhouetteSize;
-            
-            console.log(`✓ Model editing finished (rotation: ${this.modelRotation}°)`);
-        }
-        
-        // Clean up model editing
-        this.editingModel = null;
-        this.modelRotation = 0;
-        this.modelScale = null;
-        this.originalModelColor = null;
-        this.originalModelSilhouette = null;
-        this.originalModelSilhouetteSize = 0;
-        
-        this.draggedVertex = null;
-        this.moveStart = null;
-        this.viewer.scene.screenSpaceCameraController.enableRotate = true;
-        this.viewer.scene.screenSpaceCameraController.enableTranslate = true;
-        console.log("EDIT MODE OFF");
-        if (window.clearPolygonInfo) window.clearPolygonInfo();
-    }
-
-    distanceToSegment(point, segmentStart, segmentEnd) {
-        const segmentLengthSquared = Cesium.Cartesian3.distanceSquared(segmentStart, segmentEnd);
-        
-        if (segmentLengthSquared === 0) {
-            return Cesium.Cartesian3.distance(point, segmentStart);
-        }
-        
-        const v = Cesium.Cartesian3.subtract(segmentEnd, segmentStart, new Cesium.Cartesian3());
-        const w = Cesium.Cartesian3.subtract(point, segmentStart, new Cesium.Cartesian3());
-        
-        const dot = Cesium.Cartesian3.dot(w, v);
-        const t = Math.max(0, Math.min(1, dot / segmentLengthSquared));
-        
-        const projection = Cesium.Cartesian3.add(
-            segmentStart,
-            Cesium.Cartesian3.multiplyByScalar(v, t, new Cesium.Cartesian3()),
-            new Cesium.Cartesian3()
-        );
-        
-        return Cesium.Cartesian3.distance(point, projection);
-    }
-
-    getPositions(hierarchy) {
-        if (hierarchy instanceof Cesium.CallbackProperty) {
-            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
-        }
-        if (typeof hierarchy.getValue === 'function') {
-            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
-        }
-        if (hierarchy instanceof Cesium.PolygonHierarchy) {
-            return hierarchy.positions;
-        }
-        return hierarchy.positions || (Array.isArray(hierarchy) ? hierarchy : []);
-    }
+    // === POLYGON EDITING ===
 
     startEditingPolygon(entity) {
         if (!entity.polygon) return console.log("No polygon found");
         if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
-        if (this.editMode) this.stopEditingPolygon();
-        // If this polygon is marked as protected (e.g., the Spoordok area),
-        // do NOT create vertices, do NOT apply yellow edit material,
-        // and only show the polygon info container.
-        if (this.isProtectedEntity(entity)) {
-            this.editMode = true;
-            this.editingEntity = entity;
-            this._emitEditModeChanged();
-            console.log("Protected polygon selected — showing info only (no edit).");
-            if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
-            return;
-        }
+        if (this.editMode) this.stopEditing();
 
         this.editMode = true;
         this.editingEntity = entity;
         this._emitEditModeChanged();
+
+        // Protected polygons: show info only, no vertex editing
+        if (this.isProtectedEntity(entity)) {
+            console.log("Protected polygon — info only (no edit).");
+            if (window.showPolygonInfo) window.showPolygonInfo(entity);
+            return;
+        }
+
+        // Apply edit styling
         this.originalMaterial = entity.polygon.material;
         entity.polygon.material = Cesium.Color.YELLOW.withAlpha(0.5);
 
+        // Create vertex markers
         const positions = this.getPositions(entity.polygon.hierarchy);
         if (!positions.length) {
             console.error("No positions found!");
-            return this.stopEditingPolygon();
+            return this.stopEditing();
         }
 
         positions.forEach((position, index) => {
@@ -285,8 +66,9 @@ class ObjectEditor {
                 properties: { isVertex: true, vertexIndex: index }
             }));
         });
-        console.log("EDIT MODE ON");
-        if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
+        
+        console.log("📐 POLYGON EDIT MODE");
+        if (window.showPolygonInfo) window.showPolygonInfo(entity);
     }
 
     rotatePolygon(degrees) {
@@ -316,44 +98,14 @@ class ObjectEditor {
         console.log(`↻ Rotated ${degrees}°`);
     }
 
-    // Rotate model
-    rotateModel(degrees) {
-        if (!this.editingModel) return;
-        
-        // Update stored rotation
-        this.modelRotation += degrees;
-        
-        // Normalize to 0-360 range for display
-        const displayRotation = ((this.modelRotation % 360) + 360) % 360;
-        
-        // Extract current position
-        const position = new Cesium.Cartesian3();
-        Cesium.Matrix4.getTranslation(this.editingModel.modelMatrix, position);
-        
-        // Create orientation from heading (rotation around up axis)
-        const heading = Cesium.Math.toRadians(this.modelRotation);
-        const hpr = new Cesium.HeadingPitchRoll(heading, 0, 0);
-        const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
-        
-        // Update model matrix with new rotation
-        this.editingModel.modelMatrix = Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-            position,
-            orientation,
-            this.modelScale
-        );
-        
-        console.log(`↻ Model rotated to ${displayRotation.toFixed(0)}° (${degrees > 0 ? '+' : ''}${degrees}°)`);
-    }
-
     updatePolygonFromVertices() {
         if (!this.editingEntity || !this.vertexEntities.length) return;
         const positions = this.vertexEntities.map(v => 
             v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
         );
         this.editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(positions);
-        // If a UI info panel exists, refresh it so coordinates stay in sync while dragging/moving
         if (window.showPolygonInfo) {
-            try { window.showPolygonInfo(this.editingEntity); } catch (e) { /* ignore UI errors */ }
+            try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
         }
     }
 
@@ -399,23 +151,121 @@ class ObjectEditor {
         console.log(`✗ Deleted vertex ${index}`);
     }
 
+    getPositions(hierarchy) {
+        if (hierarchy instanceof Cesium.CallbackProperty) {
+            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
+        }
+        if (typeof hierarchy.getValue === 'function') {
+            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
+        }
+        if (hierarchy instanceof Cesium.PolygonHierarchy) {
+            return hierarchy.positions;
+        }
+        return hierarchy.positions || (Array.isArray(hierarchy) ? hierarchy : []);
+    }
+
+    // === MODEL EDITING ===
+
+    startEditingModel(model) {
+        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
+        if (this.editMode) this.stopEditing();
+        
+        this.editMode = true;
+        this.editingModel = model;
+        this._emitEditModeChanged();
+        
+        // Highlight model with yellow
+        model._originalColor = model.color ? Cesium.Color.clone(model.color) : null;
+        model._originalSilhouette = model.silhouetteColor ? Cesium.Color.clone(model.silhouetteColor) : null;
+        model._originalSilhouetteSize = model.silhouetteSize || 0;
+        
+        model.color = Cesium.Color.YELLOW.withAlpha(0.6);
+        model.silhouetteColor = Cesium.Color.YELLOW;
+        model.silhouetteSize = 3.0;
+        
+        console.log("🎯 MODEL EDIT MODE");
+        console.log("  • Drag to move");
+        console.log("  • Arrow Left/Right to rotate (±3°)");
+        console.log("  • Arrow Up/Down to scale (±0.1)");
+        console.log("  • R key to rotate 90°");
+        console.log("  • Right-click or ESC to finish");
+    }
+
+    rotateModel(degrees) {
+        if (!this.editingModel) return;
+        updateModelRotation(this.editingModel, this.editingModel.modelRotation + degrees);
+        console.log(`↻ Model rotated ${degrees > 0 ? '+' : ''}${degrees}°`);
+    }
+
+    scaleModel(newScale) {
+        if (!this.editingModel) return;
+        updateModelScale(this.editingModel, newScale);
+        console.log(`↔ Model scaled to ${newScale.toFixed(2)}`);
+    }
+
+    // === UNIFIED STOP EDITING ===
+
+    stopEditing() {
+        if (!this.editMode) return;
+        this.editMode = false;
+        this._emitEditModeChanged();
+        
+        // Clean up polygon editing
+        if (this.editingEntity) {
+            if (this.originalMaterial) {
+                this.editingEntity.polygon.material = this.originalMaterial;
+            }
+            this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
+            this.vertexEntities = [];
+            this.editingEntity = null;
+            this.originalMaterial = null;
+        }
+        
+        // Clean up model editing
+        if (this.editingModel) {
+            // Restore original appearance
+            if (this.editingModel._originalColor !== null) {
+                this.editingModel.color = this.editingModel._originalColor;
+            } else {
+                this.editingModel.color = undefined;
+            }
+            
+            if (this.editingModel._originalSilhouette !== null) {
+                this.editingModel.silhouetteColor = this.editingModel._originalSilhouette;
+            } else {
+                this.editingModel.silhouetteColor = undefined;
+            }
+            
+            this.editingModel.silhouetteSize = this.editingModel._originalSilhouetteSize;
+            
+            console.log(`✓ Model editing finished`);
+            this.editingModel = null;
+        }
+        
+        this.draggedVertex = null;
+        this.moveStart = null;
+        this.viewer.scene.screenSpaceCameraController.enableRotate = true;
+        this.viewer.scene.screenSpaceCameraController.enableTranslate = true;
+        console.log("EDIT MODE OFF");
+        if (window.clearPolygonInfo) window.clearPolygonInfo();
+    }
+
+    // === KEYBOARD CONTROLS ===
+
     setupKeyboardControls() {
         document.addEventListener('keydown', (e) => {
-            if (this.editMode) {
-                            // Handle model scaling and rotation
+            if (!this.editMode) return;
+
+            // MODEL CONTROLS
             if (this.editingModel) {
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    // Scale up
-                    const currentScale = this.modelScale ? this.modelScale.x : 1.0;
-                    const newScale = Math.max(0.1, currentScale + 0.1); // 10% increase
-                    this.scaleModel(newScale);
+                    const current = this.editingModel.modelScale || 1.0;
+                    this.scaleModel(Math.max(0.1, current + 0.1));
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    // Scale down
-                    const currentScale = this.modelScale ? this.modelScale.x : 1.0;
-                    const newScale = Math.max(0.1, currentScale - 0.1); // 10% decrease, min 0.1
-                    this.scaleModel(newScale);
+                    const current = this.editingModel.modelScale || 1.0;
+                    this.scaleModel(Math.max(0.1, current - 0.1));
                 } else if (e.key === 'ArrowLeft') {
                     e.preventDefault();
                     this.rotateModel(-3);
@@ -427,82 +277,52 @@ class ObjectEditor {
                     this.rotateModel(90);
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
-                    this.stopEditingPolygon();
+                    this.stopEditing();
                 }
                 return;
             }
             
-            // Handle polygon editing (existing code remains unchanged)
+            // POLYGON CONTROLS
             if (this.editingEntity) {
+                const isProtected = this.isProtectedEntity(this.editingEntity);
                 const h = this.editingEntity.polygon.extrudedHeight || 0;
-                // Scaling height
+                
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    // Prevent changing height for protected polygons
-                    if (this.isProtectedEntity && this.isProtectedEntity(this.editingEntity)) {
-                        console.log("Protected polygon - cannot change height");
-                        return;
-                    }
+                    if (isProtected) return console.log("Protected polygon - cannot change height");
                     this.editingEntity.polygon.extrudedHeight = h + 5;
                     console.log("Height:", h + 5);
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    // Prevent changing height for protected polygons
-                    if (this.isProtectedEntity && this.isProtectedEntity(this.editingEntity)) {
-                        console.log("Protected polygon - cannot change height");
-                        return;
-                    }
+                    if (isProtected) return console.log("Protected polygon - cannot change height");
                     this.editingEntity.polygon.extrudedHeight = Math.max(0, h - 5);
                     console.log("Height:", Math.max(0, h - 5));
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
-
-                    // Deleting vertex
                 } else if (e.key === 'Delete' || e.key === 'Backspace') {
                     e.preventDefault();
-                    // If hovering a vertex, delete the vertex. Otherwise offer to delete the whole polygon.
-                    // Protect certain polygons from deletion/modification
-                    if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
-                        console.log("Protected polygon - cannot delete or modify");
-                        return;
-                    }
+                    if (isProtected) return console.log("Protected polygon - cannot delete");
+                    
                     if (this.hoveredVertex) {
                         this.deleteVertex(this.hoveredVertex);
                     } else if (this.editingEntity) {
-                        // Confirm destructive action with the user
-                        try {
-                            const ok = window.confirm ? window.confirm('Delete the selected polygon?') : true;
-                            if (!ok) return;
-                        } catch (ignore) {
-                            // In some contexts confirm might not be available - proceed without it
-                        }
-
-                        // Capture reference to entity before stopping edit (stopEditingPolygon will clear editingEntity)
+                        const ok = window.confirm ? window.confirm('Delete the selected polygon?') : true;
+                        if (!ok) return;
+                        
                         const entityToRemove = this.editingEntity;
-                        // Stop editing which clears vertex markers and UI
-                        this.stopEditingPolygon();
-
+                        this.stopEditing();
+                        
                         try {
-                            // Remove from viewer
                             this.viewer.entities.remove(entityToRemove);
-                        } catch (e) {
-                            console.warn('Error removing polygon entity:', e);
-                        }
-
-                        try {
-                            // If it was a server polygon, remove mapping so it won't be re-used
-                            const sid = entityToRemove.properties && entityToRemove.properties.serverId;
+                            const sid = entityToRemove.properties?.serverId;
                             if (sid != null && window.serverPolygonEntities) {
                                 window.serverPolygonEntities.delete(sid);
                             }
                         } catch (e) {
-                            // ignore
+                            console.warn('Error removing polygon:', e);
                         }
-                        // Ensure UI is cleared
                         if (window.clearPolygonInfo) window.clearPolygonInfo();
                     }
-
-                    // Rotation
                 } else if (e.key === 'r' || e.key === 'R') {
                     e.preventDefault();
                     this.rotatePolygon(90);
@@ -512,54 +332,23 @@ class ObjectEditor {
                 } else if (e.key === 'ArrowRight') {
                     e.preventDefault();
                     this.rotatePolygon(3);
-
-                    // Stop editing (note: can also use right click)
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
-                    this.stopEditingPolygon();
+                    this.stopEditing();
                 }
             }
-        }});
+        });
     }
 
-    scaleModel(scale) {
-    if (!this.editingModel) return;
-    
-    // Update stored scale
-    this.modelScale = new Cesium.Cartesian3(scale, scale, scale);
-    
-    // Extract current position
-    const position = new Cesium.Cartesian3();
-    Cesium.Matrix4.getTranslation(this.editingModel.modelMatrix, position);
-    
-    // Create orientation with current rotation
-    const heading = Cesium.Math.toRadians(this.modelRotation);
-    const hpr = new Cesium.HeadingPitchRoll(heading, 0, 0);
-    const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
-    
-    // Update model matrix with new scale (keeping position and rotation)
-    this.editingModel.modelMatrix = Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-        position,
-        orientation,
-        this.modelScale
-    );
-    
-    // Also update the model's scale property if it exists
-    if (this.editingModel.isEditableModel) {
-        this.editingModel.modelScale = scale;
-    }
-    
-    console.log(`↔ Model scaled to ${scale.toFixed(2)}`);
-}
+    // === MOUSE HANDLERS ===
 
     handleLeftDown(event) {
         if (!this.editMode) return;
-        // If editing a protected polygon, disallow dragging/move actions
         if (this.editingEntity && this.isProtectedEntity(this.editingEntity) && !this.editingModel) {
-            console.log("Protected polygon - editing not allowed (left down)");
-            return;
+            return console.log("Protected polygon - editing not allowed");
         }
-        // Handle model dragging
+
+        // Model dragging
         if (this.editingModel) {
             const ray = this.viewer.camera.getPickRay(event.position);
             this.moveStart = this.viewer.scene.globe.pick(ray, this.viewer.scene);
@@ -571,7 +360,7 @@ class ObjectEditor {
             return;
         }
         
-        // Handle polygon vertex dragging
+        // Polygon vertex dragging
         const picked = this.viewer.scene.pick(event.position);
         if (Cesium.defined(picked) && picked.id?.properties?.isVertex) {
             this.draggedVertex = picked.id;
@@ -600,29 +389,23 @@ class ObjectEditor {
     }
 
     handleMouseMove(event) {
-        // Handle model movement
+        // Model movement
         if (this.editingModel && this.moveStart) {
             const ray = this.viewer.camera.getPickRay(event.endPosition);
             const currentPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
             if (Cesium.defined(currentPos)) {
-                // Create orientation with current rotation
-                const heading = Cesium.Math.toRadians(this.modelRotation);
-                const hpr = new Cesium.HeadingPitchRoll(heading, 0, 0);
-                const orientation = Cesium.Transforms.headingPitchRollQuaternion(currentPos, hpr);
+                const carto = Cesium.Cartographic.fromCartesian(currentPos);
+                const lon = Cesium.Math.toDegrees(carto.longitude);
+                const lat = Cesium.Math.toDegrees(carto.latitude);
+                const height = this.editingModel.modelHeight || 0;
                 
-                // Update model matrix with new position (keeping rotation and scale)
-                this.editingModel.modelMatrix = Cesium.Matrix4.fromTranslationQuaternionRotationScale(
-                    currentPos,
-                    orientation,
-                    this.modelScale
-                );
-                
+                updateModelPosition(this.editingModel, { lon, lat }, height);
                 this.moveStart = currentPos;
             }
             return;
         }
         
-        // Handle polygon vertex dragging
+        // Polygon vertex dragging
         if (this.draggedVertex) {
             const ray = this.viewer.camera.getPickRay(event.endPosition);
             const newPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
@@ -631,7 +414,6 @@ class ObjectEditor {
                 this.updatePolygonFromVertices();
             }
         } else if (this.editMode && this.moveStart && !this.editingModel) {
-            // Prevent moving the protected polygon
             if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) return;
             const ray = this.viewer.camera.getPickRay(event.endPosition);
             const currentPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
@@ -646,7 +428,6 @@ class ObjectEditor {
             }
         } else if (this.editMode && !this.editingModel) {
             const picked = this.viewer.scene.pick(event.endPosition);
-            // If editing a protected polygon, don't set hovered vertices
             if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
                 this.hoveredVertex = null;
             } else {
@@ -654,26 +435,73 @@ class ObjectEditor {
             }
         }
     }
-
-    handleCtrlClick(event) {
-        if (!this.editMode || this.editingModel) return false;
-        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) return false;
-        const picked = this.viewer.scene.pick(event.position);
-        if (Cesium.defined(picked) && picked.id?.properties?.isVertex) {
-            const idx = picked.id.properties.vertexIndex;
-            this.addVertexBetween(idx, (idx + 1) % this.vertexEntities.length);
-            return true;
-        }
-        return false;
-    }
-
+    
     handleDoubleClick(event) {
-        // Check if clicking on a model primitive
+        if (this.editMode && this.editingEntity) {
+            if (this.isProtectedEntity(this.editingEntity)) return false;
+            
+            const picked = this.viewer.scene.pick(event.position);
+            
+            // If clicked on a vertex, add new vertex after it
+            if (Cesium.defined(picked) && picked.id?.properties?.isVertex) {
+                const idx = picked.id.properties.vertexIndex;
+                this.addVertexBetween(idx, (idx + 1) % this.vertexEntities.length);
+                return true;
+            }
+            
+            // If clicked on the polygon edge (not on vertex), find closest edge
+            if (Cesium.defined(picked) && picked.id === this.editingEntity) {
+                const ray = this.viewer.camera.getPickRay(event.position);
+                const clickedPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+                
+                if (Cesium.defined(clickedPos)) {
+                    let closestEdge = { index: 0, distance: Infinity };
+                    
+                    // Find the closest edge to the click point
+                    for (let i = 0; i < this.vertexEntities.length; i++) {
+                        const nextIdx = (i + 1) % this.vertexEntities.length;
+                        const v1 = this.vertexEntities[i].position;
+                        const v2 = this.vertexEntities[nextIdx].position;
+                        
+                        const pos1 = v1.getValue ? v1.getValue(Cesium.JulianDate.now()) : v1;
+                        const pos2 = v2.getValue ? v2.getValue(Cesium.JulianDate.now()) : v2;
+                        
+                        // Calculate closest point on line segment
+                        const edge = Cesium.Cartesian3.subtract(pos2, pos1, new Cesium.Cartesian3());
+                        const edgeLen = Cesium.Cartesian3.magnitude(edge);
+                        const toClick = Cesium.Cartesian3.subtract(clickedPos, pos1, new Cesium.Cartesian3());
+                        
+                        let t = Cesium.Cartesian3.dot(toClick, edge) / (edgeLen * edgeLen);
+                        t = Math.max(0, Math.min(1, t));
+                        
+                        const closestPoint = Cesium.Cartesian3.add(
+                            pos1,
+                            Cesium.Cartesian3.multiplyByScalar(edge, t, new Cesium.Cartesian3()),
+                            new Cesium.Cartesian3()
+                        );
+                        
+                        const distance = Cesium.Cartesian3.distance(clickedPos, closestPoint);
+                        
+                        if (distance < closestEdge.distance) {
+                            closestEdge = { index: i, distance };
+                        }
+                    }
+                    
+                    // If close enough to an edge (within reasonable threshold), add vertex
+                    if (closestEdge.distance < 50) { // 50 meters threshold
+                        this.addVertexBetween(closestEdge.index, (closestEdge.index + 1) % this.vertexEntities.length);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Default behavior: start editing
         const picked = this.viewer.scene.pick(event.position);
         
-        // If we picked a primitive (3D model), start editing it
+        // Check for model primitive
         if (Cesium.defined(picked) && Cesium.defined(picked.primitive)) {
-            // Check if this is a model primitive (not a polygon or vertex)
             if (picked.primitive instanceof Cesium.Model || 
                 (picked.primitive.modelMatrix && !picked.id)) {
                 this.startEditingModel(picked.primitive);
@@ -681,19 +509,7 @@ class ObjectEditor {
             }
         }
         
-        // If in edit mode and editing polygon, try to add a vertex on an edge
-        if (this.editMode && this.editingEntity && !this.editingModel) {
-            const ray = this.viewer.camera.getPickRay(event.position);
-            if (!ray) return;
-            
-            const intersection = this.viewer.scene.globe.pick(ray, this.viewer.scene);
-            if (Cesium.defined(intersection)) {
-                this.addVertexAtPosition(intersection, event.position);
-                return;
-            }
-        }
-        
-        // Otherwise, check if clicking on a polygon entity to start editing
+        // Check for polygon entity
         if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
             this.startEditingPolygon(picked.id);
         }
@@ -701,64 +517,55 @@ class ObjectEditor {
 
     handleRightClick(event) {
         if (this.editMode) {
-            this.stopEditingPolygon();
+            this.stopEditing();
             return true;
         }
         return false;
     }
 
+    // === UTILITIES ===
 
-    editingWhat() {        
+    editingWhat() {
         if (this.editingModel) return "model";
         if (this.editingEntity) return "polygon";
         return null;
     }
 
     _emitEditModeChanged() {
-    const detail = {
-        editMode: !!this.editMode,
-        what: this.editingWhat(),                  // "model", "polygon", or null
-        object: this.editingModel || this.editingEntity || null,
-        timestamp: Date.now()
-    };
-
-    // Add polygon type and type change callback if editing a polygon
-    if (this.editingEntity && this.editingEntity.polygon) {
-        // Get current type
-        let currentType = "DEFAULT";
-        if (this.editingEntity.properties && this.editingEntity.properties.buildType) {
-            const buildTypeProp = this.editingEntity.properties.buildType;
-            currentType = (typeof buildTypeProp.getValue === 'function') 
-                ? buildTypeProp.getValue() 
-                : buildTypeProp;
-        }
-        detail.polygonType = currentType;
-        
-        // Add callback to change type
-        detail.setPolygonType = (newType) => {
-            if (this.editingEntity && this.editingEntity.properties) {
-                this.editingEntity.properties.buildType = newType;
-                console.log(`✓ Polygon type changed to: ${newType}`);
-                
-                // Refresh UI if available
-                if (window.showPolygonInfo) {
-                    try { window.showPolygonInfo(this.editingEntity); } catch (e) { /* ignore */ }
-                }
-            }
+        const detail = {
+            editMode: !!this.editMode,
+            what: this.editingWhat(),
+            object: this.editingModel || this.editingEntity || null,
+            timestamp: Date.now()
         };
-    }
 
-    // Dispatch DOM event
-    try {
-        document.dispatchEvent(new CustomEvent('object-editor-editmode-changed', { detail }));
-    } catch (e) {
-        // ignore if dispatching fails for some reason
-        console.warn("Failed to dispatch editmode event:", e);
-    }
+        // Add polygon-specific info
+        if (this.editingEntity?.polygon) {
+            detail.polygonType = getEntityType(this.editingEntity);
+            detail.setPolygonType = (newType) => {
+                setEntityType(this.editingEntity, newType);
+                if (window.showPolygonInfo) {
+                    try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
+                }
+            };
+        }
 
-    // Call optional JS callback
-    if (typeof this.onEditModeChanged === 'function') {
-        try { this.onEditModeChanged(detail); } catch (e) { console.warn("onEditModeChanged error:", e); }
+        // Add model-specific info
+        if (this.editingModel) {
+            detail.modelType = this.editingModel.buildType || "DEFAULT";
+            detail.setModelType = (newType) => {
+                updateModelType(this.editingModel, newType);
+            };
+        }
+
+        try {
+            document.dispatchEvent(new CustomEvent('object-editor-editmode-changed', { detail }));
+        } catch (e) {
+            console.warn("Failed to dispatch editmode event:", e);
+        }
+
+        if (typeof this.onEditModeChanged === 'function') {
+            try { this.onEditModeChanged(detail); } catch (e) { console.warn("onEditModeChanged error:", e); }
+        }
     }
-}
 }

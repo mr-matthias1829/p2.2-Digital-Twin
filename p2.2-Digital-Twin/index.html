@@ -8,7 +8,8 @@
         <script src="TypeData.js"></script>
 
         <!-- This is the base setup, which will init some other scripts -->
-        <script src="mainPreSetup.js"></script>
+        <!-- Required since some other scripts use references to other scripts that require them created -->
+        <script src="mainInit.js"></script>
 
         <!-- UI needs the object editor to be CREATED (not init) before it -->
         <script src="UI.js"></script>

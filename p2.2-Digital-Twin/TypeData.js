@@ -5,7 +5,6 @@ const buildTypes = {
                        // This type is filtered and not sent when prompted for all types
                        // NOTE: type 'none' IS A VALID TYPE NOT STATED IN THIS LIST AND IS NOT THIS TYPE!
 
-
         color: Cesium.Color.WHITE, // Color of the polygon
         cost: 0, // In euro, for each cubical meter
         income: 0, // % of cost as financial income per unit
@@ -29,7 +28,7 @@ const buildTypes = {
         income: 0,
         livability: 10,
     },
-        water: {
+    water: {
         id: "water",
         color: Cesium.Color.fromCssColorString("#1E88E5"), // Bright blue (different from commercial)
         cost: 300,
@@ -50,7 +49,7 @@ const buildTypes = {
         income: 10,
         livability: 6,
     },
-    coveredparking: {
+    covered_parking: {
         id: "covered parking space",
         color: Cesium.Color.fromCssColorString("#8D6E63"), // Brown
         cost: 1500,
@@ -58,7 +57,7 @@ const buildTypes = {
         livability: 10,
     },
 
-    detachedhouse: {
+    detached_house: {
         id: "detached house",
         color: Cesium.Color.fromCssColorString("#E53935"), // Red
         cost: 500,
@@ -66,7 +65,7 @@ const buildTypes = {
         people: 0.005,
         livability: 4,
     },
-    townhouse: {
+    town_house: {
         id: "townhouse",
         color: Cesium.Color.fromCssColorString("#FB8C00"), // Deep orange
         cost: 400,
@@ -82,7 +81,7 @@ const buildTypes = {
         people: 0.006,
         livability: 5,
     },
-    commercialbuilding: {
+    commercial_building: {
         id: "commercial building",
         color: Cesium.Color.fromCssColorString("#039BE5"), // Light blue
         cost: 200,
@@ -93,7 +92,7 @@ const buildTypes = {
     // Add more types here easily!
 };
 
-// Helper function to get all existing type IDs
+// Helper function to get all existing type IDs (exlcuding default)
 function getAllTypeIds() {
     return Object.keys(buildTypes).filter(key => key.toUpperCase() !== "DEFAULT");
 }
@@ -104,89 +103,6 @@ function addBuildType(id, properties) {
         id: id,
         ...properties
     };
-}
-
-// Apply type initialization for POLYGONS
-function applyTypeInitPolygon(obj) {
-    // Capture the initial color when the function is called
-    let initialColor = Cesium.Color.WHITE; // fallback
-    
-    if (obj.polygon && obj.polygon.material) {
-        const mat = obj.polygon.material;
-        // Try to get the color from the existing material
-        if (mat instanceof Cesium.Color) {
-            initialColor = mat.clone();
-        } else if (mat instanceof Cesium.ColorMaterialProperty) {
-            const col = mat.color;
-            if (col instanceof Cesium.Color) {
-                initialColor = col.clone();
-            } else if (typeof col.getValue === 'function') {
-                initialColor = col.getValue(Cesium.JulianDate.now()).clone();
-            }
-        } else if (typeof mat.getValue === 'function') {
-            const val = mat.getValue(Cesium.JulianDate.now());
-            if (val && val.color) {
-                initialColor = val.color.clone();
-            }
-        }
-    }
-    
-    return new Cesium.ColorMaterialProperty(
-        new Cesium.CallbackProperty(() => {
-            let type = "DEFAULT"; // default
-            
-            if (obj.properties && obj.properties.buildType) {
-                const buildTypeProp = obj.properties.buildType;
-                type = (typeof buildTypeProp.getValue === 'function') 
-                    ? buildTypeProp.getValue() 
-                    : buildTypeProp;
-            }
-            
-            // Look up the color from buildTypes
-            const typeColor = getTypeProperty(type, 'color');
-            return typeColor ? typeColor : initialColor;
-        }, false)
-    );
-}
-
-// Apply type initialization for MODELS
-function applyTypeInitModel(obj) {
-    // Capture initial values
-    let initialColor = Cesium.Color.WHITE;
-    let initialUri = null;
-    let initialScale = 1.0;
-    
-    // Try to get existing model properties
-    if (obj.model) {
-        if (obj.model.color) {
-            const col = obj.model.color;
-            if (col instanceof Cesium.Color) {
-                initialColor = col.clone();
-            } else if (typeof col.getValue === 'function') {
-                initialColor = col.getValue(Cesium.JulianDate.now()).clone();
-            }
-        }
-        if (obj.model.uri && typeof obj.model.uri.getValue === 'function') {
-            initialUri = obj.model.uri.getValue(Cesium.JulianDate.now());
-        }
-        if (obj.model.scale && typeof obj.model.scale === 'number') {
-            initialScale = obj.model.scale;
-        }
-    }
-}
-
-// Unified function to apply type initialization to any entity
-function applyTypeToEntity(entity) {
-    if (entity.polygon) {
-        entity.polygon.material = applyTypeInit(entity);
-    }
-    
-    if (entity.model) {
-        const modelProps = applyTypeInitModel(entity);
-        entity.model.uri = modelProps.uri;
-        entity.model.color = modelProps.color;
-        entity.model.scale = modelProps.scale;
-    }
 }
 
 // Function to fetch a property of a type
@@ -203,7 +119,7 @@ function getTypeProperty(typeId, propertyName) {
     if (typeId === "none") {
         const fallback = buildTypes.DEFAULT[propertyName];
         if (fallback !== undefined) {
-        return fallback;
+            return fallback;
         }
     }
 
@@ -238,11 +154,142 @@ function getTypeProperty(typeId, propertyName) {
     return null;
 }
 
+// Get the buildType from an entity's properties
+function getEntityType(entity) {
+    if (!entity.properties || !entity.properties.buildType) {
+        return "DEFAULT";
+    }
+    
+    const buildTypeProp = entity.properties.buildType;
+    return (typeof buildTypeProp.getValue === 'function') 
+        ? buildTypeProp.getValue() 
+        : buildTypeProp;
+}
+
+// Set the type on an entity and update visuals
+function setEntityType(entity, typeId) {
+    // Validate the type exists
+    if (!buildTypes[typeId] && typeId !== "none") {
+        console.warn(`Type "${typeId}" does not exist. Using DEFAULT.`);
+        typeId = "DEFAULT";
+    }
+    
+    // Save the type to the entity's properties
+    if (!entity.properties) {
+        entity.properties = new Cesium.PropertyBag();
+    }
+    entity.properties.buildType = typeId;
+    
+    // Apply the visual updates
+    applyTypeToEntity(entity);
+}
+
+// Apply type initialization for POLYGONS (modifies entity directly)
+function applyTypeInitPolygon(entity) {
+    if (!entity.polygon) {
+        console.warn("applyTypeInitPolygon called on entity without polygon");
+        return;
+    }
+    
+    // Capture the initial color when the function is called
+    let initialColor = Cesium.Color.WHITE; // fallback
+    
+    if (entity.polygon.material) {
+        const mat = entity.polygon.material;
+        // Try to get the color from the existing material
+        if (mat instanceof Cesium.Color) {
+            initialColor = mat.clone();
+        } else if (mat instanceof Cesium.ColorMaterialProperty) {
+            const col = mat.color;
+            if (col instanceof Cesium.Color) {
+                initialColor = col.clone();
+            } else if (typeof col.getValue === 'function') {
+                initialColor = col.getValue(Cesium.JulianDate.now()).clone();
+            }
+        } else if (typeof mat.getValue === 'function') {
+            const val = mat.getValue(Cesium.JulianDate.now());
+            if (val && val.color) {
+                initialColor = val.color.clone();
+            }
+        }
+    }
+    
+    // Set the dynamic material directly on the entity
+    entity.polygon.material = new Cesium.ColorMaterialProperty(
+        new Cesium.CallbackProperty(() => {
+            const type = getEntityType(entity);
+            const typeColor = getTypeProperty(type, 'color');
+            return typeColor ? typeColor : initialColor;
+        }, false)
+    );
+}
+
+// Apply type initialization for MODELS (modifies entity directly)
+function applyTypeInitModel(entity) {
+    if (!entity.model) {
+        console.warn("applyTypeInitModel called on entity without model");
+        return;
+    }
+    
+    // Capture initial values
+    let initialColor = Cesium.Color.WHITE;
+    let initialUri = null;
+    let initialScale = 1.0;
+    
+    // Try to get existing model properties
+    if (entity.model.color) {
+        const col = entity.model.color;
+        if (col instanceof Cesium.Color) {
+            initialColor = col.clone();
+        } else if (typeof col.getValue === 'function') {
+            initialColor = col.getValue(Cesium.JulianDate.now()).clone();
+        }
+    }
+    if (entity.model.uri && typeof entity.model.uri.getValue === 'function') {
+        initialUri = entity.model.uri.getValue(Cesium.JulianDate.now());
+    }
+    if (entity.model.scale && typeof entity.model.scale === 'number') {
+        initialScale = entity.model.scale;
+    }
+    
+    // Set dynamic properties directly on the entity
+    entity.model.color = new Cesium.CallbackProperty(() => {
+        const type = getEntityType(entity);
+        const typeColor = getTypeProperty(type, 'color');
+        return typeColor ? typeColor : initialColor;
+    }, false);
+    
+    entity.model.uri = new Cesium.CallbackProperty(() => {
+        const type = getEntityType(entity);
+        const typeUri = getTypeProperty(type, 'uri');
+        return typeUri ? typeUri : initialUri;
+    }, false);
+    
+    entity.model.scale = new Cesium.CallbackProperty(() => {
+        const type = getEntityType(entity);
+        const typeScale = getTypeProperty(type, 'scale');
+        return typeScale !== null ? typeScale : initialScale;
+    }, false);
+}
+
+// Unified function to apply type initialization to any entity
+function applyTypeToEntity(entity) {
+    if (entity.polygon) {
+        applyTypeInitPolygon(entity);
+    }
+    
+    if (entity.model) {
+        applyTypeInitModel(entity);
+    }
+}
+
 // Expose helper functions globally if needed
 window.buildTypes = buildTypes;
 window.getTypeProperty = getTypeProperty;
 window.getAllTypeIds = getAllTypeIds;
 window.addBuildType = addBuildType;
-window.applyTypeInit = applyTypeInitPolygon;
+window.getEntityType = getEntityType;
+window.setEntityType = setEntityType;
+window.applyTypeInitPolygon = applyTypeInitPolygon;
 window.applyTypeInitModel = applyTypeInitModel;
 window.applyTypeToEntity = applyTypeToEntity;
