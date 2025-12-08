@@ -37,7 +37,7 @@
     // Call backend API to compute area and volume
     async function callBackendCalculation(positions, height) {
         const API_BASE = (window.POLYGONS_API_BASE && String(window.POLYGONS_API_BASE).replace(/\/$/, '')) || 'http://localhost:8081';
-        const url = API_BASE + '/api/polygons/calculate';
+        const url = API_BASE + '/api/data/calculate';
         
         // Convert Cartesian3 positions to plain objects for JSON
         const positionData = positions.map(p => ({
