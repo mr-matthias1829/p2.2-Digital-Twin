@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
 var measure;
 var viewer;
 var Editor;
+var Server;
 
 function setupSetups() {
     UIsetup();
@@ -49,12 +50,6 @@ let objType = objTypeDEFAULT;
 function laterSetup(){
     setupSetups();
 
-    // Start connection polling to the polygons API
-    startConnectionPolling();
-
-    // Load polygons from server (if available)
-    loadPolygonsFromServer();
-
     // Initial occupation stats update (after a short delay to ensure entities are loaded)
     setTimeout(() => {
         if (typeof updateOccupationStats === 'function') {
@@ -62,9 +57,6 @@ function laterSetup(){
         }
     }, 2000);
 }
-
-// Base URL for the polygons API. Can be overridden by setting `window.POLYGONS_API_BASE` before this script runs.
-const POLYGONS_API_BASE = (window.POLYGONS_API_BASE && String(window.POLYGONS_API_BASE).replace(/\/$/, '')) || 'http://localhost:8081';
 
 
 function createPoint(worldPosition) {
@@ -211,7 +203,7 @@ function terminateShape() {
     floatingPoint = undefined;
     activeShape = undefined;
     activeShapePoints = [];
-    
+
     // Update occupation stats after drawing a polygon
     if (typeof updateOccupationStats === 'function') {
         setTimeout(() => updateOccupationStats(), 100);
@@ -346,135 +338,7 @@ function create3DObject(basePolygon, height) {
     }
 }
 
-// Connection check and polling for API at http://localhost:8080/api/polygons
-let connectionPollIntervalId = undefined;
-function startConnectionPolling() {
-    // Run an initial check immediately
-    if (window.checkPolygonsConnection) {
-        window.checkPolygonsConnection();
-    } else {
-        checkPolygonsConnection();
-    }
 
-    // Poll every 10 seconds
-    if (connectionPollIntervalId) clearInterval(connectionPollIntervalId);
-    connectionPollIntervalId = setInterval(checkPolygonsConnection, 10000);
-}
-
-async function checkPolygonsConnection(manualTrigger = false) {
-    const url = POLYGONS_API_BASE + '/api/polygons';
-    const timeoutMs = 4000;
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-        const resp = await fetch(url, { signal: controller.signal, cache: 'no-store' });
-        clearTimeout(id);
-        if (!resp.ok) {
-            const msg = `HTTP ${resp.status}`;
-            if (window.setConnectionStatus) window.setConnectionStatus('Disconnected', msg);
-            console.warn('Polygons API responded with non-OK:', resp.status);
-            return false;
-        }
-
-        // try to parse and show minimal info
-        let bodyText = '';
-        try {
-            const json = await resp.json();
-            if (Array.isArray(json)) bodyText = `Items: ${json.length}`;
-            else if (json && typeof json === 'object') bodyText = `Object keys: ${Object.keys(json).length}`;
-            else bodyText = 'OK';
-        } catch (e) {
-            bodyText = 'OK (non-JSON)';
-        }
-
-        if (window.setConnectionStatus) window.setConnectionStatus('Connected', bodyText + (manualTrigger ? ' (manual)' : ''));
-        return true;
-    } catch (err) {
-        clearTimeout(id);
-        let message = '';
-        if (err.name === 'AbortError') {
-            message = `Timeout after ${timeoutMs}ms`;
-        } else {
-            message = err.message || String(err);
-        }
-
-        // If it's a network error (often CORS or server down), surface reasonable hint.
-        if (window.setConnectionStatus) {
-            let userMsg = message;
-            if (message.toLowerCase().includes('failed to fetch') || message.toLowerCase().includes('networkrequestfailed')) {
-                userMsg = message + ' — Spring Boot server not detected';
-            }
-            window.setConnectionStatus('Disconnected', userMsg + (manualTrigger ? ' (manual)' : ''));
-        }
-        console.warn('Error checking polygons API:', err);
-        return false;
-    }
-}
-
-// Expose to the UI button
-window.checkPolygonsConnection = checkPolygonsConnection;
-
-// Map of server polygon id -> Cesium entity (so we don't duplicate on repeated loads)
-window.serverPolygonEntities = new Map();
-
-async function loadPolygonsFromServer() {
-    const url = POLYGONS_API_BASE + '/api/polygons';
-    try {
-        const resp = await fetch(url, { cache: 'no-store' });
-        if (!resp.ok) {
-            console.warn('Failed to load polygons from server:', resp.status, 'url=', url);
-            return;
-        }
-        const polygons = await resp.json();
-        if (!Array.isArray(polygons)) return;
-
-        // Render or update each polygon
-        polygons.forEach(p => {
-            if (!p || !p.coordinates) return;
-            const id = p.id != null ? p.id : Math.random();
-            // If entity exists already, remove and replace to reflect server state
-            if (window.serverPolygonEntities.has(id)) {
-                const existing = window.serverPolygonEntities.get(id);
-                try { viewer.entities.remove(existing); } catch (e) {}
-                window.serverPolygonEntities.delete(id);
-            }
-
-            const degreesArray = [];
-            p.coordinates.forEach(c => {
-                // server uses { longitude, latitude }
-                const lon = c.longitude != null ? c.longitude : c.lng || c.lon;
-                const lat = c.latitude != null ? c.latitude : c.lat;
-                if (lon != null && lat != null) {
-                    degreesArray.push(lon);
-                    degreesArray.push(lat);
-                }
-            });
-
-            if (degreesArray.length < 6) return; // need at least 3 points
-
-            const entity = viewer.entities.add({
-                id: 'server-polygon-' + id,
-                name: (p.type ? p.type : 'server-polygon') + (p.id ? ` (${p.id})` : ''),
-                polygon: {
-                    hierarchy: Cesium.Cartesian3.fromDegreesArray(degreesArray),
-                    material: new Cesium.ColorMaterialProperty(Cesium.Color.fromCssColorString('#eeff00ff').withAlpha(1)),
-                    extrudedHeight: (p.height && !isNaN(p.height)) ? p.height : undefined,
-                    height: 0,
-                    classificationType: Cesium.ClassificationType.BOTH
-                },
-                properties: {
-                    isServerPolygon: true,
-                    serverId: id
-                }
-            });
-
-            window.serverPolygonEntities.set(id, entity);
-        });
-    } catch (err) {
-        console.warn('Error fetching polygons from server:', err);
-    }
-}
 
 // Expose for manual reload
 // Utility: extract coordinates from a polygon entity's hierarchy
@@ -535,7 +399,7 @@ window.showPolygonInfo = async function (entity) {
             if (window.polygonUtils) {
                 // Show loading indicator while calculating
                 el.innerHTML = `<b>Polygon coordinates</b> ${heightLine}<br/><small>(${positions.length} punten)</small><br/><i>Calculating area and volume...</i>`;
-                
+
                 if (typeof window.polygonUtils.computeAreaFromHierarchy === 'function') {
                     const area = await window.polygonUtils.computeAreaFromHierarchy(entity.polygon.hierarchy || positions);
                     if (typeof area === 'number') {
@@ -580,10 +444,10 @@ window.clearPolygonInfo = function () {
 async function updateOccupationStats() {
     try {
         // Find the Spoordok polygon
-        const spoordokEntity = viewer.entities.values.find(e => 
+        const spoordokEntity = viewer.entities.values.find(e =>
             e.properties && e.properties.isSpoordok && e.polygon
         );
-        
+
         if (!spoordokEntity) {
             console.warn('Spoordok polygon not found');
             return;
@@ -600,7 +464,7 @@ async function updateOccupationStats() {
         // Get all other polygons (excluding Spoordok)
         const polygonAreas = [];
         viewer.entities.values.forEach(entity => {
-            if (entity.polygon && 
+            if (entity.polygon &&
                 (!entity.properties || !entity.properties.isSpoordok)) {
                 const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
                 if (positions && positions.length >= 3) {
@@ -633,7 +497,7 @@ async function updateOccupationStats() {
         }
 
         const result = await response.json();
-        
+
         // Update UI
         document.getElementById('spoordokArea').textContent = result.spoordokArea.toFixed(2);
         document.getElementById('occupiedArea').textContent = result.occupiedArea.toFixed(2);
@@ -649,5 +513,3 @@ async function updateOccupationStats() {
 
 // Call updateOccupationStats when polygons change
 window.updateOccupationStats = updateOccupationStats;
-
-window.loadPolygonsFromServer = loadPolygonsFromServer;

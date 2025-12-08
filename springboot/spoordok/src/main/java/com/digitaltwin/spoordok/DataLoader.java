@@ -1,8 +1,10 @@
 package com.digitaltwin.spoordok;
 
 import com.digitaltwin.spoordok.model.Coordinate;
+import com.digitaltwin.spoordok.model.Model;
 import com.digitaltwin.spoordok.model.Polygon;
 import com.digitaltwin.spoordok.model.PolygonType;
+import com.digitaltwin.spoordok.service.ModelService;
 import com.digitaltwin.spoordok.service.PolygonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -16,12 +18,15 @@ public class DataLoader implements CommandLineRunner {
     @Autowired
     private PolygonService polygonService;
 
+    @Autowired
+    private ModelService modelService;
+
     @Override
     public void run(String... args) throws Exception {
-        // Only load dummy data when there are no polygons yet.
-        // This prevents overwriting edited polygons when the server is restarted
-        // during a development session where the in-memory store still contains data.
-        if (polygonService.getAllPolygons() == null || polygonService.getAllPolygons().isEmpty()) {
+        boolean hasPolygons = polygonService.getAllPolygons() != null && !polygonService.getAllPolygons().isEmpty();
+        boolean hasModels = modelService.getAllModels() != null && !modelService.getAllModels().isEmpty();
+
+        if (!hasPolygons && !hasModels) {
             // Dummy Polygon 1: Vrijstaand huis
             Polygon house1 = new Polygon();
             house1.setCoordinates(Arrays.asList(
@@ -58,9 +63,53 @@ public class DataLoader implements CommandLineRunner {
             apartment.setType(PolygonType.APPARTEMENT);
             polygonService.savePolygon(apartment);
 
-            System.out.println("✓ Dummy data geladen: 3 polygons");
+            // Dummy Model 1: Tree in the park
+            Model tree1 = new Model();
+            tree1.setLongitude(5.7970);
+            tree1.setLatitude(53.2016);
+            tree1.setHeight(0.0);
+            tree1.setRotation(45.0);
+            tree1.setScale(0.65);
+            tree1.setType("nature");
+            tree1.setModelKey("tree");
+            modelService.saveModel(tree1);
+
+            // Dummy Model 2: Another tree
+            Model tree2 = new Model();
+            tree2.setLongitude(5.7968);
+            tree2.setLatitude(53.2014);
+            tree2.setHeight(0.0);
+            tree2.setRotation(120.0);
+            tree2.setScale(0.65);
+            tree2.setType("nature");
+            tree2.setModelKey("tree");
+            modelService.saveModel(tree2);
+
+            // Dummy Model 3: Building near the house
+            Model building = new Model();
+            building.setLongitude(5.7957);
+            building.setLatitude(53.2015);
+            building.setHeight(0.0);
+            building.setRotation(0.0);
+            building.setScale(3.0);
+            building.setType("detached_house");
+            building.setModelKey("building");
+            modelService.saveModel(building);
+
+            // Dummy Model 4: Person walking
+            Model person = new Model();
+            person.setLongitude(5.7947);
+            person.setLatitude(53.2018);
+            person.setHeight(0.0);
+            person.setRotation(90.0);
+            person.setScale(1.0);
+            person.setType("nature");
+            person.setModelKey("man");
+            modelService.saveModel(person);
+
+            System.out.println("✓ Dummy data geladen: 3 polygons, 4 models");
         } else {
-            System.out.println("✓ Polygon store already contains data; skipping dummy load.");
+            System.out.println("✓ Store already contains data; skipping dummy load.");
         }
     }
 }
