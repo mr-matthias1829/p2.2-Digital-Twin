@@ -20,3 +20,11 @@ cmds: (NOTE: these only work in the CMD, NOT in the docker cmd!)
 notes:
 1. we currently lack the ability to fetch and send data to DB, we need more code in spring for that
 2. also im not sure but fairly sure that the created db in docker is completely empty
+
+
+
+
+upating docker:
+
+1. be on latest commit on main (duh)
+2. docker-compose down; docker-compose up --build -d

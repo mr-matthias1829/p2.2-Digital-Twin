@@ -1,4 +1,4 @@
-// polygonUtils.js - simplified helpers to compute polygon area (m²) and volume (m³)
+// polygonUtils.js - API client for backend polygon area (m²) and volume (m³) calculations
 (function () {
 
     // Convert different input formats into an array of Cartesian3 positions
@@ -25,37 +25,7 @@
         }
         return pos; // assume already Cartesian3
     }
-
-    // Compute planar polygon area in m² using local ENU projection and 2D shoelace formula
-    function areaFromCartesianPositions(positions) {
-        if (!positions || positions.length < 3) return 0;
-
-        // Compute centroid to reduce distortion in local ENU frame
-        const centroid = positions.reduce((acc, p) => {
-            acc.x += p.x; acc.y += p.y; acc.z += p.z; return acc;
-        }, new Cesium.Cartesian3());
-        centroid.x /= positions.length;
-        centroid.y /= positions.length;
-        centroid.z /= positions.length;
-
-        // Transform global points to local East-North-Up coordinates
-        const inv = Cesium.Matrix4.inverse(Cesium.Transforms.eastNorthUpToFixedFrame(centroid), new Cesium.Matrix4());
-        const local = positions.map(p => Cesium.Matrix4.multiplyByPoint(inv, p, new Cesium.Cartesian3()));
-
-        // Shoelace formula on XY plane
-        let area = 0;
-        for (let i = 0; i < local.length; i++) {
-            const a = local[i], b = local[(i + 1) % local.length];
-            area += (a.x * b.y - b.x * a.y);
-        }
-        return Math.abs(area) * 0.5; // final area in m²
-    }
-
-    // Public function: compute polygon area from hierarchy (any input format)
-    function computeAreaFromHierarchy(hierarchy) {
-        const positions = getPositions(hierarchy).map(toCartesian3);
-        return areaFromCartesianPositions(positions);
-    }
+    
 
     // Helper: extract numeric value from number or Cesium Property
     function getNumeric(val) {
@@ -64,26 +34,88 @@
         if (val.getValue) return val.getValue(Cesium.JulianDate.now());
     }
 
-    // Compute approximate volume (m³) as area * height (simple prism)
-    function computeVolumeFromEntity(entity) {
+    // Call backend API to compute area and volume
+    async function callBackendCalculation(positions, height) {
+        const API_BASE = (window.POLYGONS_API_BASE && String(window.POLYGONS_API_BASE).replace(/\/$/, '')) || 'http://localhost:8081';
+        const url = API_BASE + '/api/polygons/calculate';
+        
+        // Convert Cartesian3 positions to plain objects for JSON
+        const positionData = positions.map(p => ({
+            x: p.x,
+            y: p.y,
+            z: p.z
+        }));
+
+        const requestBody = {
+            positions: positionData,
+            height: height
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Backend calculation failed: HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result; // { area: number, volume: number|null, height: number|null }
+        } catch (error) {
+            console.error('Error calling backend calculation API:', error);
+            throw error;
+        }
+    }
+
+    // Public function: compute polygon area from hierarchy (calls backend)
+    async function computeAreaFromHierarchy(hierarchy) {
+        const positions = getPositions(hierarchy).map(toCartesian3);
+        if (positions.length < 3) return null;
+
+        try {
+            const result = await callBackendCalculation(positions, null);
+            return result.area;
+        } catch (error) {
+            console.error('Failed to compute area from backend:', error);
+            return null;
+        }
+    }
+
+    // Compute area and volume from entity (calls backend)
+    async function computeVolumeFromEntity(entity) {
         if (!entity?.polygon) return undefined;
 
         const positions = getPositions(entity.polygon.hierarchy).map(toCartesian3);
         if (positions.length < 3) return undefined;
 
-        const area = areaFromCartesianPositions(positions);
-        const height = getNumeric(entity.polygon.extrudedHeight) ?? getNumeric(entity.polygon.height);
 
+        const height = getNumeric(entity.polygon.extrudedHeight) ?? getNumeric(entity.polygon.height);
         
+
         if (typeof height !== 'number') return undefined;
 
-        return { area, height, volume: area * height };
+        try {
+            const result = await callBackendCalculation(positions, height);
+            return { 
+                area: result.area, 
+                height: result.height, 
+                volume: result.volume 
+            };
+        } catch (error) {
+            console.error('Failed to compute volume from backend:', error);
+            return undefined;
+        }
     }
 
     // Expose simplified utilities
     window.polygonUtils = {
         computeAreaFromHierarchy,
-        computeVolumeFromEntity,
-        areaFromCartesianPositions
+        computeVolumeFromEntity
     };
 })();
+

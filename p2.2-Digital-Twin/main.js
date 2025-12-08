@@ -480,7 +480,7 @@ function _getPositionsFromHierarchy(hierarchy) {
 }
 
 // Show polygon coordinates in the bottom-right container (if present)
-window.showPolygonInfo = function (entity) {
+window.showPolygonInfo = async function (entity) {
     try {
         const el = document.getElementById('polygonInfo');
         if (!el) return;
@@ -516,26 +516,31 @@ window.showPolygonInfo = function (entity) {
             heightLine = `<small>Base height: ${Number(baseVal).toFixed(2)} m</small>`;
         }
 
-        // Compute area (always) and volume (if height present) using polygonUtils
+        // Compute area (always) and volume (if height present) using backend API via polygonUtils
         let areaLine = '';
         let volumeLine = '';
         try {
             if (window.polygonUtils) {
+                // Show loading indicator while calculating
+                el.innerHTML = `<b>Polygon coordinates</b> ${heightLine}<br/><small>(${positions.length} punten)</small><br/><i>Calculating area and volume...</i>`;
+                
                 if (typeof window.polygonUtils.computeAreaFromHierarchy === 'function') {
-                    const area = window.polygonUtils.computeAreaFromHierarchy(entity.polygon.hierarchy || positions);
+                    const area = await window.polygonUtils.computeAreaFromHierarchy(entity.polygon.hierarchy || positions);
                     if (typeof area === 'number') {
                         areaLine = `<small>Area: ${Number(area).toFixed(2)} m²</small>`;
                     }
                 }
                 if (typeof window.polygonUtils.computeVolumeFromEntity === 'function') {
-                    const vol = window.polygonUtils.computeVolumeFromEntity(entity);
+                    const vol = await window.polygonUtils.computeVolumeFromEntity(entity);
                     if (vol && typeof vol.volume === 'number') {
                         volumeLine = `<small>Volume: ${Number(vol.volume).toFixed(2)} m³</small>`;
                     }
                 }
             }
         } catch (e) {
-            console.warn('polygonUtils error', e);
+            console.warn('polygonUtils error - backend may be unavailable:', e);
+            areaLine = '<small style="color: #ff6b6b;">Area: Backend unavailable</small>';
+            volumeLine = '<small style="color: #ff6b6b;">Volume: Backend unavailable</small>';
         }
 
         let html = `<b>Polygon coordinates</b> ${heightLine} ${areaLine} ${volumeLine}<br/><small>(${positions.length} punten)</small><hr/>`;

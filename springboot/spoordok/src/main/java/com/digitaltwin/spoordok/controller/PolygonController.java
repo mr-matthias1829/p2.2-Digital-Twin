@@ -1,6 +1,9 @@
 package com.digitaltwin.spoordok.controller;
 
+import com.digitaltwin.spoordok.dto.CalculationRequest;
+import com.digitaltwin.spoordok.dto.CalculationResponse;
 import com.digitaltwin.spoordok.model.Polygon;
+import com.digitaltwin.spoordok.service.CalculationService;
 import com.digitaltwin.spoordok.service.PolygonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,6 +19,9 @@ public class PolygonController {
 
     @Autowired
     private PolygonService polygonService;
+
+    @Autowired
+    private CalculationService calculationService;
 
     // GET alle polygons
     @GetMapping
@@ -53,5 +59,12 @@ public class PolygonController {
     public ResponseEntity<Void> deleteAllPolygons() {
         polygonService.deleteAllPolygons();
         return ResponseEntity.noContent().build();
+    }
+
+    // POST calculate area and volume
+    @PostMapping("/calculate")
+    public ResponseEntity<CalculationResponse> calculateAreaAndVolume(@RequestBody CalculationRequest request) {
+        CalculationResponse response = calculationService.calculateAreaAndVolume(request);
+        return ResponseEntity.ok(response);
     }
 }
