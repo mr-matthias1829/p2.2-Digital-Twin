@@ -6,7 +6,9 @@ import com.digitaltwin.spoordok.dto.OccupationRequest;
 import com.digitaltwin.spoordok.dto.OccupationResponse;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service for calculating area and volume of polygons.
@@ -129,17 +131,23 @@ public class CalculationServiceImpl implements CalculationService {
         double spoordokArea = calculateAreaFromPositions(request.getSpoordokPositions());
         
         if (spoordokArea == 0.0) {
-            return new OccupationResponse(0.0, 0.0, 0.0);
+            return new OccupationResponse(0.0, 0.0, 0.0, new HashMap<>());
         }
 
-        // Calculate total occupied area by summing only polygons completely inside Spoordok
+        // Calculate total occupied area and breakdown by type
         double totalOccupiedArea = 0.0;
+        Map<String, Double> typeAreas = new HashMap<>();
+        
         if (request.getPolygonAreas() != null) {
             for (OccupationRequest.PolygonArea polygon : request.getPolygonAreas()) {
                 // Check if all vertices are inside the Spoordok polygon
                 if (isPolygonInsideSpoordok(polygon.getPositions(), request.getSpoordokPositions())) {
                     double area = calculateAreaFromPositions(polygon.getPositions());
                     totalOccupiedArea += area;
+                    
+                    // Track area by type
+                    String type = polygon.getType() != null ? polygon.getType() : "unknown";
+                    typeAreas.put(type, typeAreas.getOrDefault(type, 0.0) + area);
                 }
             }
         }
@@ -147,7 +155,19 @@ public class CalculationServiceImpl implements CalculationService {
         // Calculate percentage
         double occupationPercentage = (totalOccupiedArea / spoordokArea) * 100.0;
 
-        return new OccupationResponse(spoordokArea, totalOccupiedArea, occupationPercentage);
+        // Build type breakdown
+        Map<String, OccupationResponse.TypeOccupation> typeBreakdown = new HashMap<>();
+        for (Map.Entry<String, Double> entry : typeAreas.entrySet()) {
+            double typePercentage = (entry.getValue() / spoordokArea) * 100.0;
+            typeBreakdown.put(entry.getKey(), new OccupationResponse.TypeOccupation(entry.getValue(), typePercentage));
+        }
+
+        // Always add "unoccupied" area
+        double unoccupiedArea = spoordokArea - totalOccupiedArea;
+        double unoccupiedPercentage = (unoccupiedArea / spoordokArea) * 100.0;
+        typeBreakdown.put("unoccupied", new OccupationResponse.TypeOccupation(unoccupiedArea, unoccupiedPercentage));
+
+        return new OccupationResponse(spoordokArea, totalOccupiedArea, occupationPercentage, typeBreakdown);
     }
 
     /**

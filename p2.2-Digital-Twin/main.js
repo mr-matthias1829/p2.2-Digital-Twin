@@ -461,19 +461,27 @@ async function updateOccupationStats() {
             z: p.z
         }));
 
-        // Get all other polygons (excluding Spoordok)
+        // Get all other polygons (excluding Spoordok) with their types
         const polygonAreas = [];
         viewer.entities.values.forEach(entity => {
             if (entity.polygon &&
                 (!entity.properties || !entity.properties.isSpoordok)) {
                 const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
                 if (positions && positions.length >= 3) {
+                    // Get polygon type
+                    let type = 'unknown';
+                    if (entity.properties && entity.properties.buildType) {
+                        const bt = entity.properties.buildType;
+                        type = typeof bt.getValue === 'function' ? bt.getValue() : bt;
+                    }
+                    
                     polygonAreas.push({
                         positions: positions.map(p => ({
                             x: p.x,
                             y: p.y,
                             z: p.z
-                        }))
+                        })),
+                        type: type
                     });
                 }
             }
@@ -503,12 +511,104 @@ async function updateOccupationStats() {
         document.getElementById('occupiedArea').textContent = result.occupiedArea.toFixed(2);
         document.getElementById('occupationPercentage').textContent = result.occupationPercentage.toFixed(1);
 
+        // Draw pie chart and type breakdown
+        if (result.typeBreakdown) {
+            drawPieChart(result.typeBreakdown);
+            displayTypeBreakdown(result.typeBreakdown);
+        } else {
+            // Empty pie chart if no data
+            drawPieChart({ unoccupied: { area: result.spoordokArea, percentage: 100 } });
+            displayTypeBreakdown({ unoccupied: { area: result.spoordokArea, percentage: 100 } });
+        }
+
     } catch (error) {
         console.error('Error updating occupation stats:', error);
         document.getElementById('spoordokArea').textContent = 'Error';
         document.getElementById('occupiedArea').textContent = 'Error';
         document.getElementById('occupationPercentage').textContent = '--';
     }
+}
+
+function drawPieChart(typeBreakdown) {
+    const canvas = document.getElementById('pieChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Get types and their percentages
+    const types = Object.keys(typeBreakdown);
+    if (types.length === 0) return;
+    
+    let currentAngle = -Math.PI / 2; // Start at top
+    
+    types.forEach(type => {
+        const data = typeBreakdown[type];
+        const sliceAngle = (data.percentage / 100) * 2 * Math.PI;
+        
+        // Get color for this type from TypeData
+        const color = getTypeColor(type);
+        
+        // Draw slice
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        currentAngle += sliceAngle;
+    });
+}
+
+function displayTypeBreakdown(typeBreakdown) {
+    const container = document.getElementById('typeBreakdown');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    const types = Object.keys(typeBreakdown).sort((a, b) => 
+        typeBreakdown[b].percentage - typeBreakdown[a].percentage
+    );
+    
+    types.forEach(type => {
+        const data = typeBreakdown[type];
+        const color = getTypeColor(type);
+        
+        const item = document.createElement('div');
+        item.className = 'type-item';
+        item.innerHTML = `
+            <div class="type-color" style="background-color: ${color}"></div>
+            <span>${type}: ${data.percentage.toFixed(1)}%</span>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function getTypeColor(typeId) {
+    // Special case for unoccupied area
+    if (typeId === 'unoccupied') {
+        return 'rgba(200, 200, 200, 0.5)'; // Light gray, semi-transparent
+    }
+    
+    // Get color from TypeData
+    if (typeof getTypeProperty === 'function') {
+        const cesiumColor = getTypeProperty(typeId, 'color');
+        if (cesiumColor) {
+            // Convert Cesium.Color to CSS rgba
+            return `rgba(${Math.floor(cesiumColor.red * 255)}, ${Math.floor(cesiumColor.green * 255)}, ${Math.floor(cesiumColor.blue * 255)}, ${cesiumColor.alpha})`;
+        }
+    }
+    // Fallback colors
+    return '#888888';
 }
 
 // Call updateOccupationStats when polygons change

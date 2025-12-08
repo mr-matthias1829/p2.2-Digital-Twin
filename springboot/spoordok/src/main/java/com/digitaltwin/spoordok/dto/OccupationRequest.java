@@ -31,11 +31,13 @@ public class OccupationRequest {
 
     public static class PolygonArea {
         private List<CalculationRequest.Position> positions;
+        private String type;
 
         public PolygonArea() {}
 
-        public PolygonArea(List<CalculationRequest.Position> positions) {
+        public PolygonArea(List<CalculationRequest.Position> positions, String type) {
             this.positions = positions;
+            this.type = type;
         }
 
         public List<CalculationRequest.Position> getPositions() {
@@ -44,6 +46,14 @@ public class OccupationRequest {
 
         public void setPositions(List<CalculationRequest.Position> positions) {
             this.positions = positions;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
         }
     }
 }
