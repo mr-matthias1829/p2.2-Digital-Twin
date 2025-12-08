@@ -228,41 +228,6 @@ function editorDynamicContainerContent(Con){
         Con.appendChild(objType);
     }
 
-    // ONLY show the model dropdown while EDITING a model
-    if (what === "model" && Editor.editMode) {
-        const Types = ["none", ...getAllTypeIds()]; // dynamically grab all type IDs
-        const objType = createDropdown("objtype", Types, "Type:");
-
-        // Preselect the current model type
-        let currentTypeKey = "DEFAULT";
-        if (Editor.editingModel && Editor.editingModel.buildType) {
-            currentTypeKey = Editor.editingModel.buildType;
-        }
-        
-        // Convert key to ID for display
-        const currentTypeId = buildTypes[currentTypeKey]?.id || "none";
-        objType.querySelector("select").value = currentTypeId;
-
-        // Update model type when user changes dropdown
-        objType.querySelector("select").onchange = (e) => {
-            const newTypeId = e.target.value;
-            // Convert ID back to key
-            const newTypeKey = getTypeById(newTypeId);
-            
-            if (Editor.editingModel && newTypeKey) {
-                Editor.editingModel.buildType = newTypeKey;
-                console.log(`✓ Model type changed to: ${newTypeId} (key: ${newTypeKey})`);
-                
-                // Force visual update if you have a function for it
-                if (typeof updateModelType === 'function') {
-                    updateModelType(Editor.editingModel, newTypeKey);
-                }
-            }
-        };
-
-        Con.appendChild(objType);
-    }
-
     // Keep the existing info text box for EDIT mode
     if (UIState.modeSelect === "edit") {
         const txt = document.createElement("div");
