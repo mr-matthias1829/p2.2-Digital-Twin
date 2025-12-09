@@ -32,10 +32,10 @@ public class DataLoader implements CommandLineRunner {
             // Dummy Polygon 1: Vrijstaand huis
             Polygon house1 = new Polygon();
             house1.setCoordinates(Arrays.asList(
-                    new Coordinate(5.7953, 53.2012),
-                    new Coordinate(5.7960, 53.2012),
-                    new Coordinate(5.7960, 53.2018),
-                    new Coordinate(5.7953, 53.2018)
+                    new Coordinate(5.785959, 53.195938),
+                    new Coordinate(5.786659, 53.195938),
+                    new Coordinate(5.786659, 53.196538),
+                    new Coordinate(5.785959, 53.196538)
             ));
             house1.setHeight(15.0);
             house1.setType(PolygonType.VRIJSTAAND_HUIS);
@@ -44,10 +44,10 @@ public class DataLoader implements CommandLineRunner {
             // Dummy Polygon 2: Park
             Polygon park = new Polygon();
             park.setCoordinates(Arrays.asList(
-                    new Coordinate(5.7965, 53.2012),
-                    new Coordinate(5.7975, 53.2012),
-                    new Coordinate(5.7975, 53.2020),
-                    new Coordinate(5.7965, 53.2020)
+                    new Coordinate(5.787432, 53.196659),
+                    new Coordinate(5.788432, 53.196659),
+                    new Coordinate(5.788432, 53.197459),
+                    new Coordinate(5.787432, 53.197459)
             ));
             park.setHeight(2.0);
             park.setType(PolygonType.PARK);
@@ -56,10 +56,10 @@ public class DataLoader implements CommandLineRunner {
             // Dummy Polygon 3: Appartement
             Polygon apartment = new Polygon();
             apartment.setCoordinates(Arrays.asList(
-                    new Coordinate(5.7945, 53.2015),
-                    new Coordinate(5.7950, 53.2015),
-                    new Coordinate(5.7950, 53.2022),
-                    new Coordinate(5.7945, 53.2022)
+                    new Coordinate(5.783686, 53.196388),
+                    new Coordinate(5.783980, 53.196145),
+                    new Coordinate(5.784923, 53.196557),
+                    new Coordinate(5.784629, 53.196800)
             ));
             apartment.setHeight(25.0);
             apartment.setType(PolygonType.APPARTEMENT);
