@@ -104,7 +104,7 @@ function injectStyles() {
         }
         #goalsInfo {
             position: fixed;
-            right: 1px;
+            left: 1px;
             top: 430px;
             width: 280px;
             background: rgba(0, 0, 0, 0.85);
@@ -119,7 +119,7 @@ function injectStyles() {
             transition: transform 0.3s ease;
         }
         #goalsInfo.collapsed {
-            transform: translateX(calc(100% + 16px));
+            transform: translateX(calc(-100% - 16px));
         }
         #goalsInfo h3 {
             margin: 0 0 10px 0;
@@ -132,7 +132,7 @@ function injectStyles() {
         }
         #goalsToggle {
             position: fixed;
-            right: 1px;
+            left: 1px;
             top: 430px;
             background: rgba(0, 0, 0, 0.85);
             color: #FF9800;
@@ -146,7 +146,7 @@ function injectStyles() {
             transition: transform 0.3s ease;
         }
         #goalsToggle.open {
-            transform: translateX(calc(-296px));
+            transform: translateX(296px);
         }
         #goalsToggle:hover {
             background: rgba(0, 0, 0, 0.95);
