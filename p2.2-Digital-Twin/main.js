@@ -12,6 +12,11 @@ function setupSetups() {
     UIsetup();
     subscribeToStateChangesSetup();
     preloadModels();
+    
+    // Initialize goals UI
+    if (typeof initializeGoalsUI === 'function') {
+        initializeGoalsUI();
+    }
 }
 
 function subscribeToStateChangesSetup() {
@@ -91,7 +96,7 @@ function drawShape(positionData) {
                 extrudedHeight: 0.0, // Set default height to avoid rendering issues
             },
             properties: {
-                buildType: getTypeById(objType)  // Set the type HERE first
+                buildType: objType  // Store the type id (e.g., "commercial building")
             }
         });
         applyTypeInitPolygon(shape);
@@ -537,6 +542,11 @@ async function updateOccupationStats() {
             // Empty pie chart if no data
             drawPieChart({ unoccupied: { area: result.spoordokArea, percentage: 100 } });
             displayTypeBreakdown({ unoccupied: { area: result.spoordokArea, percentage: 100 } });
+        }
+        
+        // Also update goals display
+        if (typeof updateGoalsDisplay === 'function') {
+            updateGoalsDisplay();
         }
 
     } catch (error) {

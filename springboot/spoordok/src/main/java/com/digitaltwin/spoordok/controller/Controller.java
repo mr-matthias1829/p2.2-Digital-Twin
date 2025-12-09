@@ -4,6 +4,7 @@ import com.digitaltwin.spoordok.dto.CalculationRequest;
 import com.digitaltwin.spoordok.dto.CalculationResponse;
 import com.digitaltwin.spoordok.dto.OccupationRequest;
 import com.digitaltwin.spoordok.dto.OccupationResponse;
+import com.digitaltwin.spoordok.dto.GoalCheckResponse;
 import com.digitaltwin.spoordok.model.Model;
 import com.digitaltwin.spoordok.model.Polygon;
 import com.digitaltwin.spoordok.service.CalculationService;
@@ -130,6 +131,13 @@ public class Controller {
     @PostMapping("/occupation")
     public ResponseEntity<OccupationResponse> calculateOccupation(@RequestBody OccupationRequest request) {
         OccupationResponse response = calculationService.calculateOccupation(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // POST check goals
+    @PostMapping("/goals")
+    public ResponseEntity<GoalCheckResponse> checkGoals(@RequestBody OccupationRequest request) {
+        GoalCheckResponse response = calculationService.checkGoals(request);
         return ResponseEntity.ok(response);
     }
 }

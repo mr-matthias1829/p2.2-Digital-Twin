@@ -162,15 +162,20 @@ function getTypeProperty(typeId, propertyName) {
 }
 
 // Get the buildType from an entity's properties
+// Returns the object key for internal use (e.g., "commercial_building")
 function getEntityType(entity) {
     if (!entity.properties || !entity.properties.buildType) {
         return "DEFAULT";
     }
     
     const buildTypeProp = entity.properties.buildType;
-    return (typeof buildTypeProp.getValue === 'function') 
+    const typeId = (typeof buildTypeProp.getValue === 'function') 
         ? buildTypeProp.getValue() 
         : buildTypeProp;
+    
+    // Convert id to key for internal lookup (e.g., "commercial building" -> "commercial_building")
+    const typeKey = getTypeById(typeId);
+    return typeKey || typeId;  // Fallback to original if not found
 }
 
 // Set the type on an entity and update visuals

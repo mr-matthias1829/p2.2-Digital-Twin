@@ -102,6 +102,93 @@ function injectStyles() {
             border-radius: 2px;
             margin-right: 8px;
         }
+        #goalsInfo {
+            position: fixed;
+            right: 1px;
+            top: 430px;
+            width: 280px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #e6e6e6;
+            padding: 12px 14px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 8px;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+            transition: transform 0.3s ease;
+        }
+        #goalsInfo.collapsed {
+            transform: translateX(calc(100% + 16px));
+        }
+        #goalsInfo h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #FF9800;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #goalsToggle {
+            position: fixed;
+            right: 1px;
+            top: 430px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #FF9800;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+            transition: transform 0.3s ease;
+        }
+        #goalsToggle.open {
+            transform: translateX(calc(-296px));
+        }
+        #goalsToggle:hover {
+            background: rgba(0, 0, 0, 0.95);
+        }
+        .goal-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .goal-item.achieved {
+            background: rgba(76, 175, 80, 0.2);
+        }
+        .goal-item.not-achieved {
+            background: rgba(244, 67, 54, 0.2);
+        }
+        .goal-icon {
+            font-size: 18px;
+            margin-right: 10px;
+            min-width: 20px;
+        }
+        .goal-item.achieved .goal-icon {
+            color: #4CAF50;
+        }
+        .goal-item.not-achieved .goal-icon {
+            color: #F44336;
+        }
+        .goal-description {
+            flex: 1;
+            font-size: 13px;
+        }
+        .goal-value {
+            font-size: 12px;
+            color: #AAA;
+            margin-left: 8px;
+        }
+        .goal-item.error {
+            color: #F44336;
+            justify-content: center;
+        }
     `;
     document.head.appendChild(style);
 }
@@ -356,11 +443,11 @@ function editorDynamicContainerContent(Con){
         // Update polygon type when user changes dropdown
         objType.querySelector("select").onchange = (e) => {
             const newTypeId = e.target.value;
-            // Convert ID back to key
+            // Convert ID back to key for internal lookup
             const newTypeKey = getTypeById(newTypeId);
             
             if (Editor.editingEntity && Editor.editingEntity.properties && newTypeKey) {
-                Editor.editingEntity.properties.buildType = newTypeKey;
+                Editor.editingEntity.properties.buildType = newTypeId;  // Store the id, not the key
                 console.log(`✓ Polygon type changed to: ${newTypeId} (key: ${newTypeKey})`);
                 
                 // Force visual update

@@ -4,8 +4,10 @@ import com.digitaltwin.spoordok.dto.CalculationRequest;
 import com.digitaltwin.spoordok.dto.CalculationResponse;
 import com.digitaltwin.spoordok.dto.OccupationRequest;
 import com.digitaltwin.spoordok.dto.OccupationResponse;
+import com.digitaltwin.spoordok.dto.GoalCheckResponse;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -213,5 +215,49 @@ public class CalculationServiceImpl implements CalculationService {
 
         // Odd number of intersections means the point is inside
         return (intersections % 2) == 1;
+    }
+
+    @Override
+    public GoalCheckResponse checkGoals(OccupationRequest request) {
+        // First calculate occupation to get the type breakdown
+        OccupationResponse occupation = calculateOccupation(request);
+        
+        List<GoalCheckResponse.Goal> goals = new ArrayList<>();
+        
+        if (occupation.getTypeBreakdown() != null) {
+            Map<String, OccupationResponse.TypeOccupation> typeBreakdown = occupation.getTypeBreakdown();
+            
+            // Goal 1: Minimum 20% nature
+            double naturePercentage = 0.0;
+            if (typeBreakdown.containsKey("nature")) {
+                naturePercentage = typeBreakdown.get("nature").getPercentage();
+            }
+            boolean natureGoalAchieved = naturePercentage >= 20.0;
+            goals.add(new GoalCheckResponse.Goal(
+                "nature_min",
+                "Minimum 20% nature",
+                natureGoalAchieved,
+                naturePercentage,
+                20.0,
+                "min"
+            ));
+            
+            // Goal 2: Maximum 20% commercial building
+            double commercialPercentage = 0.0;
+            if (typeBreakdown.containsKey("commercial building")) {
+                commercialPercentage = typeBreakdown.get("commercial building").getPercentage();
+            }
+            boolean commercialGoalAchieved = commercialPercentage <= 20.0;
+            goals.add(new GoalCheckResponse.Goal(
+                "commercial_max",
+                "Maximum 20% commercial building",
+                commercialGoalAchieved,
+                commercialPercentage,
+                20.0,
+                "max"
+            ));
+        }
+        
+        return new GoalCheckResponse(goals);
     }
 }
