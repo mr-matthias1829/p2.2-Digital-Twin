@@ -396,6 +396,8 @@ window.showPolygonInfo = async function (entity) {
         // Compute area (always) and volume (if height present) using backend API via polygonUtils
         let areaLine = '';
         let volumeLine = '';
+        let serverDisconnected = false;
+        
         try {
             if (window.polygonUtils) {
                 // Show loading indicator while calculating
@@ -416,11 +418,26 @@ window.showPolygonInfo = async function (entity) {
             }
         } catch (e) {
             console.warn('polygonUtils error - backend may be unavailable:', e);
-            areaLine = '<small style="color: #ff6b6b;">Area: Backend unavailable</small>';
-            volumeLine = '<small style="color: #ff6b6b;">Volume: Backend unavailable</small>';
+            serverDisconnected = true;
         }
 
-        let html = `<b>Polygon coordinates</b> ${heightLine} ${areaLine} ${volumeLine}<br/><small>(${positions.length} punten)</small><hr/>`;
+        // If server is disconnected, show warning message instead of calculation results
+        if (serverDisconnected || (window.polygonUtils && !window.polygonUtils.isServerConnected())) {
+            areaLine = '';
+            volumeLine = '';
+        }
+
+        let html = '';
+        
+        // Show server disconnected warning at the top if server is unavailable
+        if (serverDisconnected || (window.polygonUtils && !window.polygonUtils.isServerConnected())) {
+            html += '<div style="background: rgba(255,107,107,0.2); padding: 8px; margin-bottom: 10px; border-radius: 4px; border-left: 3px solid #ff6b6b;">';
+            html += '<b style="color: #ff6b6b;">⚠ Server Disconnected</b><br/>';
+            html += '<small>Cannot calculate area and volume.<br/>Only showing coordinates.</small>';
+            html += '</div>';
+        }
+        
+        html += `<b>Polygon coordinates</b> ${heightLine} ${areaLine} ${volumeLine}<br/><small>(${positions.length} punten)</small><hr/>`;
         positions.forEach((cartesian, i) => {
             const carto = Cesium.Cartographic.fromCartesian(cartesian);
             const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(6);

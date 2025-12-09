@@ -34,6 +34,9 @@
         if (val.getValue) return val.getValue(Cesium.JulianDate.now());
     }
 
+    // Track server connectivity status
+    let serverConnected = true;
+
     // Call backend API to compute area and volume
     async function callBackendCalculation(positions, height) {
         const API_BASE = (window.POLYGONS_API_BASE && String(window.POLYGONS_API_BASE).replace(/\/$/, '')) || 'http://localhost:8081';
@@ -57,7 +60,8 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify(requestBody),
+                signal: AbortSignal.timeout(500) // 500ms timeout for faster failure
             });
 
             if (!response.ok) {
@@ -65,11 +69,20 @@
             }
 
             const result = await response.json();
+            serverConnected = true; // Mark server as connected on success
             return result; // { area: number, volume: number|null, height: number|null }
         } catch (error) {
+            serverConnected = false; // Mark server as disconnected on error
             console.error('Error calling backend calculation API:', error);
-            throw error;
+            const serverError = new Error('SERVER_DISCONNECTED');
+            serverError.originalError = error;
+            throw serverError;
         }
+    }
+
+    // Check if server is currently connected
+    function isServerConnected() {
+        return serverConnected;
     }
 
     // Public function: compute polygon area from hierarchy (calls backend)
@@ -115,7 +128,8 @@
     // Expose simplified utilities
     window.polygonUtils = {
         computeAreaFromHierarchy,
-        computeVolumeFromEntity
+        computeVolumeFromEntity,
+        isServerConnected
     };
 })();
 
