@@ -627,9 +627,12 @@ function getTypeColor(typeId) {
         return 'rgba(200, 200, 200, 0.5)'; // Light gray, semi-transparent
     }
     
-    // Get color from TypeData
-    if (typeof getTypeProperty === 'function') {
-        const cesiumColor = getTypeProperty(typeId, 'color');
+    // Convert type ID to type key for lookup (e.g., "commercial building" -> "commercial_building")
+    const typeKey = typeof getTypeById === 'function' ? getTypeById(typeId) : null;
+    
+    // Get color from TypeData using the type key
+    if (typeKey && typeof getTypeProperty === 'function') {
+        const cesiumColor = getTypeProperty(typeKey, 'color');
         if (cesiumColor) {
             // Convert Cesium.Color to CSS rgba
             return `rgba(${Math.floor(cesiumColor.red * 255)}, ${Math.floor(cesiumColor.green * 255)}, ${Math.floor(cesiumColor.blue * 255)}, ${cesiumColor.alpha})`;

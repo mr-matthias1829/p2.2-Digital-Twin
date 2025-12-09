@@ -242,17 +242,33 @@ public class CalculationServiceImpl implements CalculationService {
                 "min"
             ));
             
-            // Goal 2: Maximum 20% commercial building
-            double commercialPercentage = 0.0;
+            // Goal 2: Maximum 20% commercial building of total buildings only
+            // Only count actual buildings: houses, apartments, commercial, covered parking
+            double commercialArea = 0.0;
             if (typeBreakdown.containsKey("commercial building")) {
-                commercialPercentage = typeBreakdown.get("commercial building").getPercentage();
+                commercialArea = typeBreakdown.get("commercial building").getArea();
             }
-            boolean commercialGoalAchieved = commercialPercentage <= 20.0;
+            
+            // Calculate total building area (excluding nature, water, roads, open parking)
+            String[] buildingTypes = {"detached house", "townhouse", "apartment", "commercial building", "covered parking space"};
+            double totalBuildingArea = 0.0;
+            for (String buildingType : buildingTypes) {
+                if (typeBreakdown.containsKey(buildingType)) {
+                    totalBuildingArea += typeBreakdown.get(buildingType).getArea();
+                }
+            }
+            
+            double commercialPercentageOfBuildings = 0.0;
+            if (totalBuildingArea > 0) {
+                commercialPercentageOfBuildings = (commercialArea / totalBuildingArea) * 100.0;
+            }
+            
+            boolean commercialGoalAchieved = commercialPercentageOfBuildings <= 20.0;
             goals.add(new GoalCheckResponse.Goal(
                 "commercial_max",
-                "Maximum 20% commercial building",
+                "Maximum 20% commercial building of total buildings",
                 commercialGoalAchieved,
-                commercialPercentage,
+                commercialPercentageOfBuildings,
                 20.0,
                 "max"
             ));
