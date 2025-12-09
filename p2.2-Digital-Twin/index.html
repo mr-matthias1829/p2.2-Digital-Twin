@@ -4,147 +4,23 @@
         <script src="ModelPreLoad.js"></script>
         <script src="ObjectEditor.js"></script>
         <script src="OllamaAnalyzer.js"></script>
-        
+
         <script src="TypeData.js"></script>
         <script src="server.js"></script>
-
-        <!-- This is the base setup, which will init some other scripts -->
-        <!-- Required since some other scripts use references to other scripts that require them created -->
+        
         <script src="mainInit.js"></script>
-
-        <!-- UI needs the object editor to be CREATED (not init) before it -->
+        
         <script src="UI.js"></script>
 
-        <!-- Main shouldn't be overriden -->
+        
         <script src="main.js"></script>
+        <script src="polygonUtils.js"></script>
         <link href="Cesium-1.135/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
-        <script src="polygonUtils.js"></script>
-        <style>
-            #polygonInfo {
-                position: fixed;
-                right: 16px;
-                bottom: 16px;
-                /* Wider panel for longer coordinate lists */
-                width: 420px;
-                min-width: 300px;
-                max-height: 60vh;
-                overflow: auto;
-                background: rgba(0, 0, 0, 0.85);
-                color: #e6e6e6;
-                padding: 12px 14px;
-                font-family: monospace;
-                /* Slightly larger font for readability */
-                font-size: 15px;
-                line-height: 1.4;
-                border-radius: 8px;
-                z-index: 9999;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-                /* Hidden by default; shown when there is content */
-                display: none;
-            }
-            #occupationInfo {
-                position: fixed;
-                right: 1px;
-                top: 130px;
-                width: 280px;
-                background: rgba(0, 0, 0, 0.85);
-                color: #e6e6e6;
-                padding: 12px 14px;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                font-size: 14px;
-                line-height: 1.5;
-                border-radius: 8px;
-                z-index: 9999;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-                transition: transform 0.3s ease;
-            }
-            #occupationInfo.collapsed {
-                transform: translateX(calc(100% + 16px));
-            }
-            #occupationInfo h3 {
-                margin: 0 0 10px 0;
-                font-size: 16px;
-                font-weight: 600;
-                color: #4CAF50;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            #occupationToggle {
-                position: fixed;
-                right: 1px;
-                top: 130px;
-                background: rgba(0, 0, 0, 0.85);
-                color: #4CAF50;
-                border: none;
-                padding: 8px 12px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 20px;
-                z-index: 10000;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-                transition: transform 0.3s ease;
-            }
-            #occupationToggle.open {
-                transform: translateX(calc(-296px));
-            }
-            #occupationToggle:hover {
-                background: rgba(0, 0, 0, 0.95);
-            }
-            #occupationInfo .stat {
-                margin: 6px 0;
-            }
-            #occupationInfo .percentage {
-                font-size: 24px;
-                font-weight: bold;
-                color: #4CAF50;
-                margin: 10px 0;
-            }
-            #pieChart {
-                width: 300px;
-                height: 150px;
-                margin: 15px auto;
-                display: block;
-            }
-            #typeBreakdown {
-                margin-top: 10px;
-                font-size: 12px;
-            }
-            .type-item {
-                display: flex;
-                align-items: center;
-                margin: 4px 0;
-            }
-            .type-color {
-                width: 12px;
-                height: 12px;
-                border-radius: 2px;
-                margin-right: 8px;
-            }
-        </style>
+
     </head>
     <body style="margin: 0px; padding: 0px;">
         <div id="cesiumContainer" style="margin: 0px; padding: 0px;"></div>
-        <div id="polygonInfo" aria-live="polite" title="Polygon informatie"></div>
-        
-        <button id="occupationToggle" onclick="toggleOccupation()">📊</button>
-        <div id="occupationInfo" class="collapsed">
-            <h3>Spoordok Occupation</h3>
-            <div class="stat">Spoordok Area: <span id="spoordokArea">--</span> m²</div>
-            <div class="stat">Occupied Area: <span id="occupiedArea">--</span> m²</div>
-            <div class="percentage"><span id="occupationPercentage">--</span>%</div>
-            <canvas id="pieChart"></canvas>
-            <div id="typeBreakdown"></div>
-        </div>
 
-        <script>
-            function toggleOccupation() {
-                const panel = document.getElementById('occupationInfo');
-                const btn = document.getElementById('occupationToggle');
-                panel.classList.toggle('collapsed');
-                btn.classList.toggle('open');
-            }
-        </script>
     </body>
 </html>

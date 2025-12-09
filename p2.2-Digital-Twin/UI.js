@@ -1,7 +1,155 @@
 const UIState = {};
 const stateChangeListeners = {};
 
+function injectStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        #polygonInfo {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            width: 420px;
+            min-width: 300px;
+            max-height: 60vh;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.85);
+            color: #e6e6e6;
+            padding: 12px 14px;
+            font-family: monospace;
+            font-size: 15px;
+            line-height: 1.4;
+            border-radius: 8px;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+            display: none;
+        }
+        #occupationInfo {
+            position: fixed;
+            right: 1px;
+            top: 130px;
+            width: 280px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #e6e6e6;
+            padding: 12px 14px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 8px;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+            transition: transform 0.3s ease;
+        }
+        #occupationInfo.collapsed {
+            transform: translateX(calc(100% + 16px));
+        }
+        #occupationInfo h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #4CAF50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #occupationToggle {
+            position: fixed;
+            right: 1px;
+            top: 130px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #4CAF50;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+            transition: transform 0.3s ease;
+        }
+        #occupationToggle.open {
+            transform: translateX(calc(-296px));
+        }
+        #occupationToggle:hover {
+            background: rgba(0, 0, 0, 0.95);
+        }
+        #occupationInfo .stat {
+            margin: 6px 0;
+        }
+        #occupationInfo .percentage {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        #pieChart {
+            width: 300px;
+            height: 150px;
+            margin: 15px auto;
+            display: block;
+        }
+        #typeBreakdown {
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .type-item {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+        }
+        .type-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 8px;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function createInfoPanels() {
+    // Create polygon info panel
+    const polygonInfo = document.createElement('div');
+    polygonInfo.id = 'polygonInfo';
+    polygonInfo.setAttribute('aria-live', 'polite');
+    polygonInfo.setAttribute('title', 'Polygon informatie');
+    document.body.appendChild(polygonInfo);
+
+    // Create occupation toggle button
+    const occupationToggle = document.createElement('button');
+    occupationToggle.id = 'occupationToggle';
+    occupationToggle.textContent = '📊';
+    occupationToggle.onclick = toggleOccupation;
+    document.body.appendChild(occupationToggle);
+
+    // Create occupation info panel
+    const occupationInfo = document.createElement('div');
+    occupationInfo.id = 'occupationInfo';
+    occupationInfo.className = 'collapsed';
+    occupationInfo.innerHTML = `
+        <h3>Spoordok Occupation</h3>
+        <div class="stat">Spoordok Area: <span id="spoordokArea">--</span> m²</div>
+        <div class="stat">Occupied Area: <span id="occupiedArea">--</span> m²</div>
+        <div class="percentage"><span id="occupationPercentage">--</span>%</div>
+        <canvas id="pieChart"></canvas>
+        <div id="typeBreakdown"></div>
+    `;
+    document.body.appendChild(occupationInfo);
+}
+
+function toggleOccupation() {
+    const panel = document.getElementById('occupationInfo');
+    const btn = document.getElementById('occupationToggle');
+    panel.classList.toggle('collapsed');
+    btn.classList.toggle('open');
+}
+
 function UIsetup() {
+    // Inject CSS styles first
+    injectStyles();
+
+    // Create info panels
+    createInfoPanels();
+
     const uiContainer = document.createElement("div");
     uiContainer.id = "myUI";
     uiContainer.style.position = "absolute";
