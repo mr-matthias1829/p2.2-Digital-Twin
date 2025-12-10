@@ -578,3 +578,12 @@ class ObjectEditor {
         }
     }
 }
+
+
+// At the end of ObjectEditor.js
+if (typeof global !== "undefined") {
+  global.ObjectEditor = ObjectEditor;
+}
+if (typeof window !== "undefined") {
+  window.ObjectEditor = ObjectEditor;
+}

@@ -30,3 +30,14 @@ upating docker:
 2. filepath\p2.2-Digital-Twin\springboot\spoordok"; docker-compose down; docker-compose up --build -d
 
 example (Djustin) cd "c:\Digital twin\p2.2-Digital-Twin\springboot\spoordok"; docker-compose down; docker-compose up --build -d
+
+
+
+
+RUNNING TESTS (FRONTEND):
+1. open command line in the VERY ROOT of the project
+2. "npx vitest"
+3. let it do its thing
+4. win
+5. test will fail if you are missing packages that your cmds needs!'
+6. you'll figure it out

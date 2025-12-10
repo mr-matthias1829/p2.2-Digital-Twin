@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "jsdom": "^27.3.0",
     "vitest": "^4.0.15"
   }
 }
