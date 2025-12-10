@@ -1,9 +1,11 @@
 package com.digitaltwin.spoordok;
 
+import com.digitaltwin.spoordok.model.BuildingType;
 import com.digitaltwin.spoordok.model.Coordinate;
 import com.digitaltwin.spoordok.model.Model;
 import com.digitaltwin.spoordok.model.Polygon;
 import com.digitaltwin.spoordok.model.PolygonType;
+import com.digitaltwin.spoordok.service.BuildingTypeService;
 import com.digitaltwin.spoordok.service.ModelService;
 import com.digitaltwin.spoordok.service.PolygonService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,13 +20,51 @@ public class DataLoader implements CommandLineRunner {
     @Autowired
     private PolygonService polygonService;
 
-    //e
-
     @Autowired
     private ModelService modelService;
 
+    @Autowired
+    private BuildingTypeService buildingTypeService;
+
     @Override
     public void run(String... args) throws Exception {
+        // Load building types FIRST (if not present)
+        loadBuildingTypesIfNeeded();
+        
+        // Then load dummy polygons and models
+        loadDummyDataIfNeeded();
+    }
+
+    private void loadBuildingTypesIfNeeded() {
+        // Only load if table is empty
+        if (buildingTypeService.getAllBuildingTypes().isEmpty()) {
+            System.out.println("⚙ Initializing building types...");
+            
+            // Testing type
+            buildingTypeService.saveBuildingType(new BuildingType("poly", "#808080", 0.0, 0.0, 0.0, 5.0));
+            
+            // Infrastructure and nature
+            buildingTypeService.saveBuildingType(new BuildingType("nature", "#008000", 150.0, 0.0, 0.0, 10.0));
+            buildingTypeService.saveBuildingType(new BuildingType("water", "#1E88E5", 300.0, 0.0, 0.0, 7.0));
+            buildingTypeService.saveBuildingType(new BuildingType("road", "#A9A9A9", 100.0, 5.0, 0.0, 8.0));
+            buildingTypeService.saveBuildingType(new BuildingType("parking space", "#78909C", 100.0, 10.0, 0.0, 6.0));
+            buildingTypeService.saveBuildingType(new BuildingType("covered parking space", "#8D6E63", 1500.0, 15.0, 0.0, 10.0));
+            
+            // Residential buildings
+            buildingTypeService.saveBuildingType(new BuildingType("detached house", "#E53935", 500.0, 12.0, 0.005, 4.0));
+            buildingTypeService.saveBuildingType(new BuildingType("townhouse", "#FB8C00", 400.0, 8.0, 0.01, 6.0));
+            buildingTypeService.saveBuildingType(new BuildingType("apartment", "#8E24AA", 300.0, 12.0, 0.006, 5.0));
+            
+            // Commercial buildings
+            buildingTypeService.saveBuildingType(new BuildingType("commercial building", "#039BE5", 200.0, 15.0, 0.018, 2.0));
+            
+            System.out.println("✓ Loaded 10 building types");
+        } else {
+            System.out.println("✓ Building types already present (" + buildingTypeService.getAllBuildingTypes().size() + " types)");
+        }
+    }
+
+    private void loadDummyDataIfNeeded() {
         boolean hasPolygons = polygonService.getAllPolygons() != null && !polygonService.getAllPolygons().isEmpty();
         boolean hasModels = modelService.getAllModels() != null && !modelService.getAllModels().isEmpty();
 
