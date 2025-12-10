@@ -1,6 +1,6 @@
-package com.digitaltwin.spoordok.service;
+package com.service;
 
-import com.digitaltwin.spoordok.model.Model;
+import com.model.Model;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashMap;

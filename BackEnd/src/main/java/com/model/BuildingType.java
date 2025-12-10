@@ -1,4 +1,4 @@
-package com.digitaltwin.spoordok.model;
+package com.model;
 
 import jakarta.persistence.*;
 

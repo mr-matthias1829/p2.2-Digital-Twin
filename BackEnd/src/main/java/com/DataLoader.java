@@ -1,13 +1,13 @@
-package com.digitaltwin.spoordok;
+package com;
 
-import com.digitaltwin.spoordok.model.BuildingType;
-import com.digitaltwin.spoordok.model.Coordinate;
-import com.digitaltwin.spoordok.model.Model;
-import com.digitaltwin.spoordok.model.Polygon;
-import com.digitaltwin.spoordok.model.PolygonType;
-import com.digitaltwin.spoordok.service.BuildingTypeService;
-import com.digitaltwin.spoordok.service.ModelService;
-import com.digitaltwin.spoordok.service.PolygonService;
+import com.model.BuildingType;
+import com.model.Coordinate;
+import com.model.Model;
+import com.model.Polygon;
+import com.model.PolygonType;
+import com.service.BuildingTypeService;
+import com.service.ModelService;
+import com.service.PolygonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;

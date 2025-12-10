@@ -1,4 +1,4 @@
-package com.digitaltwin.spoordok.dto;
+package com.dto;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.digitaltwin.spoordok.dto;
+package com.dto;
 
 public class CalculationResponse {
     private Double area;

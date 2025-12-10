@@ -1,6 +1,6 @@
-package com.digitaltwin.spoordok.service;
+package com.service;
 
-import com.digitaltwin.spoordok.model.BuildingType;
+import com.model.BuildingType;
 
 import java.util.List;
 import java.util.Optional;

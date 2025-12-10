@@ -1,7 +1,7 @@
-package com.digitaltwin.spoordok.service;
+package com.service;
 
-import com.digitaltwin.spoordok.model.BuildingType;
-import com.digitaltwin.spoordok.repository.BuildingTypeRepository;
+import com.model.BuildingType;
+import com.repository.BuildingTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

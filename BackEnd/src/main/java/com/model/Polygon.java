@@ -1,5 +1,5 @@
 // Polygon.java
-package com.digitaltwin.spoordok.model;
+package com.model;
 
 import java.util.List;
 

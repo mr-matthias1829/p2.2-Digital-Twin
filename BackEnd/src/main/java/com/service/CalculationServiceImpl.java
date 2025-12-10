@@ -1,10 +1,10 @@
-package com.digitaltwin.spoordok.service;
+package com.service;
 
-import com.digitaltwin.spoordok.dto.CalculationRequest;
-import com.digitaltwin.spoordok.dto.CalculationResponse;
-import com.digitaltwin.spoordok.dto.OccupationRequest;
-import com.digitaltwin.spoordok.dto.OccupationResponse;
-import com.digitaltwin.spoordok.dto.GoalCheckResponse;
+import com.dto.CalculationRequest;
+import com.dto.CalculationResponse;
+import com.dto.OccupationRequest;
+import com.dto.OccupationResponse;
+import com.dto.GoalCheckResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;

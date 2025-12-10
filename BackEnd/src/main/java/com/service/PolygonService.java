@@ -1,6 +1,6 @@
-package com.digitaltwin.spoordok.service;
+package com.service;
 
-import com.digitaltwin.spoordok.model.Polygon;
+import com.model.Polygon;
 import java.util.List;
 
 public interface PolygonService {

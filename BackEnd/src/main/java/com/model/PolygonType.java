@@ -1,5 +1,5 @@
 // PolygonType.java
-package com.digitaltwin.spoordok.model;
+package com.model;
 
 public enum PolygonType {
     VRIJSTAAND_HUIS,

@@ -1,6 +1,6 @@
-package com.digitaltwin.spoordok.repository;
+package com.repository;
 
-import com.digitaltwin.spoordok.model.BuildingType;
+import com.model.BuildingType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
