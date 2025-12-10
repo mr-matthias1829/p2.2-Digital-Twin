@@ -50,6 +50,11 @@ function setup() {
         },
     });
 
+    // Load building types from API
+    loadBuildingTypesFromAPI().then(() => {
+        console.log('Building types loaded, ready for use');
+    });
+
     setupInputActions();
 
     setTimeout(() => {

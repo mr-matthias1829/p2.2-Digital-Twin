@@ -5,8 +5,10 @@ import com.digitaltwin.spoordok.dto.CalculationResponse;
 import com.digitaltwin.spoordok.dto.OccupationRequest;
 import com.digitaltwin.spoordok.dto.OccupationResponse;
 import com.digitaltwin.spoordok.dto.GoalCheckResponse;
+import com.digitaltwin.spoordok.model.BuildingType;
 import com.digitaltwin.spoordok.model.Model;
 import com.digitaltwin.spoordok.model.Polygon;
+import com.digitaltwin.spoordok.service.BuildingTypeService;
 import com.digitaltwin.spoordok.service.CalculationService;
 import com.digitaltwin.spoordok.service.ModelService;
 import com.digitaltwin.spoordok.service.PolygonService;
@@ -33,6 +35,9 @@ public class Controller {
     @Autowired
     private CalculationService calculationService;
 
+    @Autowired
+    private BuildingTypeService buildingTypeService;
+
     // GET ALL polygons AND models in one response
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllData() {
@@ -53,6 +58,42 @@ public class Controller {
         List<Polygon> polygons = polygonService.getAllPolygons();
         return ResponseEntity.ok(polygons);
     }
+
+    // ========== BUILDING TYPE ENDPOINTS ==========
+
+    @GetMapping("/building-types")
+    public ResponseEntity<List<BuildingType>> getAllBuildingTypes() {
+        List<BuildingType> buildingTypes = buildingTypeService.getAllBuildingTypes();
+        return ResponseEntity.ok(buildingTypes);
+    }
+
+    @GetMapping("/building-types/{id}")
+    public ResponseEntity<BuildingType> getBuildingTypeById(@PathVariable Long id) {
+        return buildingTypeService.getBuildingTypeById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/building-types/type/{typeId}")
+    public ResponseEntity<BuildingType> getBuildingTypeByTypeId(@PathVariable String typeId) {
+        return buildingTypeService.getBuildingTypeByTypeId(typeId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/building-types")
+    public ResponseEntity<BuildingType> createBuildingType(@RequestBody BuildingType buildingType) {
+        BuildingType savedType = buildingTypeService.saveBuildingType(buildingType);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedType);
+    }
+
+    @DeleteMapping("/building-types/{id}")
+    public ResponseEntity<Void> deleteBuildingType(@PathVariable Long id) {
+        buildingTypeService.deleteBuildingType(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ========== POLYGON DATA ENDPOINTS ==========
 
     @GetMapping("/polygons/{id}")
     public ResponseEntity<Polygon> getPolygonById(@PathVariable Long id) {
