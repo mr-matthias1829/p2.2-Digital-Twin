@@ -38,7 +38,7 @@ public class DataLoader implements CommandLineRunner {
     private void loadBuildingTypesIfNeeded() {
         // Only load if table is empty
         if (buildingTypeService.getAllBuildingTypes().isEmpty()) {
-            System.out.println("⚙ Initializing building types...");
+            System.out.println("Initializing building types...");
             
             // Testing type
             buildingTypeService.saveBuildingType(new BuildingType("poly", "#808080", 0.0, 0.0, 0.0, 5.0));

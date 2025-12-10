@@ -1,6 +1,6 @@
 # Database Setup & Development Guide
 
-## 🚀 Voor nieuwe teamleden
+##  Voor nieuwe teamleden
 
 ### Eerste keer opstarten
 ```bash
@@ -8,22 +8,22 @@ docker-compose up --build -d
 ```
 
 Dit doet automatisch:
-- ✅ MySQL database aanmaken
-- ✅ Spring Boot applicatie builden
-- ✅ Database tabellen aanmaken (via Hibernate)
-- ✅ **Building types laden** (alleen als tabel leeg is)
-- ✅ Dummy data laden voor testing
+-  MySQL database aanmaken
+-  Spring Boot applicatie builden
+-  Database tabellen aanmaken (via Hibernate)
+-  **Building types laden** (alleen als tabel leeg is)
+-  Dummy data laden voor testing
 
 ### Database connectie (IntelliJ/DBeaver/etc.)
 - **Host:** `localhost`
-- **Port:** `3307` ⚠️ (niet 3306!)
+- **Port:** `3307`  (niet 3306!)
 - **Database:** `mydb`
 - **User:** `appuser`
 - **Password:** `apppassword`
 
 ---
 
-## 🔄 Bij herbouwen/herstarten
+## Bij herbouwen/herstarten
 
 ### Normaal herstarten (data blijft behouden)
 ```bash
@@ -35,7 +35,7 @@ docker-compose down
 docker-compose up -d
 ```
 
-**Resultaat:** Alle data blijft behouden! ✅
+**Resultaat:** Alle data blijft behouden! 
 
 ### Volledig opnieuw beginnen (alles wissen)
 ```bash
@@ -47,7 +47,7 @@ docker-compose up --build -d
 
 ---
 
-## 📊 Building Types beheren
+##  Building Types beheren
 
 ### Via REST API
 
@@ -80,7 +80,7 @@ Gewoon de tabel `building_types` bewerken via de Database tool window.
 
 ---
 
-## ⚙️ Hoe werkt de data initialisatie?
+##  Hoe werkt de data initialisatie?
 
 ### Automatische initialisatie
 De `DataLoader.java` class checkt bij elke start:
@@ -93,14 +93,14 @@ De `DataLoader.java` class checkt bij elke start:
    - Ja → Laad dummy test data
    - Nee → Skip
 
-### Belangrijk! 🎯
+### Belangrijk! 
 - Data wordt **NOOIT** overschreven bij herstart
 - Alleen als tabellen **compleet leeg** zijn, wordt initial data geladen
 - Custom types die je toevoegt blijven **altijd** behouden
 
 ---
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### "Kan geen connectie maken met database"
 ```bash
@@ -128,7 +128,7 @@ docker-compose up --build -d
 
 ---
 
-## 📝 Development Workflow
+##  Development Workflow
 
 ### Nieuwe building type toevoegen (production)
 1. Voeg toe via API of database tool
@@ -149,19 +149,19 @@ docker-compose up --build -d
 
 ## 🎓 Best Practices
 
-✅ **DO:**
+ **DO:**
 - Gebruik API voor runtime changes
 - Commit code changes (niet database data)
 - Test met dummy data
 
-❌ **DON'T:**
+ **DON'T:**
 - Handmatig data.sql bewerken (wordt niet gebruikt)
 - Database credentials in code zetten
 - Aannemen dat data persistent is zonder volumes
 
 ---
 
-## 📚 Nuttige commando's
+##  Nuttige commando's
 
 ```bash
 # Logs bekijken (live)
