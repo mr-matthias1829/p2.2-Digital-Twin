@@ -1,4 +1,5 @@
-// Define all types with their properties
+// Building types object - will be populated from API
+// Keep only DEFAULT as fallback
 const buildTypes = {
     DEFAULT: {
         id: "DEFAULT", // used if a type is requested but obj has no type (or fallback for non-existing property on a type)
@@ -11,86 +12,48 @@ const buildTypes = {
         people: 0, // Amount of home owners or workers per unit
         livability: 5, // Score for livability on a scale of 1 to 10
     },
-    poly: {
-        id: "poly", // The testing value for stuff, should be removed later
-        color: Cesium.Color.GRAY,
-        // Future properties can go here: (note: they do not automatically do something)
-        // height: 10,
-        // texture: "concrete.png",
-        // cost: 0.04,
-        // etc.
-    },
-
-    nature: {
-        id: "nature",
-        color: Cesium.Color.GREEN,
-        cost: 150,
-        income: 0,
-        livability: 10,
-    },
-    water: {
-        id: "water",
-        color: Cesium.Color.fromCssColorString("#1E88E5"), // Bright blue (different from commercial)
-        cost: 300,
-        income: 0,
-        livability: 7,
-    },
-    road: {
-        id: "road",
-        color: Cesium.Color.DARKGRAY,
-        cost: 100,
-        income: 5,
-        livability: 8,
-    },
-    parking: {
-        id: "parking space",
-        color: Cesium.Color.fromCssColorString("#78909C"), // Blue gray
-        cost: 100,
-        income: 10,
-        livability: 6,
-    },
-    covered_parking: {
-        id: "covered parking space",
-        color: Cesium.Color.fromCssColorString("#8D6E63"), // Brown
-        cost: 1500,
-        income: 15,
-        livability: 10,
-    },
-
-    detached_house: {
-        id: "detached house",
-        color: Cesium.Color.fromCssColorString("#E53935"), // Red
-        cost: 500,
-        income: 12,
-        people: 0.005,
-        livability: 4,
-    },
-    town_house: {
-        id: "townhouse",
-        color: Cesium.Color.fromCssColorString("#FB8C00"), // Deep orange
-        cost: 400,
-        income: 8,
-        people: 0.01,
-        livability: 6,
-    },
-    apartment: {
-        id: "apartment",
-        color: Cesium.Color.fromCssColorString("#8E24AA"), // Purple
-        cost: 300,
-        income: 12,
-        people: 0.006,
-        livability: 5,
-    },
-    commercial_building: {
-        id: "commercial building",
-        color: Cesium.Color.fromCssColorString("#039BE5"), // Light blue
-        cost: 200,
-        income: 15,
-        people: 0.018,
-        livability: 2,
-    },
-    // Add more types here easily!
+    // All other types are loaded from the database via API
+    // See loadBuildingTypesFromAPI() function below
 };
+
+// Function to load building types from the API
+async function loadBuildingTypesFromAPI() {
+    try {
+        const response = await fetch('http://localhost:8081/api/data/building-types');
+        if (!response.ok) {
+            console.warn('Failed to load building types from API, using hardcoded types');
+            return false;
+        }
+        
+        const apiTypes = await response.json();
+        
+        // Convert API types to internal format
+        apiTypes.forEach(apiType => {
+            // Convert type ID to key format (e.g., "commercial building" -> "commercial_building")
+            const key = apiType.typeId.replace(/\s+/g, '_');
+            
+            // Convert hex color to Cesium.Color
+            const color = Cesium.Color.fromCssColorString(apiType.colorHex);
+            
+            // Add or update the type in buildTypes
+            buildTypes[key] = {
+                id: apiType.typeId,
+                color: color,
+                cost: apiType.cost,
+                income: apiType.income,
+                people: apiType.people,
+                livability: apiType.livability
+            };
+        });
+        
+        console.log(`✓ Loaded ${apiTypes.length} building types from API`);
+        return true;
+    } catch (error) {
+        console.warn('Error loading building types from API:', error);
+        console.log('Using hardcoded building types as fallback');
+        return false;
+    }
+}
 
 // Helper function to get all existing type (no id)
 function getAllType() {
