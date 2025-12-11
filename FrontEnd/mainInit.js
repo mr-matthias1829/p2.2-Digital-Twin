@@ -27,11 +27,8 @@ function setup() {
     viewer.imageryLayers.addImageryProvider(osm);
 
     viewer.scene.globe.maximumScreenSpaceError = 1;
-
-    const condo1 = createBox(200, 300, 50, 40, 70, 0, "RICKMOCK.png");
-    measure = createBox(0, 0, 3, 3, 30, 0, Cesium.Color.RED);
     
-    const redPolygon = viewer.entities.add({
+    const dokPolygon = viewer.entities.add({
         name: "Spoordok",
         polygon: {
             hierarchy: Cesium.Cartesian3.fromDegreesArray([
