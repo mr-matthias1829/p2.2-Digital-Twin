@@ -217,16 +217,21 @@ class OllamaAnalyzer{
                 const base64Image = reader.result.split(',')[1];
 
                 console.log("Sending to Ollama...");
-                const response = await fetch(`${this.ollamaUrl}/api/generate`, {
-                    method: 'POST',
+                const response = await fetch(`${this.ollamaUrl}/api/chat`, {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    "Content-Type": "application/json",
+                },
                     body: JSON.stringify({
-                        model: this.model,
-                        prompt: this.prompt,
-                        images: [base64Image],
-                        stream: false,
+                    model: this.model,
+                    messages: [
+                        {
+                            role: "user",
+                            content: this.prompt,
+                            images: [base64Image]
+                            }
+                        ],
+                    stream: false,
                     }),
                 });
                 if (!response.ok) {
@@ -234,9 +239,8 @@ class OllamaAnalyzer{
                 }
 
                 const data = await response.json();
-                console.log('Ollama response:', data.response);
-
-                this.displayResponse(data.response);
+                console.log("Ollama response:", data.message.content);
+                this.displayResponse(data.message.content);
             };
         } catch (err) {
             console.error('Error analyzing with Ollama:', err);

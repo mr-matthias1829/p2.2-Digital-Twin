@@ -1,10 +1,3 @@
-/**
- * @vitest-environment jsdom
- */
-
-
-
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Load the ObjectEditor class
@@ -14,6 +7,7 @@ const { ObjectEditor } = global;
 
 
 // Mock Cesium global
+// Needed for obj properties and whatnot
 global.Cesium = {
   CallbackProperty: class CallbackProperty {},
   PolygonHierarchy: class PolygonHierarchy {
@@ -47,6 +41,12 @@ global.updateModelType = vi.fn();
 
 
 
+
+
+
+
+
+// The actual tests are here:
 describe('ObjectEditor', () => {
   let mockViewer;
   let editor;
