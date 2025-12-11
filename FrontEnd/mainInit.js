@@ -70,6 +70,10 @@ function setup() {
         console.log('  ollamaAnalyzer.stop()   - Stop analysis');
         console.log('  ollamaAnalyzer.analyzeWithOllama() - Run once');
         console.log('  ollamaAnalyzer.setInterval(ms) - Change interval');
+        console.log('  ollamaAnalyzer.listCesiumMen() - List all Cesium Men on the map');
+        console.log('  ollamaAnalyzer.selectCesiumMan(id) - Select Cesium Man by ID and track it');
+        console.log('  ollamaAnalyzer.trackSelectedMan() - Tracks selected Cesium Man');
+        console.log('  ollamaAnalyzer.stopTracking() = Stops tracking selected Cesium Man');
     }, 2000);
 
     Editor = new ObjectEditor(viewer);
