@@ -27,7 +27,6 @@ class ObjectEditor {
 
     startEditingPolygon(entity) {
         if (!entity.polygon) return console.log("No polygon found");
-        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
         if (this.editMode) this.stopEditing();
 
         this.editMode = true;
@@ -41,7 +40,7 @@ class ObjectEditor {
             return;
         }
 
-        // Create vertex markers (no yellow overlay - vertex markers are enough visual feedback)
+        // Create vertex markers
         const positions = this.getPositions(entity.polygon.hierarchy);
         if (!positions.length) {
             console.error("No positions found!");
@@ -163,7 +162,6 @@ class ObjectEditor {
     // === MODEL EDITING ===
 
     startEditingModel(model) {
-        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
         if (this.editMode) this.stopEditing();
         
         this.editMode = true;
@@ -357,8 +355,10 @@ class ObjectEditor {
     // === MOUSE HANDLERS ===
 
     handleLeftDown(event) {
+        // CRITICAL: Only handle edit mode actions if in edit mode
         if (!this.editMode) return;
-        if (this.editingEntity && this.isProtectedEntity(this.editingEntity) && !this.editingModel) {
+        
+        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
             return console.log("Protected polygon - editing not allowed");
         }
 
@@ -456,6 +456,7 @@ class ObjectEditor {
     }
     
     handleDoubleClick(event) {
+        // PRIORITY 1: If already in edit mode, handle vertex addition
         if (this.editMode && this.editingEntity) {
             if (this.isProtectedEntity(this.editingEntity)) return false;
             
@@ -468,7 +469,7 @@ class ObjectEditor {
                 return true;
             }
             
-            // If clicked on the polygon edge (not on vertex), find closest edge
+            // If clicked on the polygon edge, find closest edge
             if (Cesium.defined(picked) && picked.id === this.editingEntity) {
                 const ray = this.viewer.camera.getPickRay(event.position);
                 const clickedPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
@@ -476,7 +477,6 @@ class ObjectEditor {
                 if (Cesium.defined(clickedPos)) {
                     let closestEdge = { index: 0, distance: Infinity };
                     
-                    // Find the closest edge to the click point
                     for (let i = 0; i < this.vertexEntities.length; i++) {
                         const nextIdx = (i + 1) % this.vertexEntities.length;
                         const v1 = this.vertexEntities[i].position;
@@ -485,7 +485,6 @@ class ObjectEditor {
                         const pos1 = v1.getValue ? v1.getValue(Cesium.JulianDate.now()) : v1;
                         const pos2 = v2.getValue ? v2.getValue(Cesium.JulianDate.now()) : v2;
                         
-                        // Calculate closest point on line segment
                         const edge = Cesium.Cartesian3.subtract(pos2, pos1, new Cesium.Cartesian3());
                         const edgeLen = Cesium.Cartesian3.magnitude(edge);
                         const toClick = Cesium.Cartesian3.subtract(clickedPos, pos1, new Cesium.Cartesian3());
@@ -506,8 +505,7 @@ class ObjectEditor {
                         }
                     }
                     
-                    // If close enough to an edge (within reasonable threshold), add vertex
-                    if (closestEdge.distance < 50) { // 50 meters threshold
+                    if (closestEdge.distance < 50) {
                         this.addVertexBetween(closestEdge.index, (closestEdge.index + 1) % this.vertexEntities.length);
                         return true;
                     }
@@ -516,7 +514,7 @@ class ObjectEditor {
             return false;
         }
         
-        // Default behavior: start editing
+        // PRIORITY 2: Not in edit mode, start editing
         const picked = this.viewer.scene.pick(event.position);
         
         // Check for model primitive
@@ -524,14 +522,17 @@ class ObjectEditor {
             if (picked.primitive instanceof Cesium.Model || 
                 (picked.primitive.modelMatrix && !picked.id)) {
                 this.startEditingModel(picked.primitive);
-                return;
+                return true;
             }
         }
         
         // Check for polygon entity
         if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
             this.startEditingPolygon(picked.id);
+            return true;
         }
+        
+        return false;
     }
 
     handleRightClick(event) {
@@ -589,8 +590,6 @@ class ObjectEditor {
     }
 }
 
-
-// At the end of ObjectEditor.js
 if (typeof global !== "undefined") {
   global.ObjectEditor = ObjectEditor;
 }

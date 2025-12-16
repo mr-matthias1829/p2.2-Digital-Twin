@@ -120,8 +120,9 @@ function setupInputActions() {
 
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
 
-    // LEFT DOWN
+    // LEFT DOWN - Edit mode has priority
     handler.setInputAction(function (event) {
+        // Editor handles its own logic
         Editor.handleLeftDown(event);
     }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
@@ -135,8 +136,8 @@ function setupInputActions() {
         // Let polygon editor handle its move logic first
         Editor.handleMouseMove(event);
         
-        // Handle drawing mode floating point
-        if (!Editor.editMode && !Editor.moveMode && Cesium.defined(floatingPoint)) {
+        // Only handle drawing mode floating point if NOT in edit mode
+        if (!Editor.editMode && Cesium.defined(floatingPoint)) {
             const ray = viewer.camera.getPickRay(event.endPosition);
             const newPosition = viewer.scene.globe.pick(ray, viewer.scene);
             if (Cesium.defined(newPosition)) {
@@ -147,61 +148,128 @@ function setupInputActions() {
         }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-    // LEFT CLICK - Drawing mode
+    // LEFT CLICK - Drawing mode (only when NOT editing)
     handler.setInputAction(function (event) {
-        if (Editor.editMode || Editor.moveMode) return;
+        // CRITICAL: Block all drawing actions if in edit mode
+        if (Editor.editMode) return;
         
-        if (drawingMode !== "none") {
-            const ray = viewer.camera.getPickRay(event.position);
-            const earthPosition = viewer.scene.globe.pick(ray, viewer.scene);
+        // Only proceed if in a drawing mode
+        if (drawingMode === "none" || drawingMode === "edit") return;
+        
+        const ray = viewer.camera.getPickRay(event.position);
+        const earthPosition = viewer.scene.globe.pick(ray, viewer.scene);
+        
+        if (!Cesium.defined(earthPosition)) return;
+        
+        // Handle model placement
+        if (drawingMode === "model") {
+            const cartographic = Cesium.Cartographic.fromCartesian(earthPosition);
+            const lon = Cesium.Math.toDegrees(cartographic.longitude);
+            const lat = Cesium.Math.toDegrees(cartographic.latitude);
             
-            if (Cesium.defined(earthPosition)) {
-    
-            if (drawingMode === "model") {
-                const cartographic = Cesium.Cartographic.fromCartesian(earthPosition);
-                const lon = Cesium.Math.toDegrees(cartographic.longitude);
-                const lat = Cesium.Math.toDegrees(cartographic.latitude);
-
-               // createModel("Cesium_Man.glb", { lon, lat }, 0);
-
-               // NOTE: type is automatically applied inside spawnModel already! refer to ModelPreLoad.js
-                spawnModel(modelToCreate,{ lon, lat }, 0 )
-
-                // alternate version where you can define type from the caller:
-                // const building = await spawnModel("building", {lon, lat}, 0, 0, {buildType: "commercial_building"});
-            }
-            
+            spawnModel(modelToCreate, { lon, lat }, 0);
+            return; // Exit after placing model
+        }
+        
+        // Handle polygon/line drawing
+        if (drawingMode === "polygon" || drawingMode === "line") {
             if (activeShapePoints.length === 0) {
-                    floatingPoint = createPoint(earthPosition);
-                    activeShapePoints.push(earthPosition);
-                    const dynamicPositions = new Cesium.CallbackProperty(function () {
-                        if (drawingMode === "polygon") {
-                            return new Cesium.PolygonHierarchy(activeShapePoints);
-                        }
-                        return activeShapePoints;
-                    }, false);
-                    activeShape = drawShape(dynamicPositions);
-                }
+                floatingPoint = createPoint(earthPosition);
+                activeShapePoints.push(earthPosition);
+                const dynamicPositions = new Cesium.CallbackProperty(function () {
+                    if (drawingMode === "polygon") {
+                        return new Cesium.PolygonHierarchy(activeShapePoints);
+                    }
+                    return activeShapePoints;
+                }, false);
+                activeShape = drawShape(dynamicPositions);
+            } else {
                 activeShapePoints.push(earthPosition);
                 createPoint(earthPosition);
             }
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // DOUBLE CLICK - Start editing polygon
+    // DOUBLE CLICK - Start editing (or add vertex if already editing)
     handler.setInputAction(function (event) {
-        Editor.handleDoubleClick(event);
+        // Let the editor handle all double-click logic
+        const handled = Editor.handleDoubleClick(event);
+        
+        // If editor didn't handle it and we're drawing, do nothing
+        // (prevents accidental polygon selection while drawing)
+        if (!handled && drawingMode !== "none" && drawingMode !== "edit") {
+            console.log("Double-click ignored - currently in drawing mode");
+        }
     }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-    
 
     // RIGHT CLICK - Finish drawing, editing, or moving
     handler.setInputAction(function (event) {
+        // Editor gets first priority
         const editorHandled = Editor.handleRightClick(event);
         
+        // If editor didn't handle it and we're drawing, finish the shape
         if (!editorHandled && activeShapePoints.length > 0) {
             terminateShape();
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+}
+
+function terminateShape() {
+    if (activeShapePoints.length === 0) return;
+    
+    activeShapePoints.pop(); // Remove the floating point
+    
+    // Need at least 3 points for a polygon
+    if (drawingMode === "polygon" && activeShapePoints.length < 3) {
+        console.log("⚠ Need at least 3 points for a polygon");
+        // Clean up
+        viewer.entities.remove(floatingPoint);
+        viewer.entities.remove(activeShape);
+        floatingPoint = undefined;
+        activeShape = undefined;
+        activeShapePoints = [];
+        return;
+    }
+    
+    // Create the final shape with proper hierarchy
+    let finalShape;
+    if (drawingMode === "polygon") {
+        finalShape = viewer.entities.add({
+            polygon: {
+                hierarchy: new Cesium.PolygonHierarchy(activeShapePoints),
+                material: Cesium.Color.WHITE,
+                extrudedHeight: 0.0,
+            },
+            properties: new Cesium.PropertyBag({
+                buildType: objType
+            })
+        });
+        applyTypeInitPolygon(finalShape);
+        
+        // Auto-save polygon to database
+        if (typeof polygonAPI !== 'undefined') {
+            polygonAPI.savePolygon(finalShape)
+                .then(() => console.log('✓ Polygon saved to database'))
+                .catch(err => console.error('Failed to save polygon:', err));
+        }
+        
+        console.log(`✓ Polygon created with ${activeShapePoints.length} vertices`);
+    } else if (drawingMode === "line") {
+        finalShape = drawShape(activeShapePoints);
+        console.log(`✓ Line created with ${activeShapePoints.length} points`);
+    }
+    
+    // Clean up drawing state
+    viewer.entities.remove(floatingPoint);
+    viewer.entities.remove(activeShape);
+    floatingPoint = undefined;
+    activeShape = undefined;
+    activeShapePoints = [];
+
+    // Update occupation stats after drawing a polygon
+    if (drawingMode === "polygon" && typeof updateOccupationStats === 'function') {
+        setTimeout(() => updateOccupationStats(), 100);
+    }
 }
 
 function terminateShape() {
