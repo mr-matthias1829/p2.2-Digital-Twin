@@ -59,14 +59,10 @@
     
     // Convert backend polygon DTO to Cesium entity
     function polygonDTOToEntity(polygonDTO, viewer) {
-        console.log('Loading polygon from database:', polygonDTO);
-        
         // Convert lon/lat coordinates to Cartesian3 positions
         const positions = polygonDTO.coordinates.map(coord => 
             Cesium.Cartesian3.fromDegrees(coord.longitude, coord.latitude)
         );
-        
-        console.log('Converted to', positions.length, 'positions');
         
         // Create entity
         const entity = viewer.entities.add({
@@ -81,14 +77,9 @@
             polygonId: polygonDTO.id  // Store database ID on entity
         });
         
-        console.log('Entity created, buildType:', polygonDTO.buildingType);
-        
         // Apply type styling
         if (typeof applyTypeInitPolygon === 'function') {
             applyTypeInitPolygon(entity);
-            console.log('Type styling applied');
-        } else {
-            console.error('applyTypeInitPolygon is not available!');
         }
         
         return entity;
@@ -101,8 +92,6 @@
             if (!polygonDTO) {
                 throw new Error('Failed to convert entity to polygon DTO');
             }
-            
-            console.log('Saving polygon to database:', polygonDTO);
             
             const url = polygonDTO.id 
                 ? `${API_BASE}/api/data/polygons/${polygonDTO.id}`
@@ -147,6 +136,18 @@
             const polygons = await response.json();
             
             console.log(`✓ Loading ${polygons.length} polygons from database...`);
+            
+            // Remove ALL existing polygon entities (not just ones with polygonId)
+            // This ensures we don't have duplicates or orphaned polygons
+            const entitiesToRemove = [];
+            viewer.entities.values.forEach(entity => {
+                // Remove any polygon that's not the protected Spoordok
+                if (entity.polygon && !entity.properties?.isSpoordok) {
+                    entitiesToRemove.push(entity);
+                }
+            });
+            entitiesToRemove.forEach(entity => viewer.entities.remove(entity));
+            console.log(`Removed ${entitiesToRemove.length} existing polygons before loading from database`);
             
             const entities = [];
             for (const polygonDTO of polygons) {

@@ -41,11 +41,7 @@ class ObjectEditor {
             return;
         }
 
-        // Apply edit styling
-        this.originalMaterial = entity.polygon.material;
-        entity.polygon.material = Cesium.Color.YELLOW.withAlpha(0.5);
-
-        // Create vertex markers
+        // Create vertex markers (no yellow overlay - vertex markers are enough visual feedback)
         const positions = this.getPositions(entity.polygon.hierarchy);
         if (!positions.length) {
             console.error("No positions found!");
@@ -212,20 +208,19 @@ class ObjectEditor {
         
         // Clean up polygon editing
         if (this.editingEntity) {
+            // Clean up vertex markers
+            this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
+            this.vertexEntities = [];
+            
             // Auto-save polygon changes to database
-            if (this.editingEntity.polygon && typeof polygonAPI !== 'undefined' && this.editingEntity.polygonId) {
-                polygonAPI.savePolygon(this.editingEntity)
+            const entityToSave = this.editingEntity;
+            if (entityToSave.polygon && typeof polygonAPI !== 'undefined' && entityToSave.polygonId) {
+                polygonAPI.savePolygon(entityToSave)
                     .then(() => console.log('✓ Polygon changes saved to database'))
                     .catch(err => console.error('Failed to save polygon changes:', err));
             }
             
-            if (this.originalMaterial) {
-                this.editingEntity.polygon.material = this.originalMaterial;
-            }
-            this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
-            this.vertexEntities = [];
             this.editingEntity = null;
-            this.originalMaterial = null;
         }
         
         // Clean up model editing
