@@ -152,18 +152,6 @@
             
             console.log(`✓ Loading ${polygons.length} polygons from database...`);
             
-            // Remove ALL existing polygon entities (not just ones with polygonId)
-            // This ensures we don't have duplicates or orphaned polygons
-            const entitiesToRemove = [];
-            viewer.entities.values.forEach(entity => {
-                // Remove any polygon that's not the protected Spoordok
-                if (entity.polygon && !entity.properties?.isSpoordok) {
-                    entitiesToRemove.push(entity);
-                }
-            });
-            entitiesToRemove.forEach(entity => viewer.entities.remove(entity));
-            console.log(`Removed ${entitiesToRemove.length} existing polygons before loading from database`);
-            
             const entities = [];
             for (const polygonDTO of polygons) {
                 const entity = polygonDTOToEntity(polygonDTO, viewer);
@@ -171,12 +159,72 @@
             }
             
             console.log(`✓ Loaded ${entities.length} polygons`);
+            
+            // AGGRESSIVE DUPLICATE REMOVAL: Remove any polygons with identical coordinates
+            setTimeout(() => {
+                removeDuplicatePolygons(viewer);
+            }, 200);
+            
             return entities;
         } catch (error) {
             console.error('Error loading polygons:', error);
             return [];
         } finally {
             hideSyncIndicator();
+        }
+    }
+    
+    // Remove duplicate polygons based on matching coordinates
+    function removeDuplicatePolygons(viewer) {
+        const polygonMap = new Map(); // Key: coordinate hash, Value: entity
+        const toRemove = [];
+        
+        viewer.entities.values.forEach(entity => {
+            if (!entity.polygon || entity.properties?.isSpoordok) return;
+            
+            // Get positions and create hash
+            let hierarchy = entity.polygon.hierarchy;
+            if (typeof hierarchy.getValue === 'function') {
+                hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
+            }
+            
+            let positions = [];
+            if (hierarchy instanceof Cesium.PolygonHierarchy) {
+                positions = hierarchy.positions || [];
+            } else if (Array.isArray(hierarchy)) {
+                positions = hierarchy;
+            }
+            
+            // Create coordinate hash
+            const coordHash = positions.map(pos => {
+                const carto = Cesium.Cartographic.fromCartesian(pos);
+                return `${carto.longitude.toFixed(8)},${carto.latitude.toFixed(8)}`;
+            }).sort().join('|');
+            
+            if (polygonMap.has(coordHash)) {
+                // Duplicate found! Keep the one with polygonId (from database), remove the other
+                const existing = polygonMap.get(coordHash);
+                if (entity.polygonId && !existing.polygonId) {
+                    // Current entity is from DB, remove the existing one
+                    toRemove.push(existing);
+                    polygonMap.set(coordHash, entity);
+                } else {
+                    // Existing is from DB or current has no ID, remove current
+                    toRemove.push(entity);
+                }
+            } else {
+                polygonMap.set(coordHash, entity);
+            }
+        });
+        
+        if (toRemove.length > 0) {
+            toRemove.forEach(entity => viewer.entities.remove(entity));
+            console.log(`🗑️ Removed ${toRemove.length} duplicate polygon(s)`);
+            
+            // Update occupation stats after cleanup
+            if (typeof updateOccupationStats === 'function') {
+                setTimeout(() => updateOccupationStats(), 100);
+            }
         }
     }
     
@@ -214,6 +262,7 @@
         loadAllPolygons,
         deletePolygon,
         entityToPolygonDTO,
-        polygonDTOToEntity
+        polygonDTOToEntity,
+        removeDuplicatePolygons  // Expose for manual cleanup if needed
     };
 })();

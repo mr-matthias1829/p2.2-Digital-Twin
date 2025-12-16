@@ -53,7 +53,17 @@ function setup() {
     loadBuildingTypesFromAPI().then(() => {
         console.log('Building types loaded, ready for use');
         
-        // Load existing polygons from database
+        // FIRST: Remove ALL user-created polygons (keep only protected Spoordok)
+        const polygonsToRemove = [];
+        viewer.entities.values.forEach(entity => {
+            if (entity.polygon && !entity.properties?.isSpoordok) {
+                polygonsToRemove.push(entity);
+            }
+        });
+        polygonsToRemove.forEach(entity => viewer.entities.remove(entity));
+        console.log(`Cleared ${polygonsToRemove.length} polygons before database load`);
+        
+        // THEN: Load polygons from database
         if (typeof polygonAPI !== 'undefined') {
             polygonAPI.loadAllPolygons(viewer)
                 .then(() => {
