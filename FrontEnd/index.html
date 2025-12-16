@@ -19,11 +19,42 @@
 
         <script src="polygonUtils.js"></script>
         <link href="Cesium-1.135/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-
+        
+        <style>
+            #syncIndicator {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.8);
+                padding: 20px;
+                border-radius: 10px;
+                z-index: 10000;
+                display: none;
+                text-align: center;
+            }
+            #syncIndicator img {
+                width: 64px;
+                height: 64px;
+                display: block;
+                margin: 0 auto 10px auto;
+            }
+            #syncIndicator .sync-text {
+                color: white;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+            }
+        </style>
 
     </head>
     <body style="margin: 0px; padding: 0px;">
         <div id="cesiumContainer" style="margin: 0px; padding: 0px;"></div>
+        
+        <!-- Sync Indicator -->
+        <div id="syncIndicator">
+            <img src="sync.gif" alt="Syncing...">
+            <div class="sync-text">Syncing with database...</div>
+        </div>
 
     </body>
 </html>
