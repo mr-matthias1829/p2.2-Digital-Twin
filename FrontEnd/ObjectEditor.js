@@ -27,6 +27,10 @@ class ObjectEditor {
 
     startEditingPolygon(entity) {
         if (!entity.polygon) return console.log("No polygon found");
+        // Only allow editing when in edit mode
+        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") {
+            return;
+        }
         if (this.editMode) this.stopEditing();
 
         this.editMode = true;
@@ -162,6 +166,11 @@ class ObjectEditor {
     // === MODEL EDITING ===
 
     startEditingModel(model) {
+        // Only allow editing when in edit mode
+        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") {
+            console.log("⚠ Switch to Edit mode to edit models");
+            return;
+        }
         if (this.editMode) this.stopEditing();
         
         this.editMode = true;
