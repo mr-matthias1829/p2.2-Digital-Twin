@@ -4,6 +4,7 @@ services:
   db:
     image: mysql:8.0
     container_name: my-sql-db
+    restart: on-failure
     environment:
       MYSQL_ROOT_PASSWORD: example
       MYSQL_DATABASE: mydb
