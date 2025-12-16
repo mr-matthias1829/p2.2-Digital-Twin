@@ -2,6 +2,17 @@
 (function() {
     const API_BASE = 'http://localhost:8081';
     
+    // Show/hide sync indicator
+    function showSyncIndicator() {
+        const indicator = document.getElementById('syncIndicator');
+        if (indicator) indicator.style.display = 'block';
+    }
+    
+    function hideSyncIndicator() {
+        const indicator = document.getElementById('syncIndicator');
+        if (indicator) indicator.style.display = 'none';
+    }
+    
     // Convert Cesium entity polygon to backend format
     function entityToPolygonDTO(entity) {
         if (!entity.polygon) {
@@ -87,6 +98,7 @@
     
     // Save polygon to database (create or update)
     async function savePolygon(entity) {
+        showSyncIndicator();
         try {
             const polygonDTO = entityToPolygonDTO(entity);
             if (!polygonDTO) {
@@ -121,11 +133,14 @@
         } catch (error) {
             console.error('Error saving polygon:', error);
             throw error;
+        } finally {
+            hideSyncIndicator();
         }
     }
     
     // Load all polygons from database
     async function loadAllPolygons(viewer) {
+        showSyncIndicator();
         try {
             const response = await fetch(`${API_BASE}/api/data/polygons`);
             
@@ -160,14 +175,18 @@
         } catch (error) {
             console.error('Error loading polygons:', error);
             return [];
+        } finally {
+            hideSyncIndicator();
         }
     }
     
     // Delete polygon from database
     async function deletePolygon(entity) {
+        showSyncIndicator();
         try {
             if (!entity.polygonId) {
                 console.warn('Entity does not have a database ID, cannot delete');
+                hideSyncIndicator();
                 return false;
             }
             
@@ -184,6 +203,8 @@
         } catch (error) {
             console.error('Error deleting polygon:', error);
             throw error;
+        } finally {
+            hideSyncIndicator();
         }
     }
     
