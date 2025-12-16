@@ -174,7 +174,8 @@ function setupInputActions() {
         // Handle polygon/line drawing
         if (drawingMode === "polygon" || drawingMode === "line") {
             if (activeShapePoints.length === 0) {
-                floatingPoint = createPoint(earthPosition);
+                // First click: create a fixed point and add position
+                createPoint(earthPosition);
                 activeShapePoints.push(earthPosition);
                 const dynamicPositions = new Cesium.CallbackProperty(function () {
                     if (drawingMode === "polygon") {
@@ -183,9 +184,17 @@ function setupInputActions() {
                     return activeShapePoints;
                 }, false);
                 activeShape = drawShape(dynamicPositions);
-            } else {
+                // Now create the floating point for subsequent positions
+                floatingPoint = createPoint(earthPosition);
                 activeShapePoints.push(earthPosition);
-                createPoint(earthPosition);
+            } else {
+                // Subsequent clicks: replace floating point with fixed point
+                activeShapePoints.pop(); // Remove floating point position
+                createPoint(earthPosition); // Create fixed point
+                activeShapePoints.push(earthPosition); // Add new fixed position
+                // Recreate floating point at same location
+                floatingPoint = createPoint(earthPosition);
+                activeShapePoints.push(earthPosition);
             }
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);

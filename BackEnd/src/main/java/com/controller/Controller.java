@@ -12,6 +12,8 @@ import com.service.BuildingTypeService;
 import com.service.CalculationService;
 import com.service.ModelService;
 import com.service.PolygonService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,8 @@ import java.util.Map;
 @RequestMapping("/api/data")
 @CrossOrigin(origins = "*")
 public class Controller {
+
+    private static final Logger logger = LoggerFactory.getLogger(Controller.class);
 
     @Autowired
     private PolygonService polygonService;
@@ -106,31 +110,62 @@ public class Controller {
 
     @PostMapping("/polygons")
     public ResponseEntity<Polygon> createPolygon(@RequestBody Polygon polygon) {
-        // Ensure bidirectional relationship is set
-        if (polygon.getCoordinates() != null) {
-            for (com.model.Coordinate coord : polygon.getCoordinates()) {
-                coord.setPolygon(polygon);
+        try {
+            logger.info("Creating new polygon with {} coordinates", 
+                       polygon.getCoordinates() != null ? polygon.getCoordinates().size() : 0);
+            
+            // Ensure height has a default value
+            if (polygon.getHeight() == null) {
+                polygon.setHeight(0.0);
             }
+            
+            // Ensure bidirectional relationship is set
+            if (polygon.getCoordinates() != null) {
+                for (com.model.Coordinate coord : polygon.getCoordinates()) {
+                    coord.setPolygon(polygon);
+                }
+            }
+            Polygon savedPolygon = polygonService.savePolygon(polygon);
+            logger.info("Successfully created polygon with ID: {}", savedPolygon.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedPolygon);
+        } catch (Exception e) {
+            logger.error("Error creating polygon: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        Polygon savedPolygon = polygonService.savePolygon(polygon);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedPolygon);
     }
 
     @PutMapping("/polygons/{id}")
     public ResponseEntity<Polygon> updatePolygon(@PathVariable Long id, @RequestBody Polygon polygon) {
-        Polygon existingPolygon = polygonService.getPolygonById(id);
-        if (existingPolygon == null) {
-            return ResponseEntity.notFound().build();
-        }
-        polygon.setId(id);
-        // Ensure bidirectional relationship is set
-        if (polygon.getCoordinates() != null) {
-            for (com.model.Coordinate coord : polygon.getCoordinates()) {
-                coord.setPolygon(polygon);
+        try {
+            logger.info("Updating polygon with ID: {}", id);
+            
+            Polygon existingPolygon = polygonService.getPolygonById(id);
+            if (existingPolygon == null) {
+                logger.warn("Polygon not found with ID: {}", id);
+                return ResponseEntity.notFound().build();
             }
+            
+            // Update existing polygon properties
+            existingPolygon.setHeight(polygon.getHeight() != null ? polygon.getHeight() : 0.0);
+            existingPolygon.setBuildingType(polygon.getBuildingType());
+            
+            // Clear existing coordinates and add new ones
+            existingPolygon.getCoordinates().clear();
+            if (polygon.getCoordinates() != null) {
+                logger.info("Updating with {} coordinates", polygon.getCoordinates().size());
+                for (com.model.Coordinate coord : polygon.getCoordinates()) {
+                    coord.setPolygon(existingPolygon);
+                    existingPolygon.getCoordinates().add(coord);
+                }
+            }
+            
+            Polygon updatedPolygon = polygonService.savePolygon(existingPolygon);
+            logger.info("Successfully updated polygon with ID: {}", updatedPolygon.getId());
+            return ResponseEntity.ok(updatedPolygon);
+        } catch (Exception e) {
+            logger.error("Error updating polygon {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        Polygon updatedPolygon = polygonService.savePolygon(polygon);
-        return ResponseEntity.ok(updatedPolygon);
     }
 
     @DeleteMapping("/polygons/{id}")
