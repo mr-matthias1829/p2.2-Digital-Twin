@@ -168,7 +168,6 @@ class ObjectEditor {
     startEditingModel(model) {
         // Only allow editing when in edit mode
         if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") {
-            console.log("⚠ Switch to Edit mode to edit models");
             return;
         }
         if (this.editMode) this.stopEditing();
