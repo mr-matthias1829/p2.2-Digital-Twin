@@ -1,29 +1,53 @@
 // Store preloaded Model primitives
 const modelCache = {};
+const modelOrder = [];
 const preloadPromises = {};
+let preloadAllPromise = null;
 
 // Preload models in this method
 // Use ID's to reference them later
 const Folder = "Models";
-function preloadModels() {
-    preloadModel("man", "Cesium_Man.glb", {
-        scale: 1.0,
-        buildType: "nature"
-    });
-    preloadModel("building", "strange_building.glb", {
-        scale: 3,
-        buildType: "detached_house"
-    });
-    preloadModel("tree", "tree.glb", {
-        scale: 0.65,
-        buildType: "nature"
-    });
+async function preloadModels() {
+
+    const models = [
+        ["man", "Cesium_Man.glb", { scale: 1.0, buildType: "nature" }],
+        ["building", "strange_building.glb", { scale: 3, buildType: "detached_house" }],
+        ["tree", "tree.glb", { scale: 0.65, buildType: "nature" }]
+    ];
+
+    // record order exactly as written
+    for (const [key] of models) {
+        if (!modelOrder.includes(key)) {
+            modelOrder.push(key);
+        }
+    }
+
+    // create the shared promise ONCE
+    if (!preloadAllPromise) {
+        preloadAllPromise = Promise.all(
+            models.map(([key, uri, options]) =>
+                preloadModel(key, uri, options)
+            )
+        ).then(() => {
+            console.log("✓ All models preloaded");
+        });
+    }
+
+    return preloadAllPromise;
 }
 
 // Returns all model id's that are already pre-loaded and ready for use
-function getAllModelIDs() {
-    return Object.keys(modelCache);
+async function getAllModelIDsAsync() {
+    if (preloadAllPromise) {
+        await preloadAllPromise;
+    }
+    return modelOrder.slice();
 }
+
+function getAllModelIDs() {
+    return modelOrder.filter(key => key in modelCache);
+}
+
 
 // Preload a model with configuration
 function preloadModel(key, uri, options = {}) {

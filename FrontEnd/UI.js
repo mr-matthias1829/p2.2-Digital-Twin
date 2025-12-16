@@ -230,6 +230,15 @@ function toggleOccupation() {
     btn.classList.toggle('open');
 }
 
+
+
+
+
+
+
+
+
+
 function UIsetup() {
     // Inject CSS styles first
     injectStyles();
@@ -279,7 +288,7 @@ function createStaticUI() {
     });
 
     // Can add more cases here if needed
-    // Note: try to not add cases that also activate other cases or activate automatically
+    // Note: try to not add cases that also activate other cases or activate on their own
 }
 
 function refreshDynamicUI() {
