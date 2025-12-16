@@ -11,7 +11,6 @@ var Server;
 function setupSetups() {
     UIsetup();
     subscribeToStateChangesSetup();
-    preloadModels();
     
     // Initialize goals UI
     if (typeof initializeGoalsUI === 'function') {
@@ -44,16 +43,22 @@ function subscribeToStateChangesSetup() {
     });
 }
 
-const modelToCreateDEFAULT = getAllModelIDs()[0];
+
+let modelToCreateDEFAULT = null; // Temporary to init the var, later set to id 0 of models
 const objTypeDEFAULT = 'none';
 
 // Make sure these are the same defaults as in UI.js to prevent offsets with UI!
 let modelToCreate = modelToCreateDEFAULT;
-let drawingMode = "none";
+let drawingMode = "none"; // Temporary and later set to default, model "none" does NOT exist
 let objType = objTypeDEFAULT;
 
-function laterSetup(){
+async function laterSetup(){
     setupSetups();
+
+    const ids = await getAllModelIDsAsync();
+
+    modelToCreateDEFAULT = ids[0];
+    modelToCreate = modelToCreateDEFAULT;
 
     // Initial occupation stats update (after a short delay to ensure entities are loaded)
     setTimeout(() => {
