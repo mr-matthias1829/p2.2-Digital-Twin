@@ -462,6 +462,19 @@ function editorDynamicContainerContent(Con){
                 // Force visual update
                 applyTypeToEntity(Editor.editingEntity);
                 
+                // Save to database
+                if (Editor.editingEntity.polygonId && typeof polygonAPI !== 'undefined') {
+                    polygonAPI.savePolygon(Editor.editingEntity)
+                        .then(() => {
+                            console.log('✓ Type change saved to database');
+                            // Update occupation stats after save completes
+                            if (typeof updateOccupationStats === 'function') {
+                                updateOccupationStats();
+                            }
+                        })
+                        .catch(err => console.error('Failed to save type change:', err));
+                }
+                
                 // Optional: refresh info panel
                 if (window.showPolygonInfo) {
                     try { window.showPolygonInfo(Editor.editingEntity); } catch {}

@@ -157,6 +157,11 @@ function setEntityType(entity, typeId) {
     
     // Apply the visual updates
     applyTypeToEntity(entity);
+    
+    // Update occupation stats after type change
+    if (typeof updateOccupationStats === 'function') {
+        setTimeout(() => updateOccupationStats(), 100);
+    }
 }
 
 // Apply type initialization for POLYGONS (modifies entity directly)
