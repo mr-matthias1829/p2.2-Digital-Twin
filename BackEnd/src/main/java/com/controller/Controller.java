@@ -106,8 +106,31 @@ public class Controller {
 
     @PostMapping("/polygons")
     public ResponseEntity<Polygon> createPolygon(@RequestBody Polygon polygon) {
+        // Ensure bidirectional relationship is set
+        if (polygon.getCoordinates() != null) {
+            for (com.model.Coordinate coord : polygon.getCoordinates()) {
+                coord.setPolygon(polygon);
+            }
+        }
         Polygon savedPolygon = polygonService.savePolygon(polygon);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedPolygon);
+    }
+
+    @PutMapping("/polygons/{id}")
+    public ResponseEntity<Polygon> updatePolygon(@PathVariable Long id, @RequestBody Polygon polygon) {
+        Polygon existingPolygon = polygonService.getPolygonById(id);
+        if (existingPolygon == null) {
+            return ResponseEntity.notFound().build();
+        }
+        polygon.setId(id);
+        // Ensure bidirectional relationship is set
+        if (polygon.getCoordinates() != null) {
+            for (com.model.Coordinate coord : polygon.getCoordinates()) {
+                coord.setPolygon(polygon);
+            }
+        }
+        Polygon updatedPolygon = polygonService.savePolygon(polygon);
+        return ResponseEntity.ok(updatedPolygon);
     }
 
     @DeleteMapping("/polygons/{id}")

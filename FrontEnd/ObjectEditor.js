@@ -212,6 +212,13 @@ class ObjectEditor {
         
         // Clean up polygon editing
         if (this.editingEntity) {
+            // Auto-save polygon changes to database
+            if (this.editingEntity.polygon && typeof polygonAPI !== 'undefined' && this.editingEntity.polygonId) {
+                polygonAPI.savePolygon(this.editingEntity)
+                    .then(() => console.log('✓ Polygon changes saved to database'))
+                    .catch(err => console.error('Failed to save polygon changes:', err));
+            }
+            
             if (this.originalMaterial) {
                 this.editingEntity.polygon.material = this.originalMaterial;
             }
@@ -310,6 +317,14 @@ class ObjectEditor {
                         if (!ok) return;
                         
                         const entityToRemove = this.editingEntity;
+                        
+                        // Delete from database if it has an ID
+                        if (entityToRemove.polygonId && typeof polygonAPI !== 'undefined') {
+                            polygonAPI.deletePolygon(entityToRemove)
+                                .then(() => console.log('✓ Polygon deleted from database'))
+                                .catch(err => console.error('Failed to delete polygon from database:', err));
+                        }
+                        
                         this.stopEditing();
                         
                         try {

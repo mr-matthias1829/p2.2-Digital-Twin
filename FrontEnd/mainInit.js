@@ -50,6 +50,19 @@ function setup() {
     // Load building types from API
     loadBuildingTypesFromAPI().then(() => {
         console.log('Building types loaded, ready for use');
+        
+        // Load existing polygons from database
+        if (typeof polygonAPI !== 'undefined') {
+            polygonAPI.loadAllPolygons(viewer)
+                .then(() => {
+                    console.log('\u2713 Polygons loaded from database');
+                    // Update occupation stats after loading polygons
+                    if (typeof updateOccupationStats === 'function') {
+                        setTimeout(() => updateOccupationStats(), 500);
+                    }
+                })
+                .catch(err => console.error('Failed to load polygons:', err));
+        }
     });
 
     setupInputActions();

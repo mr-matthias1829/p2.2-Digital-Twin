@@ -1,46 +1,40 @@
 package com.service;
 
 import com.model.Polygon;
+import com.repository.PolygonRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.ArrayList;
-import java.util.HashMap;
+
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class PolygonServiceImpl implements PolygonService {
 
-    // Tijdelijke opslag in geheugen (later vervangen door database)
-    private final Map<Long, Polygon> polygonStore = new HashMap<>();
-    private final AtomicLong idCounter = new AtomicLong(1);
+    @Autowired
+    private PolygonRepository polygonRepository;
 
     @Override
     public Polygon savePolygon(Polygon polygon) {
-        if (polygon.getId() == null) {
-            polygon.setId(idCounter.getAndIncrement());
-        }
-        polygonStore.put(polygon.getId(), polygon);
-        return polygon;
+        return polygonRepository.save(polygon);
     }
 
     @Override
     public List<Polygon> getAllPolygons() {
-        return new ArrayList<>(polygonStore.values());
+        return polygonRepository.findAll();
     }
 
     @Override
     public Polygon getPolygonById(Long id) {
-        return polygonStore.get(id);
+        return polygonRepository.findById(id).orElse(null);
     }
 
     @Override
     public void deletePolygon(Long id) {
-        polygonStore.remove(id);
+        polygonRepository.deleteById(id);
     }
 
     @Override
     public void deleteAllPolygons() {
-        polygonStore.clear();
+        polygonRepository.deleteAll();
     }
 }
