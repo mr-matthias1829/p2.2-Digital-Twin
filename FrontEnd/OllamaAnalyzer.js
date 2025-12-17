@@ -220,7 +220,7 @@ class OllamaAnalyzer{
             reader.onloadend = async () => {
                 const base64Image = reader.result.split(',')[1];
 
-                console.log("Sending to Ollama...");
+                console.log(`Sending to Ollama Model ${this.model}...`);
                 const response = await fetch(`${this.ollamaUrl}/api/chat`, {
                     method: "POST",
                     headers: {

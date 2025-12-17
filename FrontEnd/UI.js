@@ -455,8 +455,11 @@ function createGenerationUI() {
     modelContainer.style.display = 'flex';
     modelContainer.style.alignItems = 'center';
 
-    const modelDropdown = createDropdown("modelSelect", ["gemma3:4b", "qwen3-vl:4b"], "Models:");
-    modelContainer.appendChild(modelDropdown);
+    const modelType = createDropdown("modelSelect", ollamaAnalyzer.models, "Models:");
+    modelType.style.marginTop = '10px';
+    modelContainer.appendChild(modelType);
+
+    const modelTypeSelect = modelType.querySelector('select');
 
     const analyseContainer = document.createElement('div');
     analyseContainer.style.display = 'flex';
@@ -488,6 +491,14 @@ function createGenerationUI() {
     intervalContainer.appendChild(intervalInput);
     analyseContainer.appendChild(intervalContainer);
 
+    const confirmContainer = document.createElement('div');
+    confirmContainer.style.marginTop = '10px';
+    confirmContainer.style.textAlign = 'right';
+
+    const confirmButton = document.createElement('button');
+    confirmButton.textContent = 'Confirm';
+    confirmContainer.appendChild(confirmButton);
+
     analyseTypeSelect.addEventListener('change', (e) => {
         if (analyseTypeSelect.value === 'repeadetly'){
             intervalContainer.style.display = 'flex';
@@ -497,8 +508,21 @@ function createGenerationUI() {
         }
     });
 
+    confirmButton.addEventListener('click', () => {
+        if (analyseTypeSelect.value === 'once'){
+            ollamaAnalyzer.model = modelTypeSelect.value;
+            ollamaAnalyzer.analyzeWithOllama();
+        }
+        else if (analyseTypeSelect.value === 'repeadetly'){
+            ollamaAnalyzer.model = modelTypeSelect.value;
+            ollamaAnalyzer.interval = intervalInput.value * 1000;
+            ollamaAnalyzer.start();
+        }
+    });
+
     gen.appendChild(modelContainer);
     gen.appendChild(analyseContainer);
+    gen.appendChild(confirmContainer);
 
     document.body.appendChild(gen);
 }
