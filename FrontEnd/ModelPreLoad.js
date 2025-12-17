@@ -11,7 +11,10 @@ async function preloadModels() {
     const models = [
         ["man", "Cesium_Man.glb", { scale: 1.0, buildType: "nature" }],
         ["building", "strange_building.glb", { scale: 3, buildType: "detached_house" }],
-        ["tree", "tree.glb", { scale: 0.65, buildType: "nature" }]
+        ["tree", "tree.glb", { scale: 0.65, buildType: "nature" }],
+        ["tree2", "Tree2.glb", { scale: 0.65, buildType: "nature" }],
+        ["lamp", "Lamp.glb", { scale: 0.45, buildType: "road" }],
+        ["bush", "Bush.glb", { scale: 0.37, buildType: "nature" }]
     ];
 
     // Record order exactly as written

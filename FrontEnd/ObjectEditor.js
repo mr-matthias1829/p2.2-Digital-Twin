@@ -51,18 +51,26 @@ class ObjectEditor {
             return this.stopEditing();
         }
 
-        positions.forEach((position, index) => {
-            this.vertexEntities.push(this.viewer.entities.add({
-                position: position,
-                point: {
-                    pixelSize: 20,
-                    color: Cesium.Color.RED,
-                    outlineColor: Cesium.Color.WHITE,
-                    outlineWidth: 3,
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                },
-                properties: { isVertex: true, vertexIndex: index }
+            positions.forEach((position, index) => {
+        // Add small height offset to position vertices above polygon
+        const cartographic = Cesium.Cartographic.fromCartesian(position);
+        const elevatedPosition = Cesium.Cartesian3.fromRadians(
+            cartographic.longitude,
+            cartographic.latitude,
+            cartographic.height + 0.2
+        );
+        
+        this.vertexEntities.push(this.viewer.entities.add({
+            point: {
+                pixelSize: 20,
+                color: Cesium.Color.RED,
+                outlineColor: Cesium.Color.WHITE,
+                outlineWidth: 3,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            
+            },
+            position: elevatedPosition,
+            properties: { isVertex: true, vertexIndex: index }
             }));
         });
         
