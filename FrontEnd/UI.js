@@ -303,7 +303,7 @@ function refreshDynamicUI() {
     newDynamicContainer.id = "dynamicUI";
 
     if (UIState.modeSelect === "polygon") {
-        const Types = ["none", ...getAllTypeIds()]; // Dynamically grabs all types
+        const Types = ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")]; // Dynamically grabs all types, excluding 'none' and 'poly'
 
         const objType = createDropdown("objtype", Types, "Type:");
         newDynamicContainer.appendChild(objType);
@@ -435,7 +435,7 @@ function editorDynamicContainerContent(Con){
 
     // ONLY show the polygon dropdown while EDITING a polygon
     if (what === "polygon" && Editor.editMode) {
-        const Types = ["none", ...getAllTypeIds()]; // dynamically grab all type IDs
+        const Types = ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")]; // dynamically grab all type IDs, excluding 'none' and 'poly'
         const objType = createDropdown("objtype", Types, "Type:");
 
         // Preselect the current polygon type

@@ -173,6 +173,12 @@ function setupInputActions() {
         
         // Handle polygon/line drawing
         if (drawingMode === "polygon" || drawingMode === "line") {
+            // Prevent polygon drawing if type is "none"
+            if (drawingMode === "polygon" && objType === "none") {
+                console.log("⚠ Please select a type before drawing a polygon");
+                return;
+            }
+            
             if (activeShapePoints.length === 0) {
                 // First click: create a fixed point and add position
                 createPoint(earthPosition);
