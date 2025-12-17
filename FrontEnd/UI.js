@@ -1,359 +1,116 @@
 const UIState = {};
 const stateChangeListeners = {};
 
-function injectStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        #polygonInfo {
-            position: fixed;
-            right: 16px;
-            bottom: 16px;
-            width: 420px;
-            min-width: 300px;
-            max-height: 60vh;
-            overflow: auto;
-            background: rgba(0, 0, 0, 0.85);
-            color: #e6e6e6;
-            padding: 12px 14px;
-            font-family: monospace;
-            font-size: 15px;
-            line-height: 1.4;
-            border-radius: 8px;
-            z-index: 9999;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-            display: none;
-        }
-        #occupationInfo {
-            position: fixed;
-            right: 1px;
-            top: 130px;
-            width: 280px;
-            background: rgba(0, 0, 0, 0.85);
-            color: #e6e6e6;
-            padding: 12px 14px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            border-radius: 8px;
-            z-index: 9999;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-            transition: transform 0.3s ease;
-        }
-        #occupationInfo.collapsed {
-            transform: translateX(calc(100% + 16px));
-        }
-        #occupationInfo h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            font-weight: 600;
-            color: #4CAF50;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #occupationToggle {
-            position: fixed;
-            right: 1px;
-            top: 130px;
-            background: rgba(0, 0, 0, 0.85);
-            color: #4CAF50;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 20px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-            transition: transform 0.3s ease;
-        }
-        #occupationToggle.open {
-            transform: translateX(calc(-296px));
-        }
-        #occupationToggle:hover {
-            background: rgba(0, 0, 0, 0.95);
-        }
-        #occupationInfo .stat {
-            margin: 6px 0;
-        }
-        #occupationInfo .percentage {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4CAF50;
-            margin: 10px 0;
-        }
-        #pieChart {
-            width: 300px;
-            height: 150px;
-            margin: 15px auto;
-            display: block;
-        }
-        #typeBreakdown {
-            margin-top: 10px;
-            font-size: 12px;
-        }
-        .type-item {
-            display: flex;
-            align-items: center;
-            margin: 4px 0;
-        }
-        .type-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-            margin-right: 8px;
-        }
-        #goalsInfo {
-            position: fixed;
-            left: 1px;
-            top: 430px;
-            width: 280px;
-            background: rgba(0, 0, 0, 0.85);
-            color: #e6e6e6;
-            padding: 12px 14px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            border-radius: 8px;
-            z-index: 9999;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-            transition: transform 0.3s ease;
-        }
-        #goalsInfo.collapsed {
-            transform: translateX(calc(-100% - 16px));
-        }
-        #goalsInfo h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            font-weight: 600;
-            color: #FF9800;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #goalsToggle {
-            position: fixed;
-            left: 1px;
-            top: 430px;
-            background: rgba(0, 0, 0, 0.85);
-            color: #FF9800;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 20px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
-            transition: transform 0.3s ease;
-        }
-        #goalsToggle.open {
-            transform: translateX(296px);
-        }
-        #goalsToggle:hover {
-            background: rgba(0, 0, 0, 0.95);
-        }
-        .goal-item {
-            display: flex;
-            align-items: center;
-            margin: 8px 0;
-            padding: 6px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .goal-item.achieved {
-            background: rgba(76, 175, 80, 0.2);
-        }
-        .goal-item.not-achieved {
-            background: rgba(244, 67, 54, 0.2);
-        }
-        .goal-icon {
-            font-size: 18px;
-            margin-right: 10px;
-            min-width: 20px;
-        }
-        .goal-item.achieved .goal-icon {
-            color: #4CAF50;
-        }
-        .goal-item.not-achieved .goal-icon {
-            color: #F44336;
-        }
-        .goal-description {
-            flex: 1;
-            font-size: 13px;
-        }
-        .goal-value {
-            font-size: 12px;
-            color: #AAA;
-            margin-left: 8px;
-        }
-        .goal-item.error {
-            color: #F44336;
-            justify-content: center;
-        }
-    `;
-    document.head.appendChild(style);
-}
+
 
 function createInfoPanels() {
-    // Create polygon info panel
-    const polygonInfo = document.createElement('div');
-    polygonInfo.id = 'polygonInfo';
-    polygonInfo.setAttribute('aria-live', 'polite');
-    polygonInfo.setAttribute('title', 'Polygon informatie');
-    document.body.appendChild(polygonInfo);
+    const createPanel = (id, attrs) => {
+        const el = document.createElement(attrs.tag || 'div');
+        el.id = id;
+        if (attrs.className) el.className = attrs.className;
+        if (attrs.innerHTML) el.innerHTML = attrs.innerHTML;
+        if (attrs.textContent) el.textContent = attrs.textContent;
+        if (attrs.onclick) el.onclick = attrs.onclick;
+        Object.entries(attrs.attributes || {}).forEach(([k, v]) => el.setAttribute(k, v));
+        document.body.appendChild(el);
+        return el;
+    };
 
-    // Create occupation toggle button
-    const occupationToggle = document.createElement('button');
-    occupationToggle.id = 'occupationToggle';
-    occupationToggle.textContent = '📊';
-    occupationToggle.onclick = toggleOccupation;
-    document.body.appendChild(occupationToggle);
-
-    // Create occupation info panel
-    const occupationInfo = document.createElement('div');
-    occupationInfo.id = 'occupationInfo';
-    occupationInfo.className = 'collapsed';
-    occupationInfo.innerHTML = `
-        <h3>Spoordok Occupation</h3>
-        <div class="stat">Spoordok Area: <span id="spoordokArea">--</span> m²</div>
-        <div class="stat">Occupied Area: <span id="occupiedArea">--</span> m²</div>
-        <div class="percentage"><span id="occupationPercentage">--</span>%</div>
-        <canvas id="pieChart"></canvas>
-        <div id="typeBreakdown"></div>
-    `;
-    document.body.appendChild(occupationInfo);
+    createPanel('polygonInfo', {attributes: {'aria-live': 'polite', 'title': 'Polygon informatie'}});
+    createPanel('occupationToggle', {tag: 'button', textContent: '📊', onclick: toggleOccupation});
+    createPanel('occupationInfo', {
+        className: 'collapsed',
+        innerHTML: `
+            <h3>Spoordok Occupation</h3>
+            <div class="stat">Spoordok Area: <span id="spoordokArea">--</span> m²</div>
+            <div class="stat">Occupied Area: <span id="occupiedArea">--</span> m²</div>
+            <div class="percentage"><span id="occupationPercentage">--</span>%</div>
+            <canvas id="pieChart"></canvas>
+            <div id="typeBreakdown"></div>
+        `
+    });
 }
 
 function toggleOccupation() {
-    const panel = document.getElementById('occupationInfo');
-    const btn = document.getElementById('occupationToggle');
-    panel.classList.toggle('collapsed');
-    btn.classList.toggle('open');
+    ['occupationInfo', 'occupationToggle'].forEach(id => document.getElementById(id)?.classList.toggle(id === 'occupationInfo' ? 'collapsed' : 'open'));
+ 
 }
 
 
-
-
-
-
-
-
-
-
 function UIsetup() {
-    // Inject CSS styles first
-    injectStyles();
 
-    // Create info panels
+
+    
     createInfoPanels();
 
-    const uiContainer = document.createElement("div");
-    uiContainer.id = "myUI";
-    uiContainer.style.position = "absolute";
-    uiContainer.style.top = "10px";
-    uiContainer.style.left = "10px";
-    uiContainer.style.backgroundColor = "rgba(42, 42, 42, 0.8)";
-    uiContainer.style.color = "white";
-    uiContainer.style.padding = "10px";
-    uiContainer.style.borderRadius = "5px";
-    uiContainer.style.zIndex = "100";
-
+    const uiContainer = Object.assign(document.createElement("div"), {
+        id: "myUI",
+        style: "position:absolute;top:10px;left:10px;background:rgba(42,42,42,0.8);color:white;padding:10px;border-radius:5px;z-index:100"
+    });
     document.body.appendChild(uiContainer);
 
-    // Build static UI
+
     createStaticUI();
 
-    // Create separate top-right connection/status panel
+
     createConnectionUI();
 
-    // Build initial dynamic UI
+    
     refreshDynamicUI();
+
 }
 
 function createStaticUI() {
     const uiContainer = document.getElementById("myUI");
-
-    
-    // Mode select
-    const modeDropdown = createDropdown("modeSelect", ["None", "Polygon", "Model", "Edit"], "Mode:");
-    uiContainer.appendChild(modeDropdown);
-
-    // Refresh dynamic UI on mode change
+    uiContainer.appendChild(createDropdown("modeSelect", ["None", "Polygon", "Model", "Edit"], "Mode:"));
     onUIStateChange("modeSelect", refreshDynamicUI);
     document.addEventListener('object-editor-editmode-changed', (evt) => {
-    const info = evt.detail;
-    console.log("Edit mode changed (event):", info);
-
-    // Call UI refresh
-    refreshDynamicUI();
+        console.log("Edit mode changed (event):", evt.detail);
+        refreshDynamicUI();
     });
 
-    // Can add more cases here if needed
-    // Note: try to not add cases that also activate other cases or activate on their own
+
 }
 
 function refreshDynamicUI() {
     const uiContainer = document.getElementById("myUI");
+    const oldDynamic = document.getElementById("dynamicUI");
+    if (oldDynamic) uiContainer.removeChild(oldDynamic);
 
-    // Remove old dynamic UI elements
-    const dynamicContainer = document.getElementById("dynamicUI");
-    if (dynamicContainer) uiContainer.removeChild(dynamicContainer);
-
-    // Create a new container for dynamic UI
-    const newDynamicContainer = document.createElement("div");
-    newDynamicContainer.id = "dynamicUI";
+    const dynamicContainer = document.createElement("div");
+    dynamicContainer.id = "dynamicUI";
 
     if (UIState.modeSelect === "polygon") {
-        const Types = ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")]; // Dynamically grabs all types, excluding 'none' and 'poly'
-
-        const objType = createDropdown("objtype", Types, "Type:");
-        newDynamicContainer.appendChild(objType);
+        dynamicContainer.appendChild(createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:"));
     }
     if (UIState.modeSelect === "model") {
-        const modeDropdown = createDropdown("modelselect", getAllModelIDs(), "Model:");
-        newDynamicContainer.appendChild(modeDropdown);
+        dynamicContainer.appendChild(createDropdown("modelselect", getAllModelIDs(), "Model:"));
     }
 
-    
-    // Editor tab of the dynamic ui got a bit big...
-    editorDynamicContainerContent(newDynamicContainer);
-
-    uiContainer.appendChild(newDynamicContainer);
+    editorDynamicContainerContent(dynamicContainer);
+    uiContainer.appendChild(dynamicContainer);
 }
 
 
-// Below are methods that make individual UI components easy
-// TODO: The appends are currently very hardcoded per method, could be it's own dynamic method
+
 
 function createDropdown(id, options, labeltxt) {
     const container = document.createElement("div");
     container.style.marginBottom = "5px";
 
-    const dropLabel = document.createElement("label");
-    dropLabel.textContent = labeltxt;
-    dropLabel.htmlFor = id;
-    dropLabel.style.marginRight = "5px";
+    const label = Object.assign(document.createElement("label"), {textContent: labeltxt, htmlFor: id});
+    label.style.marginRight = "5px";
 
-    const select = document.createElement("select");
-    select.id = id;
-
-    options.forEach(opt => {
-        const option = document.createElement("option");
-        option.value = opt.toLowerCase();
-        option.textContent = opt;
-        select.appendChild(option);
-    });
+    const select = Object.assign(document.createElement("select"), {id});
+    options.forEach(opt => select.appendChild(Object.assign(document.createElement("option"), {value: opt.toLowerCase(), textContent: opt})));
 
     select.addEventListener("change", () => {
         UIState[id] = select.value;
         console.log("UIState updated:", UIState);
-
-        if (stateChangeListeners[id]) {
-            stateChangeListeners[id].forEach(callback => callback(select.value));
-        }
+        stateChangeListeners[id]?.forEach(cb => cb(select.value));
     });
 
-    container.appendChild(dropLabel);
-    container.appendChild(select);
+    container.append(label, select);
     return container;
 }
 
@@ -362,161 +119,89 @@ function onUIStateChange(key, callback) {
     stateChangeListeners[key].push(callback);
 }
 
-// Update the connection status UI from other scripts.
+
 function setConnectionStatus(status, message) {
     const el = document.getElementById('connectionStatus');
     const info = document.getElementById('connectionStatusInfo');
     if (!el) return;
     el.textContent = status || 'Unknown';
-    // colour coding
-    if (status === 'Connected') {
-        el.style.color = '#4CAF50'; // green
-    } else if (status === 'Disconnected') {
-        el.style.color = '#F44336'; // red
-    } else {
-        el.style.color = '#FFA500'; // orange
-    }
+    el.style.color = {'Connected': '#4CAF50', 'Disconnected': '#F44336'}[status] || '#FFA500';
     if (info) info.textContent = message || '';
 }
 
 window.setConnectionStatus = setConnectionStatus;
 
-// Create a separate top-right connection/status panel.
+
 function createConnectionUI() {
-    const conn = document.createElement('div');
-    conn.id = 'connectionUI';
-    conn.style.position = 'absolute';
-    conn.style.top = '40px';
-    conn.style.right = '1px';
-    conn.style.backgroundColor = 'rgba(32,32,32,0.85)';
-    conn.style.color = 'white';
-    conn.style.padding = '10px';
-    conn.style.borderRadius = '5px';
-    conn.style.zIndex = '150';
-    conn.style.minWidth = '180px';
+    const conn = Object.assign(document.createElement('div'), {
+        id: 'connectionUI',
+        style: 'position:absolute;top:40px;right:1px;background:rgba(32,32,32,0.85);color:white;padding:10px;border-radius:5px;z-index:150;min-width:180px'
+    });
 
-    const title = document.createElement('div');
-    title.textContent = 'Status';
-    title.style.fontWeight = '600';
-    title.style.marginBottom = '6px';
-    conn.appendChild(title);
-
-    const statusContainer = document.createElement('div');
-    statusContainer.style.display = 'flex';
-    statusContainer.style.alignItems = 'center';
-
-    const statusLabel = document.createElement('span');
-    statusLabel.textContent = 'Server:';
-    statusLabel.style.marginRight = '8px';
-    statusContainer.appendChild(statusLabel);
-
-    const statusValue = document.createElement('span');
-    statusValue.id = 'connectionStatus';
-    statusValue.textContent = 'Unknown';
-    statusValue.style.fontWeight = 'bold';
-    statusValue.style.color = '#FFA500';
-    statusContainer.appendChild(statusValue);
-
-    // No manual check button: the client auto-checks periodically.
-
-    conn.appendChild(statusContainer);
-
-    const statusInfo = document.createElement('div');
-    statusInfo.id = 'connectionStatusInfo';
-    statusInfo.style.fontSize = '11px';
-    statusInfo.style.marginTop = '6px';
-    conn.appendChild(statusInfo);
-
+    conn.innerHTML = `
+        <div style="font-weight:600;margin-bottom:6px">Status</div>
+        <div style="display:flex;align-items:center">
+            <span style="margin-right:8px">Server:</span>
+            <span id="connectionStatus" style="font-weight:bold;color:#FFA500">Unknown</span>
+        </div>
+        <div id="connectionStatusInfo" style="font-size:11px;margin-top:6px"></div>
+    `;
     document.body.appendChild(conn);
 }
 
-function editorDynamicContainerContent(Con){
+function editorDynamicContainerContent(Con) {
     const what = Editor.editingWhat();
 
-    // ONLY show the polygon dropdown while EDITING a polygon
+    
     if (what === "polygon" && Editor.editMode) {
-        const Types = ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")]; // dynamically grab all type IDs, excluding 'none' and 'poly'
-        const objType = createDropdown("objtype", Types, "Type:");
-
-        // Preselect the current polygon type
-        let currentTypeKey = "DEFAULT";
-        if (Editor.editingEntity && Editor.editingEntity.properties?.buildType) {
-            const bt = Editor.editingEntity.properties.buildType;
-            currentTypeKey = typeof bt.getValue === "function" ? bt.getValue() : bt;
-        }
+        const objType = createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:");
         
-        // Convert key to ID for display
-        const currentTypeId = buildTypes[currentTypeKey]?.id || "none";
-        objType.querySelector("select").value = currentTypeId;
+        const bt = Editor.editingEntity?.properties?.buildType;
+        const currentTypeKey = typeof bt?.getValue === "function" ? bt.getValue() : bt || "DEFAULT";
+        objType.querySelector("select").value = buildTypes[currentTypeKey]?.id || "none";
 
-        // Update polygon type when user changes dropdown
         objType.querySelector("select").onchange = (e) => {
+            
             const newTypeId = e.target.value;
-            // Convert ID back to key for internal lookup
+            
             const newTypeKey = getTypeById(newTypeId);
             
-            if (Editor.editingEntity && Editor.editingEntity.properties && newTypeKey) {
-                Editor.editingEntity.properties.buildType = newTypeId;  // Store the id, not the key
+            if (Editor.editingEntity?.properties && newTypeKey) {
+                Editor.editingEntity.properties.buildType = newTypeId;
                 console.log(`✓ Polygon type changed to: ${newTypeId} (key: ${newTypeKey})`);
                 
-                // Force visual update
+                
                 applyTypeToEntity(Editor.editingEntity);
                 
-                // Save to database
+                
                 if (Editor.editingEntity.polygonId && typeof polygonAPI !== 'undefined') {
                     polygonAPI.savePolygon(Editor.editingEntity)
                         .then(() => {
                             console.log('✓ Type change saved to database');
-                            // Update occupation stats after save completes
-                            if (typeof updateOccupationStats === 'function') {
-                                updateOccupationStats();
-                            }
+                            if (typeof updateOccupationStats === 'function') updateOccupationStats();
                         })
                         .catch(err => console.error('Failed to save type change:', err));
                 }
                 
-                // Optional: refresh info panel
-                if (window.showPolygonInfo) {
-                    try { window.showPolygonInfo(Editor.editingEntity); } catch {}
-                }
+                try { window.showPolygonInfo?.(Editor.editingEntity); } catch {}
             }
         };
-
+       
         Con.appendChild(objType);
     }
 
-    // Keep the existing info text box for EDIT mode
+    
     if (UIState.modeSelect === "edit") {
-        const txt = document.createElement("div");
-        txt.style.whiteSpace = "pre-line";
-        txt.style.padding = "8px 10px";
-        txt.style.background = "rgba(0,0,0,0.55)";
-        txt.style.border = "1px solid rgba(255,255,255,0.2)";
-        txt.style.borderRadius = "6px";
-        txt.style.maxWidth = "260px";
-        txt.style.maxHeight = "160px";
-        txt.style.overflowY = "auto";
-        txt.style.fontSize = "12px";
-        txt.style.lineHeight = "1.3";
-        txt.style.color = "white";
-
-        txt.textContent = "Double click on an object to start editing\nPress Esc or right-click to stop editing";
-
-        if (what === 'polygon') {
-            txt.textContent += 
-                "\n\nEditing polygon:\n" +
-                "Drag the selected polygon to move it\n" +
-                "Drag the vertices to reshape the polygon\n" +
-                "Press R to rotate 90°; arrows rotate freely\n" +
-                "Press Delete to remove hovered vertex\n" +
-                "Double click an edge to add a vertex\n";
-        } else if (what === 'model') {
-            txt.textContent += 
-                "\n\nEditing model:\n" +
-                "Drag the selected model to move it\n" +
-                "Press R to rotate 90°; arrows rotate freely\n";
-        }
-
+        const helpTexts = {
+            base: "Double click on an object to start editing\nPress Esc or right-click to stop editing",
+            polygon: "\n\nEditing polygon:\nDrag the selected polygon to move it\nDrag the vertices to reshape the polygon\nPress R to rotate 90°; arrows rotate freely\nPress Delete to remove hovered vertex\nDouble click an edge to add a vertex\n",
+            model: "\n\nEditing model:\nDrag the selected model to move it\nPress R to rotate 90°; arrows rotate freely\n"
+        };
+        
+        const txt = Object.assign(document.createElement("div"), {
+            textContent: helpTexts.base + (helpTexts[what] || ''),
+            style: 'white-space:pre-line;padding:8px 10px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.2);border-radius:6px;max-width:260px;max-height:160px;overflow-y:auto;font-size:12px;line-height:1.3;color:white'
+        });
         Con.appendChild(txt);
     }
 }
