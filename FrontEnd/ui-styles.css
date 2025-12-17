@@ -5,23 +5,56 @@
     width: 420px;
     min-width: 300px;
     max-height: 60vh;
-    overflow: auto;
-    background: rgba(0, 0, 0, 0.85);
-    color: #e6e6e6;
-    padding: 12px 14px;
-    font-family: monospace;
-    font-size: 15px;
-    line-height: 1.4;
-    border-radius: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: linear-gradient(135deg, rgba(20, 20, 35, 0.95) 0%, rgba(15, 15, 28, 0.95) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(100, 150, 255, 0.2);
+    color: #e8e8e8;
+    padding: 16px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    border-radius: 12px;
     z-index: 9999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     display: none;
+    animation: slideInUp 0.3s ease-out;
+}
+
+#polygonInfo::-webkit-scrollbar {
+    width: 8px;
+}
+
+#polygonInfo::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+#polygonInfo::-webkit-scrollbar-thumb {
+    background: rgba(100, 150, 255, 0.4);
+    border-radius: 4px;
+}
+
+#polygonInfo::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 150, 255, 0.6);
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 #occupationInfo {
     position: fixed;
     right: 1px;
-    top: 130px;
+    top: 180px;
     width: 280px;
     background: rgba(0, 0, 0, 0.85);
     color: #e6e6e6;
@@ -52,7 +85,7 @@
 #occupationToggle {
     position: fixed;
     right: 1px;
-    top: 130px;
+    top: 180px;
     background: rgba(0, 0, 0, 0.85);
     color: #4CAF50;
     border: none;
@@ -209,4 +242,122 @@
 .goal-item.error {
     color: #F44336;
     justify-content: center;
+}
+
+/* Modern UI Styling */
+#myUI {
+    background: linear-gradient(135deg, rgba(30, 30, 45, 0.95) 0%, rgba(20, 20, 35, 0.95) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    animation: slideInLeft 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+#myUI > div {
+    margin-bottom: 12px;
+}
+
+#myUI label {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    color: #e0e0e0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#myUI select {
+    background: linear-gradient(145deg, rgba(45, 45, 65, 0.9) 0%, rgba(35, 35, 55, 0.9) 100%);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    color: #f0f0f0;
+    padding: 8px 32px 8px 12px;
+    border-radius: 8px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    appearance: none;
+   
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+#myUI select:hover {
+    border-color: rgba(120, 170, 255, 0.6);
+    box-shadow: 0 4px 12px rgba(100, 150, 255, 0.3), 0 0 0 1px rgba(120, 170, 255, 0.2) inset;
+    transform: translateY(-1px);
+}
+
+#myUI select:focus {
+    border-color: rgba(100, 150, 255, 0.8);
+    box-shadow: 0 0 0 3px rgba(100, 150, 255, 0.2), 0 4px 12px rgba(100, 150, 255, 0.4);
+    transform: scale(1.02);
+}
+
+#myUI select:active {
+    transform: scale(0.98);
+}
+
+#myUI select option {
+    background: #2a2a3e;
+    color: #f0f0f0;
+    padding: 8px;
+}
+
+#connectionUI {
+    background: linear-gradient(135deg, rgba(25, 25, 40, 0.95) 0%, rgba(15, 15, 30, 0.95) 100%) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+#connectionStatus {
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+#dynamicUI > div {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

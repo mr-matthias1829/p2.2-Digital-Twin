@@ -45,7 +45,7 @@ function UIsetup() {
 
     const uiContainer = Object.assign(document.createElement("div"), {
         id: "myUI",
-        style: "position:absolute;top:10px;left:10px;background:rgba(42,42,42,0.8);color:white;padding:10px;border-radius:5px;z-index:100"
+        style: "position:absolute;top:10px;left:10px;color:white;padding:14px;border-radius:12px;z-index:100;min-width:200px"
     });
     document.body.appendChild(uiContainer);
 
@@ -96,10 +96,12 @@ function refreshDynamicUI() {
 
 function createDropdown(id, options, labeltxt) {
     const container = document.createElement("div");
-    container.style.marginBottom = "5px";
+    container.style.marginBottom = "10px";
 
     const label = Object.assign(document.createElement("label"), {textContent: labeltxt, htmlFor: id});
-    label.style.marginRight = "5px";
+    label.style.marginRight = "8px";
+    label.style.display = "block";
+    label.style.marginBottom = "6px";
 
     const select = Object.assign(document.createElement("select"), {id});
     options.forEach(opt => select.appendChild(Object.assign(document.createElement("option"), {value: opt.toLowerCase(), textContent: opt})));
@@ -135,16 +137,16 @@ window.setConnectionStatus = setConnectionStatus;
 function createConnectionUI() {
     const conn = Object.assign(document.createElement('div'), {
         id: 'connectionUI',
-        style: 'position:absolute;top:40px;right:1px;background:rgba(32,32,32,0.85);color:white;padding:10px;border-radius:5px;z-index:150;min-width:180px'
+        style: 'position:absolute;top:40px;right:1px;color:white;padding:14px;border-radius:12px;z-index:150;min-width:200px'
     });
 
     conn.innerHTML = `
-        <div style="font-weight:600;margin-bottom:6px">Status</div>
-        <div style="display:flex;align-items:center">
-            <span style="margin-right:8px">Server:</span>
+        <div style="font-weight:600;margin-bottom:8px;font-size:14px;letter-spacing:0.5px;color:#e0e0e0">STATUS</div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:#b0b0b0">Server:</span>
             <span id="connectionStatus" style="font-weight:bold;color:#FFA500">Unknown</span>
         </div>
-        <div id="connectionStatusInfo" style="font-size:11px;margin-top:6px"></div>
+        <div id="connectionStatusInfo" style="font-size:11px;margin-top:8px;color:#999"></div>
     `;
     document.body.appendChild(conn);
 }
@@ -200,7 +202,7 @@ function editorDynamicContainerContent(Con) {
         
         const txt = Object.assign(document.createElement("div"), {
             textContent: helpTexts.base + (helpTexts[what] || ''),
-            style: 'white-space:pre-line;padding:8px 10px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.2);border-radius:6px;max-width:260px;max-height:160px;overflow-y:auto;font-size:12px;line-height:1.3;color:white'
+            style: 'white-space:pre-line;padding:12px 14px;background:linear-gradient(135deg,rgba(40,40,60,0.7) 0%,rgba(30,30,50,0.7) 100%);backdrop-filter:blur(8px);border:1px solid rgba(100,150,255,0.2);border-radius:8px;max-width:260px;max-height:180px;overflow-y:auto;font-size:12px;line-height:1.5;color:#e8e8e8;box-shadow:0 4px 16px rgba(0,0,0,0.3),0 0 0 1px rgba(255,255,255,0.05) inset'
         });
         Con.appendChild(txt);
     }
