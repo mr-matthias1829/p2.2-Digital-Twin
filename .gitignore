@@ -36,5 +36,6 @@ out/
 .vitest/
 .vitest_cache/
 coverage/
-FrontEnd/node_modules/*
-FrontEnd/node_modules
+
+# assuming you have nodejs installed into the project (which you should on your own)
+FrontEnd/node_modules/

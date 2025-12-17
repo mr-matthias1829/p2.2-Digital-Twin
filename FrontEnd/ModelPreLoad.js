@@ -1,4 +1,3 @@
-// Store preloaded Model primitives
 const modelCache = {};
 const modelOrder = [];
 const preloadPromises = {};
@@ -15,14 +14,14 @@ async function preloadModels() {
         ["tree", "tree.glb", { scale: 0.65, buildType: "nature" }]
     ];
 
-    // record order exactly as written
+    // Record order exactly as written
     for (const [key] of models) {
         if (!modelOrder.includes(key)) {
             modelOrder.push(key);
         }
     }
 
-    // create the shared promise ONCE
+    // Create the shared promise once per model
     if (!preloadAllPromise) {
         preloadAllPromise = Promise.all(
             models.map(([key, uri, options]) =>
@@ -36,7 +35,8 @@ async function preloadModels() {
     return preloadAllPromise;
 }
 
-// Returns all model id's that are already pre-loaded and ready for use
+// This function is like... used in one case
+// Only used for a small bug fix in the code currently
 async function getAllModelIDsAsync() {
     if (preloadAllPromise) {
         await preloadAllPromise;
@@ -44,12 +44,14 @@ async function getAllModelIDsAsync() {
     return modelOrder.slice();
 }
 
+// Returns all model id's that are already pre-loaded and ready for use
 function getAllModelIDs() {
     return modelOrder.filter(key => key in modelCache);
 }
 
 
 // Preload a model with configuration
+// Options is a dictionary to prevent too many arguments (is also optional, but very recommended)
 function preloadModel(key, uri, options = {}) {
     if (preloadPromises[key]) return preloadPromises[key];
 
@@ -59,6 +61,7 @@ function preloadModel(key, uri, options = {}) {
     const defaultOptions = {
         scale: 1.0,
         buildType: "DEFAULT"
+        // Add more options here if any new ones are added
     };
     
     const config = { ...defaultOptions, ...options };
@@ -134,7 +137,7 @@ async function spawnModel(key, position, height = 0, rotationDegrees = 0, overri
     clone.modelScale = scale;
     clone.isEditableModel = true;
     
-    // Set the buildType using the unified type system
+    // Goes through to TypeData.js
     setEntityType(clone, buildType);
     
     viewer.scene.primitives.add(clone);
@@ -143,7 +146,7 @@ async function spawnModel(key, position, height = 0, rotationDegrees = 0, overri
     return clone;
 }
 
-// Helper function to update a spawned model's position
+// Update a spawned model's position
 function updateModelPosition(model, newPosition, newHeight) {
     if (!model.isEditableModel) {
         console.warn("Cannot update position: not an editable model");
@@ -172,7 +175,7 @@ function updateModelPosition(model, newPosition, newHeight) {
     console.log(`Updated position to (${newPosition.lon}, ${newPosition.lat}, ${newHeight})`);
 }
 
-// Helper function to update a spawned model's rotation
+// Update a spawned model's rotation
 function updateModelRotation(model, newRotationDegrees) {
     if (!model.isEditableModel) {
         console.warn("Cannot update rotation: not an editable model");
@@ -200,7 +203,7 @@ function updateModelRotation(model, newRotationDegrees) {
     console.log(`Updated rotation to ${newRotationDegrees}°`);
 }
 
-// Helper function to update a spawned model's scale
+// Updating model scale
 function updateModelScale(model, newScale) {
     if (!model.isEditableModel) {
         console.warn("Cannot update scale: not an editable model");
@@ -228,19 +231,18 @@ function updateModelScale(model, newScale) {
     console.log(`Updated scale to ${newScale}`);
 }
 
-// Helper function to update a spawned model's buildType
+// Helper function to update buildType of a already existing model
 function updateModelType(model, newType) {
     if (!model.isEditableModel) {
         console.warn("Cannot update type: not an editable model");
         return;
     }
     
-    // Use the unified type system
+    // Goes through to TypeData.js
     setEntityType(model, newType);
     console.log(`Updated buildType to '${newType}'`);
 }
 
-// Helper function to get model info
 function getModelInfo(model) {
     if (!model.isEditableModel) {
         return null;
