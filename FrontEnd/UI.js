@@ -256,6 +256,8 @@ function UIsetup() {
     // Create separate top-right connection/status panel
     createConnectionUI();
 
+    createGenerationUI();
+
     // Build initial dynamic UI
     refreshDynamicUI();
 }
@@ -265,7 +267,7 @@ function createStaticUI() {
 
     
     // Mode select
-    const modeDropdown = createDropdown("modeSelect", ["None", "Polygon", "Model", "Edit"], "Mode:");
+    const modeDropdown = createDropdown("modeSelect", ["None", "Polygon", "Model", "Edit", "AI"], "Mode:");
     uiContainer.appendChild(modeDropdown);
 
     // Refresh dynamic UI on mode change
@@ -419,6 +421,40 @@ function createConnectionUI() {
     conn.appendChild(statusInfo);
 
     document.body.appendChild(conn);
+}
+
+function createGenerationUI() {
+    const gen = document.createElement('div');
+    gen.id = 'generationUI';
+    gen.style.position = 'fixed';
+    gen.style.top = '50%';
+    gen.style.right = '50%';
+    gen.style.transform = 'translate(50%, -50%)';
+    gen.style.backgroundColor = 'rgba(32,32,32,0.85)';
+    gen.style.color = 'white';
+    gen.style.padding = '10px';
+    gen.style.borderRadius = '5px';
+    gen.style.zIndex = '150';
+    gen.style.minWidth = '200px';
+
+    const title = document.createElement('div');
+    title.textContent = 'Input Response';
+    title.style.fontWeight = '600';
+    gen.appendChild(title);
+
+    const responseContainer = document.createElement('div');
+    responseContainer.style.display = 'flex';
+    responseContainer.style.alignItems = 'center';
+
+    const modelDropdown = createDropdown("modelSelect", ["gemma3:4b", "qwen3-vl:4b"], "Models:");
+    modelDropdown.style.marginBottom = '0px';
+    responseContainer.appendChild(modelDropdown);
+
+    gen.appendChild(responseContainer);
+
+
+
+    document.body.appendChild(gen);
 }
 
 function editorDynamicContainerContent(Con){
