@@ -93,6 +93,11 @@
             applyTypeInitPolygon(entity);
         }
         
+        // Check bounds and mark if out of bounds
+        if (typeof boundsChecker !== 'undefined') {
+            boundsChecker.validateAndMarkPolygon(entity, viewer);
+        }
+        
         return entity;
     }
     

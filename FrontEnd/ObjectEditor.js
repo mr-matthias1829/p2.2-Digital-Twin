@@ -111,6 +111,12 @@ class ObjectEditor {
             v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
         );
         this.editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(positions);
+        
+        // Check bounds and mark if out of bounds
+        if (typeof boundsChecker !== 'undefined') {
+            boundsChecker.validateAndMarkPolygon(this.editingEntity, this.viewer);
+        }
+        
         if (window.showPolygonInfo) {
             try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
         }
@@ -337,6 +343,12 @@ class ObjectEditor {
                         
                         try {
                             this.viewer.entities.remove(entityToRemove);
+                            
+                            // Remove from bounds tracking
+                            if (typeof boundsChecker !== 'undefined') {
+                                boundsChecker.removeEntityFromTracking(entityToRemove);
+                            }
+                            
                             const sid = entityToRemove.properties?.serverId;
                             if (sid != null && window.serverPolygonEntities) {
                                 window.serverPolygonEntities.delete(sid);
