@@ -1,4 +1,6 @@
 function setup() {
+    preloadModels();
+    
     const west = 5.798212900532118;
     const south = 53.19304584690279;
     const east = 5.798212900532118;
@@ -50,6 +52,29 @@ function setup() {
     // Load building types from API
     loadBuildingTypesFromAPI().then(() => {
         console.log('Building types loaded, ready for use');
+        
+        // FIRST: Remove ALL user-created polygons (keep only protected Spoordok)
+        const polygonsToRemove = [];
+        viewer.entities.values.forEach(entity => {
+            if (entity.polygon && !entity.properties?.isSpoordok) {
+                polygonsToRemove.push(entity);
+            }
+        });
+        polygonsToRemove.forEach(entity => viewer.entities.remove(entity));
+        console.log(`Cleared ${polygonsToRemove.length} polygons before database load`);
+        
+        // THEN: Load polygons from database
+        if (typeof polygonAPI !== 'undefined') {
+            polygonAPI.loadAllPolygons(viewer)
+                .then(() => {
+                    console.log('\u2713 Polygons loaded from database');
+                    // Update occupation stats after loading polygons
+                    if (typeof updateOccupationStats === 'function') {
+                        setTimeout(() => updateOccupationStats(), 500);
+                    }
+                })
+                .catch(err => console.error('Failed to load polygons:', err));
+        }
     });
 
     setupInputActions();

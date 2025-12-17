@@ -1,18 +1,13 @@
 package com;
 
 import com.model.BuildingType;
-import com.model.Coordinate;
 import com.model.Model;
-import com.model.Polygon;
-import com.model.PolygonType;
 import com.service.BuildingTypeService;
 import com.service.ModelService;
 import com.service.PolygonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-
-import java.util.Arrays;
 
 @Component
 public class DataLoader implements CommandLineRunner {
@@ -31,8 +26,10 @@ public class DataLoader implements CommandLineRunner {
         // Load building types FIRST (if not present)
         loadBuildingTypesIfNeeded();
         
-        // Then load dummy polygons and models
-        loadDummyDataIfNeeded();
+        // Polygons are now loaded from the database and managed by the frontend
+        // No dummy data needed anymore
+        System.out.println("✓ Application initialized. Polygons: " + polygonService.getAllPolygons().size() + 
+                         ", Models: " + modelService.getAllModels().size());
     }
 
     private void loadBuildingTypesIfNeeded() {
@@ -61,97 +58,6 @@ public class DataLoader implements CommandLineRunner {
             System.out.println("✓ Loaded 10 building types");
         } else {
             System.out.println("✓ Building types already present (" + buildingTypeService.getAllBuildingTypes().size() + " types)");
-        }
-    }
-
-    private void loadDummyDataIfNeeded() {
-        boolean hasPolygons = polygonService.getAllPolygons() != null && !polygonService.getAllPolygons().isEmpty();
-        boolean hasModels = modelService.getAllModels() != null && !modelService.getAllModels().isEmpty();
-
-        if (!hasPolygons && !hasModels) {
-            // Dummy Polygon 1: Vrijstaand huis
-            Polygon house1 = new Polygon();
-            house1.setCoordinates(Arrays.asList(
-                    new Coordinate(5.785959, 53.195938),
-                    new Coordinate(5.786659, 53.195938),
-                    new Coordinate(5.786659, 53.196538),
-                    new Coordinate(5.785959, 53.196538)
-            ));
-            house1.setHeight(15.0);
-            house1.setType(PolygonType.VRIJSTAAND_HUIS);
-            polygonService.savePolygon(house1);
-
-            // Dummy Polygon 2: Park
-            Polygon park = new Polygon();
-            park.setCoordinates(Arrays.asList(
-                    new Coordinate(5.787432, 53.196659),
-                    new Coordinate(5.788432, 53.196659),
-                    new Coordinate(5.788432, 53.197459),
-                    new Coordinate(5.787432, 53.197459)
-            ));
-            park.setHeight(2.0);
-            park.setType(PolygonType.PARK);
-            polygonService.savePolygon(park);
-
-            // Dummy Polygon 3: Appartement
-            Polygon apartment = new Polygon();
-            apartment.setCoordinates(Arrays.asList(
-                    new Coordinate(5.783686, 53.196388),
-                    new Coordinate(5.783980, 53.196145),
-                    new Coordinate(5.784923, 53.196557),
-                    new Coordinate(5.784629, 53.196800)
-            ));
-            apartment.setHeight(25.0);
-            apartment.setType(PolygonType.APPARTEMENT);
-            polygonService.savePolygon(apartment);
-
-            // Dummy Model 1: Tree in the park
-            Model tree1 = new Model();
-            tree1.setLongitude(5.7970);
-            tree1.setLatitude(53.2016);
-            tree1.setHeight(0.0);
-            tree1.setRotation(45.0);
-            tree1.setScale(0.65);
-            tree1.setType("nature");
-            tree1.setModelKey("tree");
-            modelService.saveModel(tree1);
-
-            // Dummy Model 2: Another tree
-            Model tree2 = new Model();
-            tree2.setLongitude(5.7968);
-            tree2.setLatitude(53.2014);
-            tree2.setHeight(0.0);
-            tree2.setRotation(120.0);
-            tree2.setScale(0.65);
-            tree2.setType("nature");
-            tree2.setModelKey("tree");
-            modelService.saveModel(tree2);
-
-            // Dummy Model 3: Building near the house
-            Model building = new Model();
-            building.setLongitude(5.7957);
-            building.setLatitude(53.2015);
-            building.setHeight(0.0);
-            building.setRotation(0.0);
-            building.setScale(3.0);
-            building.setType("detached_house");
-            building.setModelKey("building");
-            modelService.saveModel(building);
-
-            // Dummy Model 4: Person walking
-            Model person = new Model();
-            person.setLongitude(5.7947);
-            person.setLatitude(53.2018);
-            person.setHeight(0.0);
-            person.setRotation(90.0);
-            person.setScale(1.0);
-            person.setType("nature");
-            person.setModelKey("man");
-            modelService.saveModel(person);
-
-            System.out.println("✓ Dummy data geladen: 3 polygons, 4 models");
-        } else {
-            System.out.println("✓ Store already contains data; skipping dummy load.");
         }
     }
 }

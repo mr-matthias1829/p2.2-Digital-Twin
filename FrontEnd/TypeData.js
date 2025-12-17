@@ -157,6 +157,11 @@ function setEntityType(entity, typeId) {
     
     // Apply the visual updates
     applyTypeToEntity(entity);
+    
+    // Update occupation stats after type change
+    if (typeof updateOccupationStats === 'function') {
+        setTimeout(() => updateOccupationStats(), 100);
+    }
 }
 
 // Apply type initialization for POLYGONS (modifies entity directly)
@@ -166,35 +171,19 @@ function applyTypeInitPolygon(entity) {
         return;
     }
     
-    // Capture the initial color when the function is called
-    let initialColor = Cesium.Color.WHITE; // fallback
+    // Get the building type to determine color
+    const type = getEntityType(entity);
+    const typeColor = getTypeProperty(type, 'color');
+    const finalColor = typeColor || Cesium.Color.WHITE;
     
-    if (entity.polygon.material) {
-        const mat = entity.polygon.material;
-        // Try to get the color from the existing material
-        if (mat instanceof Cesium.Color) {
-            initialColor = mat.clone();
-        } else if (mat instanceof Cesium.ColorMaterialProperty) {
-            const col = mat.color;
-            if (col instanceof Cesium.Color) {
-                initialColor = col.clone();
-            } else if (typeof col.getValue === 'function') {
-                initialColor = col.getValue(Cesium.JulianDate.now()).clone();
-            }
-        } else if (typeof mat.getValue === 'function') {
-            const val = mat.getValue(Cesium.JulianDate.now());
-            if (val && val.color) {
-                initialColor = val.color.clone();
-            }
-        }
-    }
+    console.log(`Applying type ${type} with color to polygon`);
     
-    // Set the dynamic material directly on the entity
+    // Set the dynamic material - this creates a callback that will always return the correct color
     entity.polygon.material = new Cesium.ColorMaterialProperty(
         new Cesium.CallbackProperty(() => {
-            const type = getEntityType(entity);
-            const typeColor = getTypeProperty(type, 'color');
-            return typeColor ? typeColor : initialColor;
+            const currentType = getEntityType(entity);
+            const currentColor = getTypeProperty(currentType, 'color');
+            return currentColor || finalColor;
         }, false)
     );
 }

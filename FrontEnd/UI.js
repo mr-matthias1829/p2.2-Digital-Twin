@@ -230,6 +230,15 @@ function toggleOccupation() {
     btn.classList.toggle('open');
 }
 
+
+
+
+
+
+
+
+
+
 function UIsetup() {
     // Inject CSS styles first
     injectStyles();
@@ -281,7 +290,7 @@ function createStaticUI() {
     });
 
     // Can add more cases here if needed
-    // Note: try to not add cases that also activate other cases or activate automatically
+    // Note: try to not add cases that also activate other cases or activate on their own
 }
 
 function refreshDynamicUI() {
@@ -488,6 +497,19 @@ function editorDynamicContainerContent(Con){
                 
                 // Force visual update
                 applyTypeToEntity(Editor.editingEntity);
+                
+                // Save to database
+                if (Editor.editingEntity.polygonId && typeof polygonAPI !== 'undefined') {
+                    polygonAPI.savePolygon(Editor.editingEntity)
+                        .then(() => {
+                            console.log('✓ Type change saved to database');
+                            // Update occupation stats after save completes
+                            if (typeof updateOccupationStats === 'function') {
+                                updateOccupationStats();
+                            }
+                        })
+                        .catch(err => console.error('Failed to save type change:', err));
+                }
                 
                 // Optional: refresh info panel
                 if (window.showPolygonInfo) {

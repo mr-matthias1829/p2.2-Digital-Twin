@@ -1,46 +1,82 @@
 // Polygon.java
 package com.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
+@Entity
+@Table(name = "polygons")
 public class Polygon {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private List<Coordinate> coordinates;
-    private double height;
-    private PolygonType type;
+    
+    @OneToMany(mappedBy = "polygon", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
+    private List<Coordinate> coordinates = new ArrayList<>();
+    
+    @Column(nullable = false)
+    private Double height;
+    
+    @Column(name = "building_type")
+    private String buildingType;  // References BuildingType.typeId (e.g., "commercial building", "nature", etc.)
 
+    // Constructors
+    public Polygon() {
+        this.height = 0.0;
+    }
 
-    public Polygon() {}
-
-    public Polygon(Long id, List<Coordinate> coordinates, double height, PolygonType type) {
-        this.id = id;
+    public Polygon(List<Coordinate> coordinates, Double height, String buildingType) {
         this.coordinates = coordinates;
         this.height = height;
-        this.type = type;
+        this.buildingType = buildingType;
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public List<Coordinate> getCoordinates() { return coordinates; }
-    public void setCoordinates(List<Coordinate> coordinates) { this.coordinates = coordinates; }
-
-    public double getHeight() { return height; }
-    public void setHeight(double height) { this.height = height; }
-
-    public PolygonType getType() { return type; }
-    public void setType(PolygonType type) { this.type = type; }
-
-    // Berekent volume (voor kengetallen)
-    public double getVolume() {
-        // Simpele benadering: oppervlakte * hoogte
-        // Je zou hier een betere oppervlakte-berekening kunnen doen
-        return calculateArea() * height;
+    public Long getId() { 
+        return id; 
+    }
+    
+    public void setId(Long id) { 
+        this.id = id; 
     }
 
-    private double calculateArea() {
-        // Placeholder
-        return 100.0; // m²
+    public List<Coordinate> getCoordinates() { 
+        return coordinates; 
+    }
+    
+    public void setCoordinates(List<Coordinate> coordinates) { 
+        this.coordinates = coordinates;
+        // Set parent reference for bidirectional relationship
+        if (coordinates != null) {
+            for (Coordinate coord : coordinates) {
+                coord.setPolygon(this);
+            }
+        }
+    }
+
+    public Double getHeight() { 
+        return height; 
+    }
+    
+    public void setHeight(Double height) { 
+        this.height = height; 
+    }
+
+    public String getBuildingType() { 
+        return buildingType; 
+    }
+    
+    public void setBuildingType(String buildingType) { 
+        this.buildingType = buildingType; 
+    }
+
+    // Helper method to add a coordinate
+    public void addCoordinate(Coordinate coordinate) {
+        coordinates.add(coordinate);
+        coordinate.setPolygon(this);
     }
 }

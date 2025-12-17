@@ -30,3 +30,11 @@ replay_pid*
 *.ipr
 out/
 .idea_modules/
+
+
+# Vitest
+.vitest/
+.vitest_cache/
+coverage/
+FrontEnd/node_modules/*
+FrontEnd/node_modules
