@@ -144,6 +144,26 @@ function setupInputActions() {
                 floatingPoint.position.setValue(newPosition);
                 activeShapePoints.pop();
                 activeShapePoints.push(newPosition);
+                
+                // Real-time bounds checking during drawing
+                if (drawingMode === "polygon" && activeShape && typeof boundsChecker !== 'undefined') {
+                    const spoordokEntity = boundsChecker.getSpoordokEntity(viewer);
+                    if (spoordokEntity) {
+                        const spoordokPositions = boundsChecker.getPositionsFromHierarchy(spoordokEntity.polygon.hierarchy);
+                        const isWithinBounds = boundsChecker.isPolygonInsideBounds(activeShapePoints, spoordokPositions);
+                        
+                        // Update outline during drawing
+                        if (activeShape.polygon) {
+                            if (!isWithinBounds) {
+                                activeShape.polygon.outlineColor = Cesium.Color.RED;
+                                activeShape.polygon.outline = true;
+                                activeShape.polygon.outlineWidth = 3.0;
+                            } else {
+                                activeShape.polygon.outline = false;
+                            }
+                        }
+                    }
+                }
             }
         }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
@@ -261,6 +281,14 @@ function terminateShape() {
         });
         applyTypeInitPolygon(finalShape);
         
+        // Check bounds and mark if out of bounds
+        if (typeof boundsChecker !== 'undefined') {
+            const isWithinBounds = boundsChecker.validateAndMarkPolygon(finalShape, viewer);
+            if (!isWithinBounds) {
+                console.log('⚠️ Polygon placed outside valid boundary');
+            }
+        }
+        
         // Auto-save polygon to database
         if (typeof polygonAPI !== 'undefined') {
             polygonAPI.savePolygon(finalShape)
@@ -287,46 +315,6 @@ function terminateShape() {
     }
 }
 
-function terminateShape() {
-    if (activeShapePoints.length > 0) {
-        activeShapePoints.pop();
-        
-        // Create the final shape with proper hierarchy
-        let finalShape;
-        if (drawingMode === "polygon") {
-            finalShape = viewer.entities.add({
-                polygon: {
-                    hierarchy: new Cesium.PolygonHierarchy(activeShapePoints),
-                    material: Cesium.Color.WHITE,
-                    extrudedHeight: 0.0,
-                },
-                properties: new Cesium.PropertyBag({
-                    buildType: objType
-                })
-            });
-            applyTypeInitPolygon(finalShape);
-            
-            // Auto-save polygon to database
-            if (typeof polygonAPI !== 'undefined') {
-                polygonAPI.savePolygon(finalShape)
-                    .then(() => console.log('✓ Polygon saved to database'))
-                    .catch(err => console.error('Failed to save polygon:', err));
-            }
-        } else {
-            finalShape = drawShape(activeShapePoints);
-        }
-    }
-    viewer.entities.remove(floatingPoint);
-    viewer.entities.remove(activeShape);
-    floatingPoint = undefined;
-    activeShape = undefined;
-    activeShapePoints = [];
-
-    // Update occupation stats after drawing a polygon
-    if (typeof updateOccupationStats === 'function') {
-        setTimeout(() => updateOccupationStats(), 100);
-    }
-}
 
 // x = verplaatsing in meters oost (+) / west (-)
 // y = verplaatsing in meters noord (+) / zuid (-)
