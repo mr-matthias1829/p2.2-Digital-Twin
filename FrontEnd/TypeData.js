@@ -6,6 +6,7 @@ const buildTypes = {
                        // This type is filtered and not sent when prompted for all types
                        // NOTE: type 'none' IS A VALID TYPE NOT STATED IN THIS LIST AND IS NOT THIS TYPE!
 
+        default: 'default',
         color: Cesium.Color.WHITE, // Color of the polygon
         cost: 0, // In euro, for each cubical meter
         income: 0, // % of cost as financial income per unit
@@ -68,8 +69,8 @@ function getAllTypeIds() {
 }
 
 // Helper function to add a new type dynamically
-function addBuildType(id, properties) {
-    buildTypes[id] = {
+function addBuildType(key, id, properties) {
+    buildTypes[key] = {
         id: id,
         ...properties
     };
@@ -77,8 +78,8 @@ function addBuildType(id, properties) {
 
 // Function to fetch a property of a type
 // Handy because a type might not have a certain value defined, after which it will fallback to the default type
-function getTypeProperty(typeId, propertyName) {
-    const type = buildTypes[typeId];
+function getTypeProperty(key, propertyName) {
+    const type = buildTypes[key];
 
     // Case 1: Type exists AND property exists
     if (type && type[propertyName] !== undefined) {
@@ -86,7 +87,7 @@ function getTypeProperty(typeId, propertyName) {
     }
 
     // Case 1.5: Type is none, fall back to default automatically
-    if (typeId === "none") {
+    if (key === "none") {
         const fallback = buildTypes.DEFAULT[propertyName];
         if (fallback !== undefined) {
             return fallback;
@@ -98,13 +99,13 @@ function getTypeProperty(typeId, propertyName) {
         const fallback = buildTypes.DEFAULT[propertyName];
         if (fallback !== undefined) {
             console.warn(
-                `Type "${typeId}" is missing property "${propertyName}". Using DEFAULT fallback.`
+                `Type "${key}" is missing property "${propertyName}". Using DEFAULT fallback.`
             );
             return fallback;
         }
 
         console.warn(
-            `Type "${typeId}" is missing property "${propertyName}", and DEFAULT also doesn't define it. Returning null.`
+            `Type "${key}" is missing property "${propertyName}", and DEFAULT also doesn't define it. Returning null.`
         );
         return null;
     }
@@ -113,13 +114,13 @@ function getTypeProperty(typeId, propertyName) {
     const fallback = buildTypes.DEFAULT[propertyName];
     if (fallback !== undefined) {
         console.warn(
-            `Type "${typeId}" does not exist! Using DEFAULT fallback for property "${propertyName}".`
+            `Type "${key}" does not exist! Using DEFAULT fallback for property "${propertyName}".`
         );
         return fallback;
     }
 
     console.warn(
-        `Type "${typeId}" does not exist AND DEFAULT does not define property "${propertyName}". Returning null.`
+        `Type "${key}" does not exist AND DEFAULT does not define property "${propertyName}". Returning null.`
     );
     return null;
 }
@@ -241,7 +242,6 @@ function applyTypeToEntity(entity) {
     if (entity.polygon) {
         applyTypeInitPolygon(entity);
     }
-    
     if (entity.model) {
         applyTypeInitModel(entity);
     }
@@ -265,6 +265,8 @@ function getTypeById(searchId) {
 window.buildTypes = buildTypes;
 window.getTypeProperty = getTypeProperty;
 window.getAllTypeIds = getAllTypeIds;
+window.getTypeById = getTypeById;
+window.getAllType = getAllType;
 window.addBuildType = addBuildType;
 window.getEntityType = getEntityType;
 window.setEntityType = setEntityType;
