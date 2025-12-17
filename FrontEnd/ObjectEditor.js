@@ -51,7 +51,7 @@ class ObjectEditor {
             return this.stopEditing();
         }
 
-            positions.forEach((position, index) => {
+        positions.forEach((position, index) => {
         // Add small height offset to position vertices above polygon
         const cartographic = Cesium.Cartographic.fromCartesian(position);
         const elevatedPosition = Cesium.Cartesian3.fromRadians(
@@ -122,7 +122,7 @@ class ObjectEditor {
         const pos2 = this.vertexEntities[index2].position;
         const cart1 = pos1.getValue ? pos1.getValue(Cesium.JulianDate.now()) : pos1;
         const cart2 = pos2.getValue ? pos2.getValue(Cesium.JulianDate.now()) : pos2;
-        const midpoint = Cesium.Cartesian3.lerp(cart1, cart2, 0.5, new Cesium.Cartesian3());
+        const midpoint = Cesium.Cartesian3.lerp(cart1, cart2, 0.2, new Cesium.Cartesian3());
         
         this.vertexEntities.splice(index2, 0, this.viewer.entities.add({
             position: midpoint,
@@ -132,7 +132,6 @@ class ObjectEditor {
                 outlineColor: Cesium.Color.WHITE,
                 outlineWidth: 3,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             },
             properties: { isVertex: true, vertexIndex: index2 }
         }));
