@@ -451,17 +451,54 @@ function createGenerationUI() {
     title.style.fontWeight = '600';
     gen.appendChild(title);
 
-    const responseContainer = document.createElement('div');
-    responseContainer.style.display = 'flex';
-    responseContainer.style.alignItems = 'center';
+    const modelContainer = document.createElement('div');
+    modelContainer.style.display = 'flex';
+    modelContainer.style.alignItems = 'center';
 
     const modelDropdown = createDropdown("modelSelect", ["gemma3:4b", "qwen3-vl:4b"], "Models:");
-    modelDropdown.style.marginBottom = '0px';
-    responseContainer.appendChild(modelDropdown);
+    modelContainer.appendChild(modelDropdown);
 
-    gen.appendChild(responseContainer);
+    const analyseContainer = document.createElement('div');
+    analyseContainer.style.display = 'flex';
+    analyseContainer.style.alignItems = 'center';
 
+    const analyseType = createDropdown("analyseType", ["once", "repeadetly"], "Run:");
+    analyseType.style.marginRight = '8px';
+    analyseContainer.appendChild(analyseType);
 
+    const analyseTypeSelect = analyseType.querySelector('select');
+    
+    const intervalContainer = document.createElement('div');
+    intervalContainer.style.display = 'none';
+    intervalContainer.style.alignItems = 'center';
+
+    const intervalLabel = document.createElement('span');
+    intervalLabel.textContent = 'Interval (s):';
+    intervalLabel.style.marginRight = '8px';
+    
+
+    const intervalInput = document.createElement('input');
+    intervalInput.type = 'number';
+    intervalInput.id = 'analyseInterval';
+    intervalInput.value = '300';
+    intervalInput.min = '60';
+    intervalInput.style.width = '50px';
+    
+    intervalContainer.appendChild(intervalLabel);
+    intervalContainer.appendChild(intervalInput);
+    analyseContainer.appendChild(intervalContainer);
+
+    analyseTypeSelect.addEventListener('change', (e) => {
+        if (analyseTypeSelect.value === 'repeadetly'){
+            intervalContainer.style.display = 'flex';
+        }
+        else {
+            intervalContainer.style.display = 'none';
+        }
+    });
+
+    gen.appendChild(modelContainer);
+    gen.appendChild(analyseContainer);
 
     document.body.appendChild(gen);
 }
