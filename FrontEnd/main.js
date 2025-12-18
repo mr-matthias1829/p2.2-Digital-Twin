@@ -49,7 +49,7 @@ const objTypeDEFAULT = 'none';
 
 // Make sure these are the same defaults as in UI.js to prevent offsets with UI!
 let modelToCreate = modelToCreateDEFAULT;
-let drawingMode = "none"; // Temporary and later set to default, model "none" does NOT exist
+let drawingMode = "data"; // Start in data mode by default
 let objType = objTypeDEFAULT;
 
 async function laterSetup(){
@@ -225,9 +225,18 @@ function setupInputActions() {
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // DOUBLE CLICK - Start editing (or add vertex if already editing)
+    // DOUBLE CLICK - Start editing (or add vertex if already editing) OR show data in Data mode
     handler.setInputAction(function (event) {
-        // Let the editor handle all double-click logic
+        // If in Data mode, show polygon data instead of editing
+        if (drawingMode === "data") {
+            const picked = viewer.scene.pick(event.position);
+            if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
+                showPolygonDataInDataMenu(picked.id);
+                return;
+            }
+        }
+        
+        // Let the editor handle all double-click logic (for Edit mode)
         const handled = Editor.handleDoubleClick(event);
         
         // If editor didn't handle it and we're drawing, do nothing
