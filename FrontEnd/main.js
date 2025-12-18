@@ -263,10 +263,10 @@ function handleClickToDraw(earthPosition) { // Split into a function so the code
                 activeShapePoints.push(earthPosition);
             }
         }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+}
 
     // DOUBLE CLICK - Start editing (or add vertex if already editing)
-    handler.setInputAction(function (event) {
+    handler.setIcomnputAction(function (event) {
         // Let the editor handle all double-click logic
         const handled = Editor.handleDoubleClick(event);
         
@@ -299,7 +299,8 @@ function handleClickToDraw(earthPosition) { // Split into a function so the code
             terminateShape();
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-}
+
+
 
 function openCesiumManUI(cesiumManPrimitive) {
     let genUI = document.getElementById('generationUI');
@@ -317,7 +318,6 @@ function openCesiumManUI(cesiumManPrimitive) {
     if (index !== -1) {
         ollamaAnalyzer.selectCesiumMan(index);
     }
-}
 }
 
 
