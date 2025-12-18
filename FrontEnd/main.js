@@ -48,8 +48,8 @@ let modelToCreateDEFAULT = null; // Temporary to init the var, later set to id 0
 const objTypeDEFAULT = 'none';
 
 // Make sure these are the same defaults as in UI.js to prevent offsets with UI!
-let modelToCreate = modelToCreateDEFAULT;
-let drawingMode = "none"; // Temporary and later set to default, model "none" does NOT exist
+let modelToCreate = modelToCreateDEFAULT; // Temporary
+let drawingMode = "none";
 let objType = objTypeDEFAULT;
 
 async function laterSetup(){
@@ -72,11 +72,6 @@ async function laterSetup(){
 function createPoint(worldPosition) {
     const point = viewer.entities.add({
         position: worldPosition,
-        point: {
-            color: Cesium.Color.BLUE,
-            pixelSize: 0,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        },
     });
     return point;
 }
@@ -84,7 +79,7 @@ function createPoint(worldPosition) {
 function drawShape(positionData) {
     let shape;
 
-    // Line drawing mode is unused, but still here if you want to use it later anyway
+    // Line drawing mode is unused, but still here if needed later
     if (drawingMode === "line") {
         shape = viewer.entities.add({
             polyline: {
@@ -178,6 +173,35 @@ function setupInputActions() {
         
         const ray = viewer.camera.getPickRay(event.position);
         const earthPosition = viewer.scene.globe.pick(ray, viewer.scene);
+        handleClickToDraw(earthPosition);
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    // DOUBLE CLICK - Start editing (or add vertex if already editing)
+    handler.setInputAction(function (event) {
+        // Let the editor handle all double-click logic
+        const handled = Editor.handleDoubleClick(event);
+        
+        // If editor didn't handle it and we're drawing, do nothing
+        // (prevents accidental polygon selection while drawing)
+        if (!handled && drawingMode !== "none" && drawingMode !== "edit") {
+            console.log("Double-click ignored - currently in drawing mode");
+        }
+    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+    // RIGHT CLICK - Finish drawing, editing, or moving
+    handler.setInputAction(function (event) {
+        // Editor gets first priority
+        const editorHandled = Editor.handleRightClick(event);
+        
+        // If editor didn't handle it and we're drawing, finish the shape
+        if (!editorHandled && activeShapePoints.length > 0) {
+            terminateShape();
+        }
+    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+}
+
+
+function handleClickToDraw(earthPosition) { // Split into a function so the code can be tested
         
         if (!Cesium.defined(earthPosition)) return;
         
@@ -223,30 +247,6 @@ function setupInputActions() {
                 activeShapePoints.push(earthPosition);
             }
         }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-    // DOUBLE CLICK - Start editing (or add vertex if already editing)
-    handler.setInputAction(function (event) {
-        // Let the editor handle all double-click logic
-        const handled = Editor.handleDoubleClick(event);
-        
-        // If editor didn't handle it and we're drawing, do nothing
-        // (prevents accidental polygon selection while drawing)
-        if (!handled && drawingMode !== "none" && drawingMode !== "edit") {
-            console.log("Double-click ignored - currently in drawing mode");
-        }
-    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-
-    // RIGHT CLICK - Finish drawing, editing, or moving
-    handler.setInputAction(function (event) {
-        // Editor gets first priority
-        const editorHandled = Editor.handleRightClick(event);
-        
-        // If editor didn't handle it and we're drawing, finish the shape
-        if (!editorHandled && activeShapePoints.length > 0) {
-            terminateShape();
-        }
-    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 }
 
 function terminateShape() {
@@ -314,140 +314,6 @@ function terminateShape() {
         setTimeout(() => updateOccupationStats(), 100);
     }
 }
-
-
-// x = verplaatsing in meters oost (+) / west (-)
-// y = verplaatsing in meters noord (+) / zuid (-)
-// reference_lon = referentie-longitude (graden)
-// reference_lat = referentie-latitude (graden)
-
-const reference_lon = 5.77465380114684;
-const reference_lat = 53.194528716741345;
-
-function latlonFromXY(xMeters, yMeters) {
-    const metersPerDegLat = 111320.0;
-
-    // bereken nieuwe latitude (in graden)
-    const newLat = reference_lat + (yMeters / metersPerDegLat);
-
-    // meters per graad longitude = ~111320 * cos(latitude_in_radians)
-    const latRad = newLat * Math.PI / 180.0;
-    const metersPerDegLon = 111320.0 * Math.cos(latRad);
-
-    // voorkom deling door 0 vlak bij polen
-    const newLon = reference_lon + (xMeters / (metersPerDegLon || 1e-9));
-
-    return { lat: newLat, lon: newLon };
-}
-
-var _box = 1;
-
-function createBox(x, y, width, depth, height, rotation, color) {
-    const cords = latlonFromXY(x, y);
-    return createBoxLatLon(cords, width, depth, height, rotation, color);
-}
-
-function createBoxLatLon(cords, width, depth, height, rotation, color) {
-    return viewer.entities.add({
-        name: "Box_" + _box++,
-        position: Cesium.Cartesian3.fromDegrees(cords.lon, cords.lat, height / 2.0),
-        box: {
-            dimensions: new Cesium.Cartesian3(width, depth, height),
-            material: color
-        }
-    });
-}
-
-function createBoxXYZ(position, width, depth, height, rotation, color) {
-    return viewer.entities.add({
-        name: "Box_" + _box++,
-        position: position,
-        box: {
-            dimensions: new Cesium.Cartesian3(width, depth, height),
-            material: color,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-        }
-    });
-}
-
-function moveEntity(entity, x, y) {
-    const cords = latlonFromXY(x, y);
-    entity.position = Cesium.Cartesian3.fromDegrees(cords.lon, cords.lat, entity.box.dimensions._value.z);
-}
-
-var _polygon = 1;
-
-function createPolygonFromXYs(xyArray, color) {
-    var degreeArray = [];
-    xyArray.forEach(element => {
-        const cords = latlonFromXY(element[0], element[1]);
-        degreeArray.push(cords.lon);
-        degreeArray.push(cords.lat);
-    });
-}
-
-//Werkt alleen met glTF modellen!
-//Als je OBJ-modellen wilt laden, moet je ze eerst naar glTF converten. Dit kan met Blender,
-//maar ook via de volgende tool van Cesium: https://github.com/CesiumGS/obj2gltf
-//!Let op bij gebruik van Blender! 3D-modellen die als .blend bestand worden opgeslagen kunnen
-//embedded Python-code bevatten. Pas op dat dit niet tijdens het openen automatisch uitgevoerd
-//wordt, want dit is een bekende attack vector voor exploits, etc.
-function createModel(url, position, height) {
-    const full_position = Cesium.Cartesian3.fromDegrees(
-        position.lon,
-        position.lat,
-        height
-    );
-
-    const heading = Cesium.Math.toRadians(135);
-    const pitch = 0;
-    const roll = 0;
-    const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
-    const orientation = Cesium.Transforms.headingPitchRollQuaternion(
-        full_position,
-        hpr,
-    );
-
-    const entity = viewer.entities.add({
-        name: url,
-        position: full_position,
-        orientation: orientation,
-        model: {
-            uri: url,
-            minimumPixelSize: 128,
-            maximumScale: 1,
-        },
-    });
-   // viewer.trackedEntity = entity;
-}
-
-function cartesianToLatLon(cartesianPosition) {
-    const cartographic = Cesium.Cartographic.fromCartesian(cartesianPosition);
-    const lon = cartographic.longitude;
-    const lat = cartographic.latitude;
-    return { lat, lon };
-}
-
-const gridSize = 1.1;
-
-function snapToGrid(position) {
-    const snappedX = Math.round(position.x / gridSize) * gridSize;
-    const snappedZ = Math.round(position.z / gridSize) * gridSize;
-    return new Cesium.Cartesian3(snappedX, position.y, snappedZ);
-}
-
-function create3DObject(basePolygon, height) {
-    if (basePolygon.polygon.extrudedHeight == undefined) {
-        basePolygon.polygon.extrudedHeight = height;
-    } else {
-        basePolygon.polygon.extrudedHeight *= 1.5;
-    }
-}
-
-
-
-// Expose for manual reload
-// Polygon info display functions moved to polygonInfoDisplay.js
 
 // Update occupation statistics by calling backend
 async function updateOccupationStats() {
