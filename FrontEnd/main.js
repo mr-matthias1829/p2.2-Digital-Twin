@@ -192,9 +192,23 @@ function setupInputActions() {
         
         // If editor didn't handle it and we're drawing, do nothing
         // (prevents accidental polygon selection while drawing)
-        if (!handled && drawingMode !== "none" && drawingMode !== "edit") {
+        if (drawingMode !== "none" && drawingMode !== "edit") {
             console.log("Double-click ignored - currently in drawing mode");
         }
+
+        const pickedObject = viewer.scene.pick(event.position);
+        if (Cesium.defined(pickedObject) && 
+            pickedObject.primitive && 
+            pickedObject.primitive.isEditableModel && 
+            pickedObject.primitive.modelKey === "man" &&
+            drawingMode === "ai") {
+        
+            // Found a Cesium Man! Open the UI
+            const cesiumMan = pickedObject.primitive;
+            openCesiumManUI(cesiumMan);
+            return;
+        }
+
     }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
     // RIGHT CLICK - Finish drawing, editing, or moving
