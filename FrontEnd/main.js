@@ -202,51 +202,57 @@ function setupInputActions() {
 
 
 function handleClickToDraw(earthPosition) { // Split into a function so the code can be tested
+    if (!Cesium.defined(earthPosition)){ 
+        return false;
+        console.log("⚠ Clicked outside globe");
+    };
+    
+    // Handle model placement
+    if (drawingMode === "model") {
+        const cartographic = Cesium.Cartographic.fromCartesian(earthPosition);
+        const lon = Cesium.Math.toDegrees(cartographic.longitude);
+        const lat = Cesium.Math.toDegrees(cartographic.latitude);
         
-        if (!Cesium.defined(earthPosition)) return;
-        
-        // Handle model placement
-        if (drawingMode === "model") {
-            const cartographic = Cesium.Cartographic.fromCartesian(earthPosition);
-            const lon = Cesium.Math.toDegrees(cartographic.longitude);
-            const lat = Cesium.Math.toDegrees(cartographic.latitude);
-            
-            spawnModel(modelToCreate, { lon, lat }, 0);
-            return; // Exit after placing model
+        spawnModel(modelToCreate, { lon, lat }, 0);
+        return true;
+    }
+    
+    // Handle polygon/line drawing
+    if (drawingMode === "polygon" || drawingMode === "line") {
+        // Prevent polygon drawing if type is "none"
+        if (drawingMode === "polygon" && objType === "none") {
+            console.log("⚠ Please select a type before drawing a polygon");
+            return false;
         }
         
-        // Handle polygon/line drawing
-        if (drawingMode === "polygon" || drawingMode === "line") {
-            // Prevent polygon drawing if type is "none"
-            if (drawingMode === "polygon" && objType === "none") {
-                console.log("⚠ Please select a type before drawing a polygon");
-                return;
-            }
-            
-            if (activeShapePoints.length === 0) {
-                // First click: create a fixed point and add position
-                createPoint(earthPosition);
-                activeShapePoints.push(earthPosition);
-                const dynamicPositions = new Cesium.CallbackProperty(function () {
-                    if (drawingMode === "polygon") {
-                        return new Cesium.PolygonHierarchy(activeShapePoints);
-                    }
-                    return activeShapePoints;
-                }, false);
-                activeShape = drawShape(dynamicPositions);
-                // Now create the floating point for subsequent positions
-                floatingPoint = createPoint(earthPosition);
-                activeShapePoints.push(earthPosition);
-            } else {
-                // Subsequent clicks: replace floating point with fixed point
-                activeShapePoints.pop(); // Remove floating point position
-                createPoint(earthPosition); // Create fixed point
-                activeShapePoints.push(earthPosition); // Add new fixed position
-                // Recreate floating point at same location
-                floatingPoint = createPoint(earthPosition);
-                activeShapePoints.push(earthPosition);
-            }
+        if (activeShapePoints.length === 0) {
+            // First click: create a fixed point and add position
+            createPoint(earthPosition);
+            activeShapePoints.push(earthPosition);
+            const dynamicPositions = new Cesium.CallbackProperty(function () {
+                if (drawingMode === "polygon") {
+                    return new Cesium.PolygonHierarchy(activeShapePoints);
+                }
+                return activeShapePoints;
+            }, false);
+            activeShape = drawShape(dynamicPositions);
+            // Now create the floating point for subsequent positions
+            floatingPoint = createPoint(earthPosition);
+            activeShapePoints.push(earthPosition);
+            return true;
+        } else {
+            // Subsequent clicks: replace floating point with fixed point
+            activeShapePoints.pop(); // Remove floating point position
+            createPoint(earthPosition); // Create fixed point
+            activeShapePoints.push(earthPosition); // Add new fixed position
+            // Recreate floating point at same location
+            floatingPoint = createPoint(earthPosition);
+            activeShapePoints.push(earthPosition);
+            return true;
         }
+    }
+    
+    return false; // No action taken (wrong mode, etc.)
 }
 
 function terminateShape() {
@@ -492,6 +498,14 @@ function getTypeColor(typeId) {
     }
     // Fallback colors
     return '#888888';
+}
+
+// Make them globally accessible for testing
+if (typeof window !== 'undefined') {
+  window.activeShapePoints = activeShapePoints;
+  window.drawingMode = drawingMode;
+  window.objType = objType;
+  window.handleClickToDraw = handleClickToDraw;
 }
 
 // Call updateOccupationStats when polygons change

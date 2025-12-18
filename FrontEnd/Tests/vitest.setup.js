@@ -5,6 +5,9 @@ global.window = global;
 
 // Mock Cesium globally BEFORE any modules load
 global.Cesium = {
+
+defined: (value) => value !== undefined && value !== null,
+
   CallbackProperty: class CallbackProperty {
     constructor(callback, isConstant) {
       this.callback = callback;
@@ -33,8 +36,17 @@ global.Cesium = {
     GREEN: { clone: function() { return this; } },
     fromCssColorString: vi.fn((hex) => ({ hex, clone: function() { return this; } }))
   },
-  Cartesian3: {
-    fromRadians: vi.fn((lon, lat, height) => ({ lon, lat, height }))
+ Cartesian3: class Cartesian3 {
+    constructor(x, y, z) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+    }
+    
+    // Keep static methods
+    static fromRadians(lon, lat, height) {
+      return { lon, lat, height };
+    }
   },
   Cartographic: {
     fromCartesian: vi.fn((position) => ({
