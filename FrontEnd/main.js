@@ -242,8 +242,15 @@ function setupInputActions() {
         // Editor gets first priority
         const editorHandled = Editor.handleRightClick(event);
         
-        // If editor didn't handle it and we're drawing, finish the shape
+        // If editor didn't handle it and we're drawing, check if we can finish
         if (!editorHandled && activeShapePoints.length > 0) {
+            // Validate minimum points for polygon (subtract 1 for floating point)
+            if (drawingMode === "polygon" && activeShapePoints.length < 4) {
+                const pointsNeeded = 4 - activeShapePoints.length;
+                alert(`Cannot create polygon: You need to add ${pointsNeeded} more point${pointsNeeded > 1 ? 's' : ''} (minimum 3 points required).`);
+                console.log(`⚠ Need ${pointsNeeded} more point${pointsNeeded > 1 ? 's' : ''} for a polygon`);
+                return;
+            }
             terminateShape();
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
