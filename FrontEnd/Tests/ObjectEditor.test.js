@@ -5,47 +5,6 @@ import '../ObjectEditor.js';
 const { ObjectEditor } = global;
 
 
-
-// Mock Cesium global
-// Needed for obj properties and whatnot
-global.Cesium = {
-  CallbackProperty: class CallbackProperty {},
-  PolygonHierarchy: class PolygonHierarchy {
-    constructor(positions) {
-      this.positions = positions;
-    }
-  },
-  JulianDate: {
-    now: () => ({})
-  },
-  Color: {
-    YELLOW: { withAlpha: (a) => ({ alpha: a }) }
-  },
-  Cartesian3: {},
-  Cartographic: {},
-  Math: {},
-  Matrix3: {},
-  Matrix4: {},
-  Transforms: {}
-};
-
-global.getEntityType = vi.fn(() => 'BUILDING');
-global.setEntityType = vi.fn();
-global.getTypeById = vi.fn((id) => ({ id, name: 'MockType' }));
-global.updateModelRotation = vi.fn();
-global.updateModelScale = vi.fn();
-global.updateModelPosition = vi.fn();
-global.updateModelType = vi.fn();
-
-
-
-
-
-
-
-
-
-
 // The actual tests are here:
 describe('ObjectEditor', () => {
   let mockViewer;
@@ -75,6 +34,25 @@ describe('ObjectEditor', () => {
 
     editor = new ObjectEditor(mockViewer);
   });
+
+
+
+
+
+global.getEntityType = vi.fn(() => 'BUILDING');
+global.setEntityType = vi.fn();
+global.getTypeById = vi.fn((id) => ({ id, name: 'MockType' }));
+global.updateModelRotation = vi.fn();
+global.updateModelScale = vi.fn();
+global.updateModelPosition = vi.fn();
+global.updateModelType = vi.fn();
+
+
+
+
+
+
+
 
   describe('constructor', () => {
     it('initializes with correct default values', () => {

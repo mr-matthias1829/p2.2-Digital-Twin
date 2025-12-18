@@ -61,7 +61,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestBody),
-                signal: AbortSignal.timeout(500) // 500ms timeout for faster failure
+                signal: AbortSignal.timeout(1200) // 1200ms timeout for faster failure
             });
 
             if (!response.ok) {

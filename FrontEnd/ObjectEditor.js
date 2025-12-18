@@ -52,17 +52,25 @@ class ObjectEditor {
         }
 
         positions.forEach((position, index) => {
-            this.vertexEntities.push(this.viewer.entities.add({
-                position: position,
-                point: {
-                    pixelSize: 20,
-                    color: Cesium.Color.RED,
-                    outlineColor: Cesium.Color.WHITE,
-                    outlineWidth: 3,
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                },
-                properties: { isVertex: true, vertexIndex: index }
+        // Add small height offset to position vertices above polygon
+        const cartographic = Cesium.Cartographic.fromCartesian(position);
+        const elevatedPosition = Cesium.Cartesian3.fromRadians(
+            cartographic.longitude,
+            cartographic.latitude,
+            cartographic.height + 0.2
+        );
+        
+        this.vertexEntities.push(this.viewer.entities.add({
+            point: {
+                pixelSize: 20,
+                color: Cesium.Color.RED,
+                outlineColor: Cesium.Color.WHITE,
+                outlineWidth: 3,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            
+            },
+            position: elevatedPosition,
+            properties: { isVertex: true, vertexIndex: index }
             }));
         });
         
@@ -103,6 +111,12 @@ class ObjectEditor {
             v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
         );
         this.editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(positions);
+        
+        // Check bounds and mark if out of bounds
+        if (typeof boundsChecker !== 'undefined') {
+            boundsChecker.validateAndMarkPolygon(this.editingEntity, this.viewer);
+        }
+        
         if (window.showPolygonInfo) {
             try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
         }
@@ -124,7 +138,6 @@ class ObjectEditor {
                 outlineColor: Cesium.Color.WHITE,
                 outlineWidth: 3,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             },
             properties: { isVertex: true, vertexIndex: index2 }
         }));
@@ -207,7 +220,7 @@ class ObjectEditor {
 
     // === UNIFIED STOP EDITING ===
 
-    stopEditing() {
+    stopEditing(skipAutoSave = false) {
         if (!this.editMode) return;
         this.editMode = false;
         this._emitEditModeChanged();
@@ -218,9 +231,9 @@ class ObjectEditor {
             this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
             this.vertexEntities = [];
             
-            // Auto-save polygon changes to database
+            // Auto-save polygon changes to database (unless explicitly skipped, e.g., during deletion)
             const entityToSave = this.editingEntity;
-            if (entityToSave.polygon && typeof polygonAPI !== 'undefined' && entityToSave.polygonId) {
+            if (!skipAutoSave && entityToSave.polygon && typeof polygonAPI !== 'undefined' && entityToSave.polygonId) {
                 polygonAPI.savePolygon(entityToSave)
                     .then(() => console.log('✓ Polygon changes saved to database'))
                     .catch(err => console.error('Failed to save polygon changes:', err));
@@ -326,10 +339,16 @@ class ObjectEditor {
                                 .catch(err => console.error('Failed to delete polygon from database:', err));
                         }
                         
-                        this.stopEditing();
+                        this.stopEditing(true); // Pass true to skip auto-save
                         
                         try {
                             this.viewer.entities.remove(entityToRemove);
+                            
+                            // Remove from bounds tracking
+                            if (typeof boundsChecker !== 'undefined') {
+                                boundsChecker.removeEntityFromTracking(entityToRemove);
+                            }
+                            
                             const sid = entityToRemove.properties?.serverId;
                             if (sid != null && window.serverPolygonEntities) {
                                 window.serverPolygonEntities.delete(sid);
