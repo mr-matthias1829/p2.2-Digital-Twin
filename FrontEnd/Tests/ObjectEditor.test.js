@@ -35,6 +35,25 @@ describe('ObjectEditor', () => {
     editor = new ObjectEditor(mockViewer);
   });
 
+
+
+
+
+global.getEntityType = vi.fn(() => 'BUILDING');
+global.setEntityType = vi.fn();
+global.getTypeById = vi.fn((id) => ({ id, name: 'MockType' }));
+global.updateModelRotation = vi.fn();
+global.updateModelScale = vi.fn();
+global.updateModelPosition = vi.fn();
+global.updateModelType = vi.fn();
+
+
+
+
+
+
+
+
   describe('constructor', () => {
     it('initializes with correct default values', () => {
       expect(editor.viewer).toBe(mockViewer);

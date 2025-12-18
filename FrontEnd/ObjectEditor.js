@@ -128,7 +128,7 @@ class ObjectEditor {
         const pos2 = this.vertexEntities[index2].position;
         const cart1 = pos1.getValue ? pos1.getValue(Cesium.JulianDate.now()) : pos1;
         const cart2 = pos2.getValue ? pos2.getValue(Cesium.JulianDate.now()) : pos2;
-        const midpoint = Cesium.Cartesian3.lerp(cart1, cart2, 0.2, new Cesium.Cartesian3());
+        const midpoint = Cesium.Cartesian3.lerp(cart1, cart2, 0.5, new Cesium.Cartesian3());
         
         this.vertexEntities.splice(index2, 0, this.viewer.entities.add({
             position: midpoint,
