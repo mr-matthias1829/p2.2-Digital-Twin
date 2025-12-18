@@ -48,8 +48,8 @@ let modelToCreateDEFAULT = null; // Temporary to init the var, later set to id 0
 const objTypeDEFAULT = 'none';
 
 // Make sure these are the same defaults as in UI.js to prevent offsets with UI!
-let modelToCreate = modelToCreateDEFAULT; // Temporary
-let drawingMode = "none";
+let modelToCreate = modelToCreateDEFAULT;
+let drawingMode = "data"; // Start in data mode by default
 let objType = objTypeDEFAULT;
 
 async function laterSetup(){
@@ -248,6 +248,61 @@ function handleClickToDraw(earthPosition) { // Split into a function so the code
             }
         }
 }
+
+    // LEFT CLICK - Drawing mode (only when NOT editing)
+    handler.setInputAction(function (event) {
+        // CRITICAL: Block all drawing actions if in edit mode
+        if (Editor.editMode) return;
+        
+        // Only proceed if in a drawing mode
+        if (drawingMode === "none" || drawingMode === "edit") return;
+        
+        const ray = viewer.camera.getPickRay(event.position);
+        const earthPosition = viewer.scene.globe.pick(ray, viewer.scene);
+        handleClickToDraw(earthPosition);
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    // DOUBLE CLICK - Start editing (or add vertex if already editing) OR show data in Data mode
+    handler.setInputAction(function (event) {
+        // If in Data mode, show polygon data instead of editing
+        if (drawingMode === "data") {
+            const picked = viewer.scene.pick(event.position);
+            if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
+                showPolygonDataInDataMenu(picked.id);
+                return;
+            }
+        }
+        
+        // Let the editor handle all double-click logic (for Edit mode)
+        const handled = Editor.handleDoubleClick(event);
+        
+        // If editor didn't handle it and we're drawing, do nothing
+        // (prevents accidental polygon selection while drawing)
+        if (!handled && drawingMode !== "none" && drawingMode !== "edit") {
+            console.log("Double-click ignored - currently in drawing mode");
+        }
+    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+    // RIGHT CLICK - Finish drawing, editing, or moving
+    handler.setInputAction(function (event) {
+        // Editor gets first priority
+        const editorHandled = Editor.handleRightClick(event);
+        
+        // If editor didn't handle it and we're drawing, check if we can finish
+        if (!editorHandled && activeShapePoints.length > 0) {
+            // Validate minimum points for polygon (subtract 1 for floating point)
+            if (drawingMode === "polygon" && activeShapePoints.length < 4) {
+                const pointsNeeded = 4 - activeShapePoints.length;
+                alert(`Cannot create polygon: You need to add ${pointsNeeded} more point${pointsNeeded > 1 ? 's' : ''} (minimum 3 points required).`);
+                console.log(`⚠ Need ${pointsNeeded} more point${pointsNeeded > 1 ? 's' : ''} for a polygon`);
+                return;
+            }
+            terminateShape();
+        }
+    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+}
+
+// Terminate the current shape drawing
 
 function terminateShape() {
     if (activeShapePoints.length === 0) return;

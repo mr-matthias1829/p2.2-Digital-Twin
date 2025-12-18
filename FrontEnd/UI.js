@@ -17,6 +17,7 @@ function createInfoPanels() {
     };
 
     createPanel('polygonInfo', {attributes: {'aria-live': 'polite', 'title': 'Polygon informatie'}});
+    createPanel('dataMenu', {attributes: {'aria-live': 'polite', 'title': 'Data & Analysis'}});
     createPanel('occupationToggle', {tag: 'button', textContent: '📊', onclick: toggleOccupation});
     createPanel('occupationInfo', {
         className: 'collapsed',
@@ -62,7 +63,7 @@ function UIsetup() {
 
 function createStaticUI() {
     const uiContainer = document.getElementById("myUI");
-    uiContainer.appendChild(createDropdown("modeSelect", ["None", "Polygon", "Model", "Edit"], "Mode:"));
+    uiContainer.appendChild(createDropdown("modeSelect", ["Data", "Polygon", "Model", "Edit"], "Mode:"));
     onUIStateChange("modeSelect", refreshDynamicUI);
     document.addEventListener('object-editor-editmode-changed', (evt) => {
         console.log("Edit mode changed (event):", evt.detail);
@@ -79,6 +80,12 @@ function refreshDynamicUI() {
 
     const dynamicContainer = document.createElement("div");
     dynamicContainer.id = "dynamicUI";
+
+    if (UIState.modeSelect === "data") {
+        showDataMenu();
+    } else {
+        hideDataMenu();
+    }
 
     if (UIState.modeSelect === "polygon") {
         dynamicContainer.appendChild(createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:"));
@@ -156,13 +163,17 @@ function editorDynamicContainerContent(Con) {
 
     
     if (what === "polygon" && Editor.editMode) {
-        const objType = createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:");
+        // Don't show type dropdown for protected polygons (like Spoordok)
+        const isProtected = Editor.editingEntity && Editor.isProtectedEntity(Editor.editingEntity);
         
-        const bt = Editor.editingEntity?.properties?.buildType;
-        const currentTypeKey = typeof bt?.getValue === "function" ? bt.getValue() : bt || "DEFAULT";
-        objType.querySelector("select").value = buildTypes[currentTypeKey]?.id || "none";
+        if (!isProtected) {
+            const objType = createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:");
+            
+            const bt = Editor.editingEntity?.properties?.buildType;
+            const currentTypeKey = typeof bt?.getValue === "function" ? bt.getValue() : bt || "DEFAULT";
+            objType.querySelector("select").value = buildTypes[currentTypeKey]?.id || "none";
 
-        objType.querySelector("select").onchange = (e) => {
+            objType.querySelector("select").onchange = (e) => {
             
             const newTypeId = e.target.value;
             
@@ -189,7 +200,8 @@ function editorDynamicContainerContent(Con) {
             }
         };
        
-        Con.appendChild(objType);
+            Con.appendChild(objType);
+        }
     }
 
     
@@ -206,4 +218,93 @@ function editorDynamicContainerContent(Con) {
         });
         Con.appendChild(txt);
     }
-} 
+}
+
+function showDataMenu() {
+    const dataMenu = document.getElementById('dataMenu');
+    if (dataMenu) {
+        dataMenu.style.display = 'block';
+        dataMenu.innerHTML = `
+            <div class="data-menu-header">
+                <h3>Data & Analysis</h3>
+                <button class="data-menu-close" onclick="hideDataMenu()" title="Close">✕</button>
+            </div>
+            <div class="data-menu-content">
+                <p style="text-align: center; color: #b0b0b0; font-size: 13px; padding: 20px;">
+                    Double-click a polygon to view its data
+                </p>
+            </div>
+        `;
+    }
+}
+
+function hideDataMenu() {
+    const dataMenu = document.getElementById('dataMenu');
+    if (dataMenu) {
+        dataMenu.style.display = 'none';
+    }
+}
+
+function showPolygonDataInDataMenu(entity) {
+    const dataMenu = document.getElementById('dataMenu');
+    if (!dataMenu) return;
+    
+    dataMenu.style.display = 'block';
+    
+    // Get polygon properties
+    const props = entity.properties || {};
+    const buildType = props.buildType?.getValue ? props.buildType.getValue() : props.buildType;
+    const name = entity.name || 'Unnamed Polygon';
+    const polygonId = entity.polygonId || props.polygonId?.getValue?.() || 'N/A';
+    
+    // Calculate area if polygon hierarchy is available
+    let areaText = 'N/A';
+    if (entity.polygon?.hierarchy) {
+        const hierarchy = entity.polygon.hierarchy.getValue ? entity.polygon.hierarchy.getValue(Cesium.JulianDate.now()) : entity.polygon.hierarchy;
+        if (hierarchy && hierarchy.positions) {
+            const area = calculatePolygonArea(hierarchy.positions);
+            areaText = `${area.toFixed(2)} m²`;
+        }
+    }
+    
+    dataMenu.innerHTML = `
+        <div class="data-menu-header">
+            <h3>Data & Analysis</h3>
+            <button class="data-menu-close" onclick="hideDataMenu()" title="Close">✕</button>
+        </div>
+        <div class="data-menu-content">
+            <div style="margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid #b896ff;">
+                <h4 style="margin: 0 0 8px 0; color: #b896ff; font-size: 14px; font-weight: 600;">Selected Polygon</h4>
+                <div style="font-size: 12px; line-height: 1.8;">
+                    <div><strong>Name:</strong> ${name}</div>
+                    <div><strong>ID:</strong> ${polygonId}</div>
+                    <div><strong>Type:</strong> ${buildType || 'none'}</div>
+                    <div><strong>Area:</strong> ${areaText}</div>
+                </div>
+            </div>
+            <div style="padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                <h4 style="margin: 0 0 8px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
+                <p style="text-align: center; color: #b0b0b0; font-size: 12px; padding: 12px 0;">
+                    Scores and analysis results will appear here
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+function calculatePolygonArea(positions) {
+    if (!positions || positions.length < 3) return 0;
+    
+    const ellipsoid = Cesium.Ellipsoid.WGS84;
+    let area = 0;
+    
+    for (let i = 0; i < positions.length; i++) {
+        const j = (i + 1) % positions.length;
+        const cart1 = ellipsoid.cartesianToCartographic(positions[i]);
+        const cart2 = ellipsoid.cartesianToCartographic(positions[j]);
+        area += (cart2.longitude - cart1.longitude) * (2 + Math.sin(cart1.latitude) + Math.sin(cart2.latitude));
+    }
+    
+    area = Math.abs(area * ellipsoid.maximumRadius * ellipsoid.maximumRadius / 2.0);
+    return area;
+}

@@ -361,3 +361,85 @@
         transform: translateY(0);
     }
 }
+
+#dataMenu {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    width: 420px;
+    min-width: 300px;
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: linear-gradient(135deg, rgba(35, 20, 45, 0.95) 0%, rgba(25, 15, 35, 0.95) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(150, 100, 255, 0.2);
+    color: #e8e8e8;
+    padding: 16px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    border-radius: 12px;
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    display: none;
+    animation: slideInUp 0.3s ease-out;
+}
+
+#dataMenu::-webkit-scrollbar {
+    width: 8px;
+}
+
+#dataMenu::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+#dataMenu::-webkit-scrollbar-thumb {
+    background: rgba(150, 100, 255, 0.4);
+    border-radius: 4px;
+}
+
+#dataMenu::-webkit-scrollbar-thumb:hover {
+    background: rgba(150, 100, 255, 0.6);
+}
+
+.data-menu-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #b896ff;
+    flex: 1;
+}
+
+.data-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(150, 100, 255, 0.2);
+}
+
+.data-menu-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(150, 100, 255, 0.3);
+    color: #e8e8e8;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.data-menu-close:hover {
+    background: rgba(255, 100, 100, 0.3);
+    border-color: rgba(255, 100, 100, 0.5);
+    color: #fff;
+}
+
+.data-menu-content {
+    min-height: 100px;
+}
