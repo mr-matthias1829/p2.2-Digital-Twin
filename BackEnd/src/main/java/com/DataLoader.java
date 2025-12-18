@@ -47,7 +47,7 @@ public class DataLoader implements CommandLineRunner {
             
             // Residential buildings
             buildingTypeService.saveBuildingType(new BuildingType("detached house", "#E53935", 500.0, 0.12, 0.005, 4.0));
-            buildingTypeService.saveBuildingType(new BuildingType("townhouse", "#FB8C00", 400.0, 0.8, 0.01, 6.0));
+            buildingTypeService.saveBuildingType(new BuildingType("townhouse", "#FB8C00", 400.0, 0.08, 0.01, 6.0));
             buildingTypeService.saveBuildingType(new BuildingType("apartment", "#8E24AA", 300.0, 0.12, 0.006, 5.0));
             
             // Commercial buildings
