@@ -84,7 +84,7 @@ function setup() {
         ollamaUrl: 'http://localhost:11434',
         model: 'gemma3:4b',
         interval: 30000,
-        prompt: "You are a citizen giving an opinion about the environment. This image is your Point of view. Describe what you see and give your opinion about it in 2-3 sentences. Dont do startup talk like: 'here is a perspective of cesium man.' You have your own personality. Also dont prepare that you're going to talk just talk.",
+        prompt: "You are a citizen giving an opinion about the environment. This image is your Point of view. Describe what you see and give your opinion about it in 2-3 sentences. Dont do startup talk like: 'here is a perspective of cesium man.' after finishing those 2-3 sentences give a final score of 1-10 with a last small explanation of 1-2 sentences (decimal scores are allowed but only in .5's). Also dont prepare that you're going to talk just talk.",
     });
 
     console.log('Ollama analyzer ready! Use these commands:');

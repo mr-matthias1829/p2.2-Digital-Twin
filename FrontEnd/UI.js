@@ -507,7 +507,7 @@ function createGenerationUI() {
     const intervalInput = document.createElement('input');
     intervalInput.type = 'number';
     intervalInput.id = 'analyseInterval';
-    intervalInput.value = '60';
+    intervalInput.value = '120';
     intervalInput.min = '60';
     intervalInput.style.width = '50px';
     
