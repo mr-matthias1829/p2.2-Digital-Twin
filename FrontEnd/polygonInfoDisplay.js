@@ -102,6 +102,14 @@ window.showPolygonInfo = async function (entity) {
 
         let html = '';
         
+        // Add style for coordinates scrollbar
+        html += '<style>';
+        html += '#polygonInfo .coordinates-scroll::-webkit-scrollbar { width: 6px; }';
+        html += '#polygonInfo .coordinates-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 3px; }';
+        html += '#polygonInfo .coordinates-scroll::-webkit-scrollbar-thumb { background: rgba(100, 150, 255, 0.4); border-radius: 3px; }';
+        html += '#polygonInfo .coordinates-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100, 150, 255, 0.6); }';
+        html += '</style>';
+        
         // Show server disconnected warning at the top if server is unavailable
         if (serverDisconnected || (window.polygonUtils && !window.polygonUtils.isServerConnected())) {
             html += '<div style="background: linear-gradient(135deg, rgba(255,70,70,0.15), rgba(255,50,50,0.1)); padding: 12px; margin-bottom: 14px; border-radius: 8px; border-left: 3px solid #ff5252; box-shadow: 0 2px 8px rgba(255,82,82,0.2);">';
@@ -153,7 +161,10 @@ window.showPolygonInfo = async function (entity) {
         
         // Coordinates section
         html += '<div style="font-size: 12px; font-weight: 600; color: #80a0ff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Coordinates</div>';
-        html += '<div style="background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 6px; font-family: \'Consolas\', \'Monaco\', monospace; font-size: 11px; line-height: 1.6;">';
+        
+        // Add scrollable container if 3 or more coordinates
+        const scrollableStyle = positions.length >= 3 ? 'max-height: 80px; overflow-y: auto;' : '';
+        html += `<div class="coordinates-scroll" style="background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 6px; font-family: 'Consolas', 'Monaco', monospace; font-size: 11px; line-height: 1.6; ${scrollableStyle}">`;
         
         positions.forEach((cartesian, i) => {
             const carto = Cesium.Cartographic.fromCartesian(cartesian);
