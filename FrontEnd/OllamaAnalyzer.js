@@ -71,7 +71,18 @@ class OllamaAnalyzer{
             );
 
             this.viewer.trackedEntity = new Cesium.Entity({
-                position: new Cesium.ConstantPositionProperty(modelPos),
+                position: new Cesium.ConstantPositionProperty(modelPos)
+            });
+
+            const offset = new Cesium.Cartesian3(-10, -10, 5);
+            this.viewer.trackedEntity.viewFrom = offset;
+
+            this.viewer.flyTo(this.viewer.trackedEntity, {
+                offset: new Cesium.HeadingPitchRange(
+                    Cesium.Math.toRadians(45),
+                    Cesium.Math.toRadians(-15),
+                    20
+                )
             });
         };
 

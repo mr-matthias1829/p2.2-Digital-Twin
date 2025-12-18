@@ -265,8 +265,6 @@ function UIsetup() {
     // Create separate top-right connection/status panel
     createConnectionUI();
 
-    createGenerationUI();
-
     // Build initial dynamic UI
     refreshDynamicUI();
 }
@@ -438,18 +436,44 @@ function createGenerationUI() {
     gen.style.position = 'fixed';
     gen.style.top = '50%';
     gen.style.right = '50%';
-    gen.style.transform = 'translate(50%, -50%)';
+    gen.style.transform = 'translate(50%, 20%)';
     gen.style.backgroundColor = 'rgba(32,32,32,0.85)';
     gen.style.color = 'white';
     gen.style.padding = '10px';
     gen.style.borderRadius = '5px';
     gen.style.zIndex = '150';
     gen.style.minWidth = '200px';
+    gen.style.display = 'none';
+
+    const titleContainer = document.createElement('div');
+    titleContainer.style.display = 'flex';
+    titleContainer.style.justifyContent = 'space-between';
+    titleContainer.style.alignItems = 'center';
+    titleContainer.style.marginBottom = '10px';
 
     const title = document.createElement('div');
     title.textContent = 'Input Response';
     title.style.fontWeight = '600';
-    gen.appendChild(title);
+    titleContainer.appendChild(title);
+
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'x';
+    closeButton.style.background = 'none';
+    closeButton.style.border = 'none';
+    closeButton.style.color = 'white';
+    closeButton.style.fontSize = '24px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.padding = '0';
+    closeButton.style.width = '24px';
+    closeButton.style.height = '24px';
+    closeButton.onclick = () => {
+        gen.style.display = 'none';
+        ollamaAnalyzer.stopTracking();
+        if (ollamaAnalyzer.isRunning) {
+            ollamaAnalyzer.stop();
+        }
+    };
+    titleContainer.appendChild(closeButton);
 
     const modelContainer = document.createElement('div');
     modelContainer.style.display = 'flex';
@@ -483,7 +507,7 @@ function createGenerationUI() {
     const intervalInput = document.createElement('input');
     intervalInput.type = 'number';
     intervalInput.id = 'analyseInterval';
-    intervalInput.value = '300';
+    intervalInput.value = '60';
     intervalInput.min = '60';
     intervalInput.style.width = '50px';
     
@@ -520,6 +544,7 @@ function createGenerationUI() {
         }
     });
 
+    gen.appendChild(titleContainer);
     gen.appendChild(modelContainer);
     gen.appendChild(analyseContainer);
     gen.appendChild(confirmContainer);
