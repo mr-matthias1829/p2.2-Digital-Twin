@@ -156,13 +156,17 @@ function editorDynamicContainerContent(Con) {
 
     
     if (what === "polygon" && Editor.editMode) {
-        const objType = createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:");
+        // Don't show type dropdown for protected polygons (like Spoordok)
+        const isProtected = Editor.editingEntity && Editor.isProtectedEntity(Editor.editingEntity);
         
-        const bt = Editor.editingEntity?.properties?.buildType;
-        const currentTypeKey = typeof bt?.getValue === "function" ? bt.getValue() : bt || "DEFAULT";
-        objType.querySelector("select").value = buildTypes[currentTypeKey]?.id || "none";
+        if (!isProtected) {
+            const objType = createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:");
+            
+            const bt = Editor.editingEntity?.properties?.buildType;
+            const currentTypeKey = typeof bt?.getValue === "function" ? bt.getValue() : bt || "DEFAULT";
+            objType.querySelector("select").value = buildTypes[currentTypeKey]?.id || "none";
 
-        objType.querySelector("select").onchange = (e) => {
+            objType.querySelector("select").onchange = (e) => {
             
             const newTypeId = e.target.value;
             
@@ -189,7 +193,8 @@ function editorDynamicContainerContent(Con) {
             }
         };
        
-        Con.appendChild(objType);
+            Con.appendChild(objType);
+        }
     }
 
     
