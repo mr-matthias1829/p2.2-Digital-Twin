@@ -35,10 +35,6 @@ describe('ObjectEditor', () => {
     editor = new ObjectEditor(mockViewer);
   });
 
-
-
-
-
 global.getEntityType = vi.fn(() => 'BUILDING');
 global.setEntityType = vi.fn();
 global.getTypeById = vi.fn((id) => ({ id, name: 'MockType' }));

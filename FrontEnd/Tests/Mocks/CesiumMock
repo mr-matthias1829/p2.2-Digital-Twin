@@ -1,0 +1,78 @@
+export function createCesiumMock() {
+  class PolygonHierarchy { constructor(positions) { this.positions = positions } }
+  class CallbackProperty { constructor(cb, isConst) { this.callback = cb; this.getValue = cb; this.isConstant = isConst } }
+  class PropertyBag { constructor(props) { Object.assign(this, props) } }
+  return {
+    defined: vi.fn(v => v != null),
+
+    Rectangle: {
+      fromDegrees: vi.fn(() => ({}))
+    },
+
+    ScreenSpaceEventHandler: vi.fn(() => ({
+      setInputAction: vi.fn(),
+      destroy: vi.fn()
+    })),
+
+    ScreenSpaceEventType: {
+      LEFT_CLICK: 'LEFT_CLICK',
+      LEFT_DOWN: 'LEFT_DOWN',
+      LEFT_UP: 'LEFT_UP',
+      LEFT_DOUBLE_CLICK: 'LEFT_DOUBLE_CLICK',
+      RIGHT_CLICK: 'RIGHT_CLICK',
+      MOUSE_MOVE: 'MOUSE_MOVE'
+    },
+
+    Viewer: vi.fn(),
+  CallbackProperty: class CallbackProperty {
+    constructor(callback, isConstant) {
+      this.callback = callback;
+      this.isConstant = isConstant;
+    }
+  },
+  ColorMaterialProperty: class ColorMaterialProperty {
+    constructor(color) {
+      this.color = color;
+    }
+  },
+  PropertyBag: class PropertyBag {},
+  PolygonHierarchy: class PolygonHierarchy {
+      constructor(positions) {
+        this.positions = positions;
+      }
+    },
+  JulianDate: {
+    now: () => ({})
+  },
+  Color: {
+    YELLOW: { withAlpha: (a) => ({ alpha: a }), clone: function() { return this; } },
+    RED: { clone: function() { return this; } },
+    WHITE: { clone: function() { return this; } },
+    BLUE: { clone: function() { return this; } },
+    GREEN: { clone: function() { return this; } },
+    fromCssColorString: vi.fn((hex) => ({ hex, clone: function() { return this; } }))
+  },
+  Cartesian3: {
+    fromRadians: vi.fn((lon, lat, height) => ({ lon, lat, height }))
+  },
+  Cartographic: {
+    fromCartesian: vi.fn((position) => ({
+      longitude: 0,
+      latitude: 0,
+      height: 0
+    }))
+  },
+  Math: {
+    toDegrees: vi.fn((rad) => rad * 180 / Math.PI),
+    toRadians: vi.fn((deg) => deg * Math.PI / 180)
+  },
+  Matrix3: {},
+  Matrix4: {},
+  Transforms: {},
+  HeightReference: {
+    CLAMP_TO_GROUND: 1,
+    RELATIVE_TO_GROUND: 2,
+    NONE: 0
+  }
+  };
+}

@@ -516,3 +516,63 @@ function getTypeColor(typeId) {
 
 // Call updateOccupationStats when polygons change
 window.updateOccupationStats = updateOccupationStats;
+
+
+    window.handleClickToDraw = handleClickToDraw;
+    window.terminateShape = terminateShape;
+    window.drawShape = drawShape;
+    window.createPoint = createPoint;
+    window.setupInputActions = setupInputActions;
+    window.laterSetup = laterSetup;
+    window.setupSetups = setupSetups;
+    window.subscribeToStateChangesSetup = subscribeToStateChangesSetup;
+    window.updateOccupationStats = updateOccupationStats;
+    window.drawPieChart = drawPieChart;
+    window.displayTypeBreakdown = displayTypeBreakdown;
+    window.getTypeColor = getTypeColor;
+
+if (typeof global !== 'undefined') {
+
+    //global._getPositionsFromHierarchy = _getPositionsFromHierarchy;
+    
+    // Expose variables with getters/setters
+    Object.defineProperty(global, 'drawingMode', {
+      get: () => drawingMode,
+      set: (val) => { drawingMode = val; }
+    });
+    
+    Object.defineProperty(global, 'objType', {
+      get: () => objType,
+      set: (val) => { objType = val; }
+    });
+    
+    Object.defineProperty(global, 'modelToCreate', {
+      get: () => modelToCreate,
+      set: (val) => { modelToCreate = val; }
+    });
+    
+    Object.defineProperty(global, 'activeShapePoints', {
+      get: () => activeShapePoints,
+      set: (val) => { activeShapePoints = val; }
+    });
+    
+    Object.defineProperty(global, 'activeShape', {
+      get: () => activeShape,
+      set: (val) => { activeShape = val; }
+    });
+    
+    Object.defineProperty(global, 'floatingPoint', {
+      get: () => floatingPoint,
+      set: (val) => { floatingPoint = val; }
+    });
+    
+    Object.defineProperty(global, 'viewer', {
+      get: () => viewer,
+      set: (val) => { viewer = val; }
+    });
+    
+    Object.defineProperty(global, 'Editor', {
+      get: () => Editor,
+      set: (val) => { Editor = val; }
+    });
+}

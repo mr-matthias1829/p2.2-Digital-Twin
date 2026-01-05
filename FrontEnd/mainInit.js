@@ -99,5 +99,8 @@ function setup() {
     }, 2000);
 
     Editor = new ObjectEditor(viewer);
-    Server = new server(viewer);
+    Server = new serverPoller(viewer);
 }
+
+
+    window.setup = setup;
