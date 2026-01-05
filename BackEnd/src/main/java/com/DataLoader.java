@@ -38,20 +38,20 @@ public class DataLoader implements CommandLineRunner {
             System.out.println("Initializing building types...");
 
             
-            // Infrastructure and nature
-            buildingTypeService.saveBuildingType(new BuildingType("nature", "#008000", 150.0, 0.0, 0.0, 10.0));
-            buildingTypeService.saveBuildingType(new BuildingType("water", "#1E88E5", 300.0, 0.0, 0.0, 7.0));
-            buildingTypeService.saveBuildingType(new BuildingType("road", "#A9A9A9", 100.0, 0.05, 0.0, 8.0));
-            buildingTypeService.saveBuildingType(new BuildingType("parking space", "#78909C", 100.0, 0.10, 0.0, 6.0));
-            buildingTypeService.saveBuildingType(new BuildingType("covered parking space", "#8D6E63", 1500.0, 0.15, 0.0, 10.0));
+            // Infrastructure and nature (use AREA)
+            buildingTypeService.saveBuildingType(new BuildingType("nature", "#008000", 150.0, 0.0, 0.0, 10.0, "area"));
+            buildingTypeService.saveBuildingType(new BuildingType("water", "#1E88E5", 300.0, 0.0, 0.0, 7.0, "area"));
+            buildingTypeService.saveBuildingType(new BuildingType("road", "#A9A9A9", 100.0, 5.0, 0.0, 8.0, "area"));
+            buildingTypeService.saveBuildingType(new BuildingType("parking space", "#78909C", 100.0, 10.0, 0.0, 6.0, "area"));
+            buildingTypeService.saveBuildingType(new BuildingType("covered parking space", "#8D6E63", 1500.0, 15.0, 0.0, 10.0, "area"));
             
-            // Residential buildings
-            buildingTypeService.saveBuildingType(new BuildingType("detached house", "#E53935", 500.0, 0.12, 0.005, 4.0));
-            buildingTypeService.saveBuildingType(new BuildingType("townhouse", "#FB8C00", 400.0, 0.08, 0.01, 6.0));
-            buildingTypeService.saveBuildingType(new BuildingType("apartment", "#8E24AA", 300.0, 0.12, 0.006, 5.0));
+            // Residential buildings (use VOLUME)
+            buildingTypeService.saveBuildingType(new BuildingType("detached house", "#E53935", 500.0, 12.0, 0.005, 4.0, "volume"));
+            buildingTypeService.saveBuildingType(new BuildingType("townhouse", "#FB8C00", 400.0, 8.0, 0.01, 6.0, "volume"));
+            buildingTypeService.saveBuildingType(new BuildingType("apartment", "#8E24AA", 300.0, 12.0, 0.006, 5.0, "volume"));
             
-            // Commercial buildings
-            buildingTypeService.saveBuildingType(new BuildingType("commercial building", "#039BE5", 200.0, 0.15, 0.018, 2.0));
+            // Commercial buildings (use VOLUME)
+            buildingTypeService.saveBuildingType(new BuildingType("commercial building", "#039BE5", 200.0, 15.0, 0.018, 2.0, "volume"));
             
             System.out.println("✓ Loaded 10 building types");
         } else {

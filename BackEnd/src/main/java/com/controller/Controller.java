@@ -5,6 +5,7 @@ import com.dto.CalculationResponse;
 import com.dto.OccupationRequest;
 import com.dto.OccupationResponse;
 import com.dto.GoalCheckResponse;
+import com.dto.PolygonDataResponse;
 import com.model.BuildingType;
 import com.model.Model;
 import com.model.Polygon;
@@ -12,6 +13,7 @@ import com.service.BuildingTypeService;
 import com.service.CalculationService;
 import com.service.ModelService;
 import com.service.PolygonService;
+import com.service.PolygonDataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +43,9 @@ public class Controller {
 
     @Autowired
     private BuildingTypeService buildingTypeService;
+
+    @Autowired
+    private PolygonDataService polygonDataService;
 
     // GET ALL polygons AND models in one response
     @GetMapping
@@ -239,5 +244,20 @@ public class Controller {
     public ResponseEntity<GoalCheckResponse> checkGoals(@RequestBody OccupationRequest request) {
         GoalCheckResponse response = calculationService.checkGoals(request);
         return ResponseEntity.ok(response);
+    }
+
+    // GET polygon data (cost, income, people, livability)
+    @GetMapping("/polygons/{id}/data")
+    public ResponseEntity<PolygonDataResponse> getPolygonData(
+            @PathVariable Long id,
+            @RequestParam(required = false) Double area,
+            @RequestParam(required = false) Double volume) {
+        try {
+            PolygonDataResponse data = polygonDataService.calculatePolygonData(id, area, volume);
+            return ResponseEntity.ok(data);
+        } catch (Exception e) {
+            logger.error("Error calculating polygon data for ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

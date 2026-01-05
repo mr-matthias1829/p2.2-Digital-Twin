@@ -367,7 +367,7 @@ function hideDataMenu() {
     }
 }
 
-function showPolygonDataInDataMenu(entity) {
+async function showPolygonDataInDataMenu(entity) {
     const dataMenu = document.getElementById('dataMenu');
     if (!dataMenu) return;
 
@@ -377,18 +377,37 @@ function showPolygonDataInDataMenu(entity) {
     const props = entity.properties || {};
     const buildType = props.buildType?.getValue ? props.buildType.getValue() : props.buildType;
     const name = entity.polygonName || 'Unnamed Polygon';
-    const polygonId = entity.polygonId || props.polygonId?.getValue?.() || 'N/A';
+    const polygonId = entity.polygonId || props.polygonId?.getValue?.() || null;
 
-    // Calculate area if polygon hierarchy is available
-    let areaText = 'N/A';
-    if (entity.polygon?.hierarchy) {
-        const hierarchy = entity.polygon.hierarchy.getValue ? entity.polygon.hierarchy.getValue(Cesium.JulianDate.now()) : entity.polygon.hierarchy;
-        if (hierarchy && hierarchy.positions) {
-            const area = calculatePolygonArea(hierarchy.positions);
-            areaText = `${area.toFixed(2)} m²`;
+    // Calculate area and volume using the same method as polygonInfoDisplay (backend calculations)
+    let area = 0;
+    let volume = 0;
+    let areaText = 'Calculating...';
+    
+    // Use polygonUtils for accurate backend calculations
+    if (entity.polygon?.hierarchy && typeof window.polygonUtils !== 'undefined') {
+        try {
+            // Get accurate area from backend
+            const areaResult = await window.polygonUtils.computeAreaFromHierarchy(entity.polygon.hierarchy);
+            if (typeof areaResult === 'number') {
+                area = areaResult;
+                areaText = `${area.toFixed(2)} m²`;
+            }
+            
+            // Get accurate volume from backend
+            const volResult = await window.polygonUtils.computeVolumeFromEntity(entity);
+            if (volResult && typeof volResult.volume === 'number') {
+                volume = volResult.volume;
+            }
+        } catch (e) {
+            console.warn('Error calculating area/volume:', e);
+            areaText = 'N/A';
         }
+    } else {
+        areaText = 'N/A';
     }
 
+    // Initial HTML with loading state for calculations
     dataMenu.innerHTML = `
         <div class="data-menu-header">
             <h3>Data & Analysis</h3>
@@ -399,19 +418,102 @@ function showPolygonDataInDataMenu(entity) {
                 <h4 style="margin: 0 0 8px 0; color: #b896ff; font-size: 14px; font-weight: 600;">Selected Polygon</h4>
                 <div style="font-size: 12px; line-height: 1.8;">
                     <div><strong>Name:</strong> ${name}</div>
-                    <div><strong>ID:</strong> ${polygonId}</div>
+                    <div><strong>ID:</strong> ${polygonId || 'N/A'}</div>
                     <div><strong>Type:</strong> ${buildType || 'none'}</div>
                     <div><strong>Area:</strong> ${areaText}</div>
                 </div>
             </div>
-            <div style="padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+            <div id="calculationResults" style="padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
                 <h4 style="margin: 0 0 8px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
                 <p style="text-align: center; color: #b0b0b0; font-size: 12px; padding: 12px 0;">
-                    Scores and analysis results will appear here
+                    <span style="display: inline-block; animation: pulse 1.5s ease-in-out infinite;">⏳</span>
+                    Loading calculations...
                 </p>
             </div>
         </div>
+        <style>
+            @keyframes pulse {
+                0%, 100% { opacity: 0.4; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.1); }
+            }
+        </style>
     `;
+
+    // Fetch and display polygon data calculations if polygon has an ID
+    if (polygonId && area > 0 && typeof polygonDataCalculations !== 'undefined') {
+        polygonDataCalculations.getPolygonData(polygonId, area, volume)
+            .then(data => {
+                const resultsContainer = document.getElementById('calculationResults');
+                if (!resultsContainer) return;
+
+                if (!data || buildType === 'none') {
+                    resultsContainer.innerHTML = `
+                        <h4 style="margin: 0 0 8px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
+                        <p style="text-align: center; color: #b0b0b0; font-size: 12px; padding: 12px 0;">
+                            ${buildType === 'none' ? 'Assign a building type to see calculations' : 'No data available'}
+                        </p>
+                    `;
+                    return;
+                }
+
+                // Debug log to check values
+                console.log('Polygon data - Area:', area, 'Volume:', volume, 'Backend measurement:', data.measurement, 'Base:', data.calculationBase);
+                
+                const costFormatted = polygonDataCalculations.formatCurrency(data.cost);
+                const incomeFormatted = polygonDataCalculations.formatCurrency(data.income);
+                const peopleFormatted = polygonDataCalculations.formatNumber(data.people, 0);
+                const measurementFormatted = polygonDataCalculations.formatNumber(data.measurement, 2);
+                const measurementUnit = data.calculationBase === 'area' ? 'm²' : 'm³';
+
+                resultsContainer.innerHTML = `
+                    <h4 style="margin: 0 0 12px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
+                    <div style="display: grid; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(255,100,100,0.1); border-radius: 6px; border-left: 3px solid #ff6b6b;">
+                            <span style="color: #ffb3b3; font-size: 12px;">💰 Cost:</span>
+                            <span style="color: #fff; font-size: 12px; font-weight: 600;">${costFormatted}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(100,255,100,0.1); border-radius: 6px; border-left: 3px solid #4caf50;">
+                            <span style="color: #b3ffb3; font-size: 12px;">💵 Income:</span>
+                            <span style="color: #fff; font-size: 12px; font-weight: 600;">${incomeFormatted}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(100,150,255,0.1); border-radius: 6px; border-left: 3px solid #64a0ff;">
+                            <span style="color: #b3d4ff; font-size: 12px;">👥 People:</span>
+                            <span style="color: #fff; font-size: 12px; font-weight: 600;">${peopleFormatted}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(255,200,100,0.1); border-radius: 6px; border-left: 3px solid #ffa726;">
+                            <span style="color: #ffd8b3; font-size: 12px;">⭐ Livability:</span>
+                            <span style="color: #fff; font-size: 12px; font-weight: 600;">${data.livability.toFixed(1)}/10</span>
+                        </div>
+                        <div style="margin-top: 4px; padding: 6px; text-align: center; font-size: 11px; color: #888;">
+                            Based on ${measurementFormatted} ${measurementUnit}
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(err => {
+                console.error('Error displaying polygon data:', err);
+                const resultsContainer = document.getElementById('calculationResults');
+                if (resultsContainer) {
+                    resultsContainer.innerHTML = `
+                        <h4 style="margin: 0 0 8px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
+                        <p style="text-align: center; color: #ff6b6b; font-size: 12px; padding: 12px 0;">
+                            ⚠️ Error loading calculations
+                        </p>
+                    `;
+                }
+            });
+    } else {
+        // No polygon ID - show message
+        const resultsContainer = document.getElementById('calculationResults');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = `
+                <h4 style="margin: 0 0 8px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
+                <p style="text-align: center; color: #b0b0b0; font-size: 12px; padding: 12px 0;">
+                    Save polygon to database to see calculations
+                </p>
+            `;
+        }
+    }
 }
 
 function calculatePolygonArea(positions) {
