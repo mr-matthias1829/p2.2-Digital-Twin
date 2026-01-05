@@ -275,6 +275,11 @@ class ObjectEditor {
 
     setupKeyboardControls() {
         document.addEventListener('keydown', (e) => {
+            // Prevent keyboard shortcuts when typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                return;
+            }
+            
             if (!this.editMode) return;
 
             // MODEL CONTROLS

@@ -2,7 +2,11 @@ class OllamaAnalyzer{
     constructor(viewer, options = {}) {
         this.viewer = viewer;
         this.ollamaUrl = options.ollamaUrl || 'http://localhost:11434';
-        this.model = options.model || 'gemma3:4b';
+        this.models = options.models || [
+            'gemma3:4b',
+            'qwen3-vl:4b',
+        ];
+        this.model = this.models[0];
         this.interval = options.interval || 120000;
         this.prompt = options.prompt || "You are viewing this scene from the Cesium Man's perspective in Leeuwarden. Describe what you see in the environment and give your opinion about it in 2-3 sentences.";
         this.intervalId = null;
@@ -67,7 +71,18 @@ class OllamaAnalyzer{
             );
 
             this.viewer.trackedEntity = new Cesium.Entity({
-                position: new Cesium.ConstantPositionProperty(modelPos),
+                position: new Cesium.ConstantPositionProperty(modelPos)
+            });
+
+            const offset = new Cesium.Cartesian3(-10, -10, 5);
+            this.viewer.trackedEntity.viewFrom = offset;
+
+            this.viewer.flyTo(this.viewer.trackedEntity, {
+                offset: new Cesium.HeadingPitchRange(
+                    Cesium.Math.toRadians(45),
+                    Cesium.Math.toRadians(-15),
+                    20
+                )
             });
         };
 
@@ -216,7 +231,7 @@ class OllamaAnalyzer{
             reader.onloadend = async () => {
                 const base64Image = reader.result.split(',')[1];
 
-                console.log("Sending to Ollama...");
+                console.log(`Sending to Ollama Model ${this.model}...`);
                 const response = await fetch(`${this.ollamaUrl}/api/chat`, {
                     method: "POST",
                     headers: {

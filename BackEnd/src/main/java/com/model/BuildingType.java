@@ -28,6 +28,9 @@ public class BuildingType {
     @Column(nullable = false)
     private Double livability;  // Score for livability on a scale of 1 to 10
     
+    @Column(nullable = false)
+    private String calculationBase = "volume";  // "volume" or "area" - determines what to multiply cost with
+    
     // Constructors
     public BuildingType() {
     }
@@ -39,6 +42,17 @@ public class BuildingType {
         this.income = income;
         this.people = people;
         this.livability = livability;
+        this.calculationBase = "volume";
+    }
+    
+    public BuildingType(String typeId, String colorHex, Double cost, Double income, Double people, Double livability, String calculationBase) {
+        this.typeId = typeId;
+        this.colorHex = colorHex;
+        this.cost = cost;
+        this.income = income;
+        this.people = people;
+        this.livability = livability;
+        this.calculationBase = calculationBase;
     }
     
     // Getters and Setters
@@ -86,6 +100,14 @@ public class BuildingType {
         return people;
     }
     
+    
+    public String getCalculationBase() {
+        return calculationBase;
+    }
+    
+    public void setCalculationBase(String calculationBase) {
+        this.calculationBase = calculationBase;
+    }
     public void setPeople(Double people) {
         this.people = people;
     }

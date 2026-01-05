@@ -79,24 +79,24 @@ function setup() {
 
     setupInputActions();
 
-    setTimeout(() => {
-        window.ollamaAnalyzer = new OllamaAnalyzer(viewer, {
-            ollamaUrl: 'http://localhost:11434',
-            model: 'gemma3:4b',
-            interval: 30000,
-            prompt: "You are a citizen giving an opinion about the environment. This image is your Point of view. Describe what you see and give your opinion about it in 2-3 sentences. Dont do startup talk like: 'here is a perspective of cesium man.' You have your own personality. Also dont prepare that you're going to talk just talk.",
-        });
+    
+    ollamaAnalyzer = new OllamaAnalyzer(viewer, {
+        ollamaUrl: 'http://localhost:11434',
+        model: 'gemma3:4b',
+        interval: 30000,
+        prompt: "You are a citizen giving an opinion about the environment. This image is your Point of view. Describe what you see and give your opinion about it in 2-3 sentences. Dont do startup talk like: 'here is a perspective of cesium man.' after finishing those 2-3 sentences give a final score of 1-10 with a last small explanation of 1-2 sentences (decimal scores are allowed but only in .5's). Also dont prepare that you're going to talk just talk.",
+    });
 
-        console.log('Ollama analyzer ready! Use these commands:');
-        console.log('  ollamaAnalyzer.start()  - Start analysis');
-        console.log('  ollamaAnalyzer.stop()   - Stop analysis');
-        console.log('  ollamaAnalyzer.analyzeWithOllama() - Run once');
-        console.log('  ollamaAnalyzer.setInterval(ms) - Change interval');
-        console.log('  ollamaAnalyzer.listCesiumMen() - List all Cesium Men on the map');
-        console.log('  ollamaAnalyzer.selectCesiumMan(id) - Select Cesium Man by ID and track it');
-        console.log('  ollamaAnalyzer.trackSelectedMan() - Tracks selected Cesium Man');
-        console.log('  ollamaAnalyzer.stopTracking() = Stops tracking selected Cesium Man');
-    }, 2000);
+    console.log('Ollama analyzer ready! Use these commands:');
+    console.log('  ollamaAnalyzer.start()  - Start analysis');
+    console.log('  ollamaAnalyzer.stop()   - Stop analysis');
+    console.log('  ollamaAnalyzer.analyzeWithOllama() - Run once');
+    console.log('  ollamaAnalyzer.setInterval(ms) - Change interval');
+    console.log('  ollamaAnalyzer.listCesiumMen() - List all Cesium Men on the map');
+    console.log('  ollamaAnalyzer.selectCesiumMan(id) - Select Cesium Man by ID and track it');
+    console.log('  ollamaAnalyzer.trackSelectedMan() - Tracks selected Cesium Man');
+    console.log('  ollamaAnalyzer.stopTracking() = Stops tracking selected Cesium Man');
+    
 
     Editor = new ObjectEditor(viewer);
     Server = new serverPoller(viewer);

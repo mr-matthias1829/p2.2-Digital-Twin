@@ -60,11 +60,15 @@
                 : entity.properties.buildType;
         }
         
+        // Get polygon name
+        let name = entity.polygonName || null;
+        
         return {
             id: entity.polygonId || null,  // Include ID if updating existing polygon
             coordinates: coordinates,
             height: height,
-            buildingType: buildingType
+            buildingType: buildingType,
+            name: name
         };
     }
     
@@ -85,7 +89,8 @@
             properties: new Cesium.PropertyBag({
                 buildType: polygonDTO.buildingType || 'none'
             }),
-            polygonId: polygonDTO.id  // Store database ID on entity
+            polygonId: polygonDTO.id,  // Store database ID on entity
+            polygonName: polygonDTO.name || ''  // Store polygon name on entity
         });
         
         // Apply type styling
