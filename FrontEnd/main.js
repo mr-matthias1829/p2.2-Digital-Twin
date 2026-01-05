@@ -233,10 +233,8 @@ function setupInputActions() {
             terminateShape();
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-}
 
-
-function handleClickToDraw(earthPosition) { // Split into a function so the code can be tested
+    function handleClickToDraw(earthPosition) { // Split into a function so the code can be tested
         
         if (!Cesium.defined(earthPosition)) return;
         
@@ -282,10 +280,10 @@ function handleClickToDraw(earthPosition) { // Split into a function so the code
                 activeShapePoints.push(earthPosition);
             }
         }
-}
+    }
 
     // DOUBLE CLICK - Start editing (or add vertex if already editing)
-    handler.setIcomnputAction(function (event) {
+    handler.setInputAction(function (event) {
         // Let the editor handle all double-click logic
         const handled = Editor.handleDoubleClick(event);
         
@@ -318,8 +316,7 @@ function handleClickToDraw(earthPosition) { // Split into a function so the code
             terminateShape();
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-
-
+}
 
 function openCesiumManUI(cesiumManPrimitive) {
     let genUI = document.getElementById('generationUI');

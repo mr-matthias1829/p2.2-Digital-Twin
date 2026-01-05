@@ -141,8 +141,8 @@ function displayGoals(goals) {
         value.className = 'goal-value';
         
         // Format value based on goal type
-        if (goal.id === 'people_min') {
-            // Show actual numbers for people goal
+        if (goal.id === 'people_min' || goal.id === 'residents_min' || goal.id === 'workers_min') {
+            // Show actual numbers for people/residents/workers goals
             value.textContent = `(${Math.round(goal.currentValue)} / ${Math.round(goal.targetValue)})`;
         } else {
             // Show percentage for other goals

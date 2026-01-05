@@ -90,16 +90,25 @@ public class DataLoader implements CommandLineRunner {
                 "commercial_percentage"
             ));
 
-            // Goal 3: Minimum 3000 people
+            // Goal 3: Minimum 3000 residents (people living)
             goalService.saveGoal(new Goal(
-                "people_min",
-                "Minimum 3000 people living/working in the area",
+                "residents_min",
+                "Minimum 3000 people living in the area",
                 3000.0,
                 "min",
-                "people_count"
+                "residents_count"
             ));
 
-            System.out.println("✓ Loaded 3 goals");
+            // Goal 4: Minimum 500 workers (commercial buildings)
+            goalService.saveGoal(new Goal(
+                "workers_min",
+                "Minimum 500 people working in commercial buildings",
+                500.0,
+                "min",
+                "workers_count"
+            ));
+
+            System.out.println("✓ Loaded 4 goals");
         } else {
             System.out.println("✓ Goals already present (" + goalService.getAllGoals().size() + " goals)");
         }

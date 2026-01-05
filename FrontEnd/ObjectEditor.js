@@ -327,6 +327,10 @@ class ObjectEditor {
                     if (typeof updateGreenRoofVisualization === 'function') {
                         updateGreenRoofVisualization(this.editingEntity);
                     }
+                    // Update goals display
+                    if (typeof window.updateGoalsDisplay === 'function') {
+                        window.updateGoalsDisplay();
+                    }
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
@@ -336,6 +340,10 @@ class ObjectEditor {
                     // Update green roof overlay if it exists
                     if (typeof updateGreenRoofVisualization === 'function') {
                         updateGreenRoofVisualization(this.editingEntity);
+                    }
+                    // Update goals display
+                    if (typeof window.updateGoalsDisplay === 'function') {
+                        window.updateGoalsDisplay();
                     }
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
                 } else if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -360,6 +368,11 @@ class ObjectEditor {
                         this.stopEditing(true); // Pass true to skip auto-save
                         
                         try {
+                            // Remove green roof overlay if it exists
+                            if (entityToRemove._greenRoofOverlay && this.viewer.entities) {
+                                this.viewer.entities.remove(entityToRemove._greenRoofOverlay);
+                            }
+                            
                             this.viewer.entities.remove(entityToRemove);
                             
                             // Remove from bounds tracking
