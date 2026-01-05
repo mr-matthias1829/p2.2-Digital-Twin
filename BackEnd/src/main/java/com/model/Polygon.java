@@ -27,9 +27,13 @@ public class Polygon {
     @Column(name = "name")
     private String name;  // User-defined name for the polygon
 
+    @Column(name = "has_nature_on_top")
+    private Boolean hasNatureOnTop = false;  // Nature on top (green roof) - counts for nature goal but not occupation
+
     // Constructors
     public Polygon() {
         this.height = 0.0;
+        this.hasNatureOnTop = false;
     }
 
     public Polygon(List<Coordinate> coordinates, Double height, String buildingType) {
@@ -83,6 +87,14 @@ public class Polygon {
     
     public void setName(String name) { 
         this.name = name; 
+    }
+
+    public Boolean getHasNatureOnTop() { 
+        return hasNatureOnTop; 
+    }
+    
+    public void setHasNatureOnTop(Boolean hasNatureOnTop) { 
+        this.hasNatureOnTop = hasNatureOnTop; 
     }
 
     // Helper method to add a coordinate

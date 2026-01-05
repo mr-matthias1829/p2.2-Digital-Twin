@@ -52,7 +52,8 @@ async function updateGoalsDisplay() {
         const polygonAreas = [];
         viewer.entities.values.forEach(entity => {
             if (entity.polygon &&
-                (!entity.properties || !entity.properties.isSpoordok)) {
+                (!entity.properties || !entity.properties.isSpoordok) &&
+                (!entity.properties || !entity.properties.isGreenRoofOverlay)) {  // Skip green roof overlays
                 const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
                 if (positions && positions.length >= 3) {
                     let type = 'unknown';
@@ -61,13 +62,25 @@ async function updateGoalsDisplay() {
                         type = typeof bt.getValue === 'function' ? bt.getValue() : bt;
                     }
                     
+                    // Get height for volume-based calculations
+                    let height = 0;
+                    if (entity.polygon.extrudedHeight) {
+                        const h = entity.polygon.extrudedHeight;
+                        height = typeof h.getValue === 'function' ? h.getValue(Cesium.JulianDate.now()) : h;
+                    }
+                    
+                    // Get hasNatureOnTop status for green roof feature
+                    const hasNatureOnTop = entity.hasNatureOnTop || false;
+                    
                     polygonAreas.push({
                         positions: positions.map(p => ({
                             x: p.x,
                             y: p.y,
                             z: p.z
                         })),
-                        type: type
+                        type: type,
+                        height: height,
+                        hasNatureOnTop: hasNatureOnTop
                     });
                 }
             }
@@ -126,7 +139,15 @@ function displayGoals(goals) {
         
         const value = document.createElement('span');
         value.className = 'goal-value';
-        value.textContent = `(${goal.currentValue.toFixed(1)}%)`;
+        
+        // Format value based on goal type
+        if (goal.id === 'people_min') {
+            // Show actual numbers for people goal
+            value.textContent = `(${Math.round(goal.currentValue)} / ${Math.round(goal.targetValue)})`;
+        } else {
+            // Show percentage for other goals
+            value.textContent = `(${goal.currentValue.toFixed(1)}%)`;
+        }
         
         goalItem.appendChild(icon);
         goalItem.appendChild(description);

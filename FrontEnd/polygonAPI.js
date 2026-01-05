@@ -63,12 +63,16 @@
         // Get polygon name
         let name = entity.polygonName || null;
         
+        // Get nature on top status
+        let hasNatureOnTop = entity.hasNatureOnTop || false;
+        
         return {
             id: entity.polygonId || null,  // Include ID if updating existing polygon
             coordinates: coordinates,
             height: height,
             buildingType: buildingType,
-            name: name
+            name: name,
+            hasNatureOnTop: hasNatureOnTop
         };
     }
     
@@ -90,12 +94,18 @@
                 buildType: polygonDTO.buildingType || 'none'
             }),
             polygonId: polygonDTO.id,  // Store database ID on entity
-            polygonName: polygonDTO.name || ''  // Store polygon name on entity
+            polygonName: polygonDTO.name || '',  // Store polygon name on entity
+            hasNatureOnTop: polygonDTO.hasNatureOnTop || false  // Store green roof status
         });
         
         // Apply type styling
         if (typeof applyTypeInitPolygon === 'function') {
             applyTypeInitPolygon(entity);
+        }
+        
+        // Apply green roof visualization if enabled
+        if (entity.hasNatureOnTop && typeof updateGreenRoofVisualization === 'function') {
+            updateGreenRoofVisualization(entity);
         }
         
         // Check bounds and mark if out of bounds
@@ -190,7 +200,7 @@
         const toRemove = [];
         
         viewer.entities.values.forEach(entity => {
-            if (!entity.polygon || entity.properties?.isSpoordok) return;
+            if (!entity.polygon || entity.properties?.isSpoordok || entity.properties?.isGreenRoofOverlay) return;
             
             // Get positions and create hash
             let hierarchy = entity.polygon.hierarchy;

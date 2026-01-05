@@ -7,10 +7,12 @@ import com.dto.OccupationResponse;
 import com.dto.GoalCheckResponse;
 import com.dto.PolygonDataResponse;
 import com.model.BuildingType;
+import com.model.Goal;
 import com.model.Model;
 import com.model.Polygon;
 import com.service.BuildingTypeService;
 import com.service.CalculationService;
+import com.service.GoalService;
 import com.service.ModelService;
 import com.service.PolygonService;
 import com.service.PolygonDataService;
@@ -46,6 +48,9 @@ public class Controller {
 
     @Autowired
     private PolygonDataService polygonDataService;
+
+    @Autowired
+    private GoalService goalService;
 
     // GET ALL polygons AND models in one response
     @GetMapping
@@ -154,6 +159,7 @@ public class Controller {
             existingPolygon.setHeight(polygon.getHeight() != null ? polygon.getHeight() : 0.0);
             existingPolygon.setBuildingType(polygon.getBuildingType());
             existingPolygon.setName(polygon.getName());
+            existingPolygon.setHasNatureOnTop(polygon.getHasNatureOnTop() != null ? polygon.getHasNatureOnTop() : false);
             
             // Clear existing coordinates and add new ones
             existingPolygon.getCoordinates().clear();
@@ -259,5 +265,50 @@ public class Controller {
             logger.error("Error calculating polygon data for ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // ========== GOAL ENDPOINTS ==========
+
+    @GetMapping("/goals-config")
+    public ResponseEntity<List<Goal>> getAllGoals() {
+        List<Goal> goals = goalService.getAllGoals();
+        return ResponseEntity.ok(goals);
+    }
+
+    @GetMapping("/goals-config/{id}")
+    public ResponseEntity<Goal> getGoalById(@PathVariable Long id) {
+        return goalService.getGoalById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/goals-config/goalId/{goalId}")
+    public ResponseEntity<Goal> getGoalByGoalId(@PathVariable String goalId) {
+        return goalService.getGoalByGoalId(goalId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/goals-config")
+    public ResponseEntity<Goal> createGoal(@RequestBody Goal goal) {
+        Goal savedGoal = goalService.saveGoal(goal);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedGoal);
+    }
+
+    @PutMapping("/goals-config/{id}")
+    public ResponseEntity<Goal> updateGoal(@PathVariable Long id, @RequestBody Goal goal) {
+        return goalService.getGoalById(id)
+                .map(existingGoal -> {
+                    goal.setId(id);
+                    Goal updatedGoal = goalService.saveGoal(goal);
+                    return ResponseEntity.ok(updatedGoal);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/goals-config/{id}")
+    public ResponseEntity<Void> deleteGoal(@PathVariable Long id) {
+        goalService.deleteGoal(id);
+        return ResponseEntity.noContent().build();
     }
 }

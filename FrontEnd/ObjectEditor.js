@@ -117,6 +117,11 @@ class ObjectEditor {
             boundsChecker.validateAndMarkPolygon(this.editingEntity, this.viewer);
         }
         
+        // Update green roof overlay if it exists
+        if (typeof updateGreenRoofVisualization === 'function') {
+            updateGreenRoofVisualization(this.editingEntity);
+        }
+        
         if (window.showPolygonInfo) {
             try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
         }
@@ -318,12 +323,20 @@ class ObjectEditor {
                     if (isProtected) return console.log("Protected polygon - cannot change height");
                     this.editingEntity.polygon.extrudedHeight = h + 5;
                     console.log("Height:", h + 5);
+                    // Update green roof overlay if it exists
+                    if (typeof updateGreenRoofVisualization === 'function') {
+                        updateGreenRoofVisualization(this.editingEntity);
+                    }
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     if (isProtected) return console.log("Protected polygon - cannot change height");
                     this.editingEntity.polygon.extrudedHeight = Math.max(0, h - 5);
                     console.log("Height:", Math.max(0, h - 5));
+                    // Update green roof overlay if it exists
+                    if (typeof updateGreenRoofVisualization === 'function') {
+                        updateGreenRoofVisualization(this.editingEntity);
+                    }
                     if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
                 } else if (e.key === 'Delete' || e.key === 'Backspace') {
                     e.preventDefault();
@@ -501,8 +514,14 @@ class ObjectEditor {
                 return true;
             }
             
+            // Resolve green roof overlay to parent entity
+            let targetEntity = picked.id;
+            if (picked.id?.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
+                targetEntity = picked.id._parentEntity;
+            }
+            
             // If clicked on the polygon edge, find closest edge
-            if (Cesium.defined(picked) && picked.id === this.editingEntity) {
+            if (Cesium.defined(picked) && targetEntity === this.editingEntity) {
                 const ray = this.viewer.camera.getPickRay(event.position);
                 const clickedPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
                 
@@ -560,7 +579,12 @@ class ObjectEditor {
         
         // Check for polygon entity
         if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
-            this.startEditingPolygon(picked.id);
+            // If clicked on green roof overlay, use parent entity instead
+            let targetEntity = picked.id;
+            if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
+                targetEntity = picked.id._parentEntity;
+            }
+            this.startEditingPolygon(targetEntity);
             return true;
         }
         

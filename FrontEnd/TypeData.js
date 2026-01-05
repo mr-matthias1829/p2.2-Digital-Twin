@@ -187,6 +187,18 @@ function applyTypeInitPolygon(entity) {
             return currentColor || finalColor;
         }, false)
     );
+    
+    // Keep sides matching the building type
+    entity.polygon.extrudedHeightMaterial = new Cesium.ColorMaterialProperty(
+        new Cesium.CallbackProperty(() => {
+            const currentType = getEntityType(entity);
+            const currentColor = getTypeProperty(currentType, 'color');
+            return currentColor || finalColor;
+        }, false)
+    );
+    
+    // Handle green roof visualization - create a separate top surface
+    updateGreenRoofVisualization(entity);
 }
 
 // Apply type initialization for MODELS (modifies entity directly)
@@ -247,6 +259,66 @@ function applyTypeToEntity(entity) {
     }
 }
 
+// Update green roof visualization by creating/removing a top surface overlay
+function updateGreenRoofVisualization(entity) {
+    if (!entity || !entity.polygon) return;
+    
+    // Remove existing green roof overlay if it exists
+    if (entity._greenRoofOverlay && viewer && viewer.entities) {
+        viewer.entities.remove(entity._greenRoofOverlay);
+        entity._greenRoofOverlay = null;
+    }
+    
+    // If hasNatureOnTop is enabled, create a green overlay on top
+    if (entity.hasNatureOnTop) {
+        const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
+        if (!positions || positions.length < 3) return;
+        
+        // Get the extruded height
+        let extrudedHeight = 0;
+        if (entity.polygon.extrudedHeight) {
+            const h = entity.polygon.extrudedHeight;
+            extrudedHeight = typeof h.getValue === 'function' ? h.getValue(Cesium.JulianDate.now()) : h;
+        }
+        
+        if (extrudedHeight <= 0) return; // No need for overlay if not extruded
+        
+        // Get nature color
+        const natureColor = getTypeProperty('nature', 'color') || Cesium.Color.GREEN;
+        const transparentNature = natureColor.withAlpha(0.8);
+        
+        // Create the green roof overlay positioned slightly above the building top
+        entity._greenRoofOverlay = viewer.entities.add({
+            polygon: {
+                hierarchy: new Cesium.PolygonHierarchy(positions),
+                material: transparentNature,
+                height: extrudedHeight + 0.5  // Position 0.5m above the building top
+            },
+            properties: new Cesium.PropertyBag({
+                isGreenRoofOverlay: true  // Mark as overlay for click filtering
+            }),
+            show: true
+        });
+        
+        // Link overlay back to parent entity
+        entity._greenRoofOverlay._parentEntity = entity;
+    }
+}
+
+// Helper function to get positions from hierarchy (reused from other files)
+function _getPositionsFromHierarchy(hierarchy) {
+    if (!hierarchy) return [];
+    if (typeof hierarchy.getValue === 'function') {
+        hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
+    }
+    if (hierarchy instanceof Cesium.PolygonHierarchy) {
+        return hierarchy.positions || [];
+    }
+    if (Array.isArray(hierarchy)) return hierarchy;
+    if (hierarchy.positions) return hierarchy.positions;
+    return [];
+}
+
 // Function to get the object key for a build type by its id
 function getTypeById(searchId) {
     if (!searchId) return null;
@@ -273,3 +345,4 @@ window.setEntityType = setEntityType;
 window.applyTypeInitPolygon = applyTypeInitPolygon;
 window.applyTypeInitModel = applyTypeInitModel;
 window.applyTypeToEntity = applyTypeToEntity;
+window.updateGreenRoofVisualization = updateGreenRoofVisualization;
