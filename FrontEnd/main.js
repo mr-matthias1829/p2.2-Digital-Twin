@@ -282,30 +282,6 @@ function setupInputActions() {
         }
     }
 
-    // DOUBLE CLICK - Start editing (or add vertex if already editing)
-    handler.setInputAction(function (event) {
-        // Let the editor handle all double-click logic
-        const handled = Editor.handleDoubleClick(event);
-        
-        // If editor didn't handle it and we're drawing, do nothing
-        // (prevents accidental polygon selection while drawing)
-        if (!handled && drawingMode !== "none" && drawingMode !== "edit") {
-            console.log("Double-click ignored - currently in drawing mode");
-        }
-
-        const pickedObject = viewer.scene.pick(event.position);
-        if (Cesium.defined(pickedObject) &&
-            pickedObject.primitive &&
-            pickedObject.primitive.isEditableModel &&
-            pickedObject.primitive.modelKey === "man" && 
-            drawingMode === "ai"){
-
-            const cesiumMan = pickedObject.primitive;
-            openCesiumManUI(cesiumMan);
-            return;
-        }
-    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-
     // RIGHT CLICK - Finish drawing, editing, or moving
     handler.setInputAction(function (event) {
         // Editor gets first priority
