@@ -33,6 +33,7 @@ public class OccupationRequest {
         private List<CalculationRequest.Position> positions;
         private String type;
         private Double height;
+        private Boolean hasNatureOnTop;
 
         public PolygonArea() {}
 
@@ -45,6 +46,13 @@ public class OccupationRequest {
             this.positions = positions;
             this.type = type;
             this.height = height;
+        }
+
+        public PolygonArea(List<CalculationRequest.Position> positions, String type, Double height, Boolean hasNatureOnTop) {
+            this.positions = positions;
+            this.type = type;
+            this.height = height;
+            this.hasNatureOnTop = hasNatureOnTop;
         }
 
         public List<CalculationRequest.Position> getPositions() {
@@ -69,6 +77,14 @@ public class OccupationRequest {
 
         public void setHeight(Double height) {
             this.height = height;
+        }
+
+        public Boolean getHasNatureOnTop() {
+            return hasNatureOnTop;
+        }
+
+        public void setHasNatureOnTop(Boolean hasNatureOnTop) {
+            this.hasNatureOnTop = hasNatureOnTop;
         }
     }
 }

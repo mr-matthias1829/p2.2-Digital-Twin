@@ -136,6 +136,20 @@ window.showPolygonInfo = async function (entity) {
         html += '/>';
         html += '</div>';
         
+        // Nature on top checkbox (green roof option)
+        const hasNatureOnTop = entity.hasNatureOnTop || false;
+        html += '<div style="margin-bottom: 14px; padding: 10px; background: rgba(100, 200, 100, 0.08); border: 1px solid rgba(100, 200, 100, 0.2); border-radius: 6px;">';
+        html += '<label style="display: flex; align-items: center; cursor: pointer; user-select: none;">';
+        html += '<input type="checkbox" id="natureOnTopCheckbox" ' + (hasNatureOnTop ? 'checked' : '') + ' ';
+        html += 'style="margin-right: 8px; cursor: pointer; width: 16px; height: 16px;"';
+        html += '/>';
+        html += '<div style="flex: 1;">';
+        html += '<div style="font-size: 12px; font-weight: 600; color: #90ee90;">Nature on Top (Green Roof)</div>';
+        html += '<div style="font-size: 10px; color: #b0b0b0; margin-top: 2px;">Counts toward nature goal without increasing occupation</div>';
+        html += '</div>';
+        html += '</label>';
+        html += '</div>';
+        
         // Measurements section
         if (heightLine || areaLine || volumeLine) {
             html += '<div style="background: linear-gradient(135deg, rgba(100, 150, 255, 0.08), rgba(80, 130, 255, 0.05)); padding: 12px; border-radius: 8px; margin-bottom: 14px; border: 1px solid rgba(100, 150, 255, 0.15);">';
@@ -208,6 +222,32 @@ window.showPolygonInfo = async function (entity) {
                                 .then(() => console.log('✓ Polygon name saved'))
                                 .catch(err => console.error('Failed to save polygon name:', err));
                         }, 1000);
+                    }
+                });
+            }
+            
+            // Set up nature on top checkbox event listener
+            const natureCheckbox = document.getElementById('natureOnTopCheckbox');
+            if (natureCheckbox && entity) {
+                natureCheckbox.addEventListener('change', (e) => {
+                    entity.hasNatureOnTop = e.target.checked;
+                    
+                    // Update visual appearance immediately (forces callback property to re-evaluate)
+                    if (typeof applyTypeInitPolygon === 'function') {
+                        applyTypeInitPolygon(entity);
+                    }
+                    
+                    // Save to database immediately
+                    if (entity.polygonId && typeof polygonAPI !== 'undefined') {
+                        polygonAPI.savePolygon(entity)
+                            .then(() => {
+                                console.log('✓ Nature on top status saved');
+                                // Refresh goals to update nature percentage
+                                if (typeof window.updateGoalsDisplay === 'function') {
+                                    window.updateGoalsDisplay();
+                                }
+                            })
+                            .catch(err => console.error('Failed to save nature on top status:', err));
                     }
                 });
             }

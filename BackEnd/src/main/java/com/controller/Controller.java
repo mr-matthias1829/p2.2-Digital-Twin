@@ -159,6 +159,7 @@ public class Controller {
             existingPolygon.setHeight(polygon.getHeight() != null ? polygon.getHeight() : 0.0);
             existingPolygon.setBuildingType(polygon.getBuildingType());
             existingPolygon.setName(polygon.getName());
+            existingPolygon.setHasNatureOnTop(polygon.getHasNatureOnTop() != null ? polygon.getHasNatureOnTop() : false);
             
             // Clear existing coordinates and add new ones
             existingPolygon.getCoordinates().clear();

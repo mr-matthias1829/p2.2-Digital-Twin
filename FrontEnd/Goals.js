@@ -52,7 +52,8 @@ async function updateGoalsDisplay() {
         const polygonAreas = [];
         viewer.entities.values.forEach(entity => {
             if (entity.polygon &&
-                (!entity.properties || !entity.properties.isSpoordok)) {
+                (!entity.properties || !entity.properties.isSpoordok) &&
+                (!entity.properties || !entity.properties.isGreenRoofOverlay)) {  // Skip green roof overlays
                 const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
                 if (positions && positions.length >= 3) {
                     let type = 'unknown';
@@ -68,6 +69,9 @@ async function updateGoalsDisplay() {
                         height = typeof h.getValue === 'function' ? h.getValue(Cesium.JulianDate.now()) : h;
                     }
                     
+                    // Get hasNatureOnTop status for green roof feature
+                    const hasNatureOnTop = entity.hasNatureOnTop || false;
+                    
                     polygonAreas.push({
                         positions: positions.map(p => ({
                             x: p.x,
@@ -75,7 +79,8 @@ async function updateGoalsDisplay() {
                             z: p.z
                         })),
                         type: type,
-                        height: height
+                        height: height,
+                        hasNatureOnTop: hasNatureOnTop
                     });
                 }
             }

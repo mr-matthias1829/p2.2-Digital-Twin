@@ -150,12 +150,20 @@ public class CalculationServiceImpl implements CalculationService {
         double totalOccupiedArea = 0.0;
         Map<String, Double> typeAreas = new HashMap<>();
         Map<String, Double> typeVolumes = new HashMap<>();
+        double natureOnTopArea = 0.0;  // Track nature on top separately (doesn't count for occupation)
         
         if (request.getPolygonAreas() != null) {
             for (OccupationRequest.PolygonArea polygon : request.getPolygonAreas()) {
                 // Check if all vertices are inside the Spoordok polygon
                 if (isPolygonInsideSpoordok(polygon.getPositions(), request.getSpoordokPositions())) {
                     double area = calculateAreaFromPositions(polygon.getPositions());
+                    
+                    // If has nature on top, add to nature on top counter
+                    if (Boolean.TRUE.equals(polygon.getHasNatureOnTop())) {
+                        natureOnTopArea += area;
+                    }
+                    
+                    // Always add to occupation (nature on top doesn't change the building's footprint)
                     totalOccupiedArea += area;
                     
                     // Track area by type
@@ -198,6 +206,21 @@ public class CalculationServiceImpl implements CalculationService {
             }
             
             typeBreakdown.put(type, new OccupationResponse.TypeOccupation(area, typePercentage, people));
+        }
+
+        // Add nature on top area to the "nature" type for goal calculations (but it's already counted in occupation)
+        if (natureOnTopArea > 0.0) {
+            if (typeBreakdown.containsKey("nature")) {
+                // Add to existing nature area
+                OccupationResponse.TypeOccupation existingNature = typeBreakdown.get("nature");
+                double totalNatureArea = existingNature.getArea() + natureOnTopArea;
+                double totalNaturePercentage = (totalNatureArea / spoordokArea) * 100.0;
+                typeBreakdown.put("nature", new OccupationResponse.TypeOccupation(totalNatureArea, totalNaturePercentage, existingNature.getPeople()));
+            } else {
+                // Create new nature entry with just the on-top area
+                double naturePercentage = (natureOnTopArea / spoordokArea) * 100.0;
+                typeBreakdown.put("nature", new OccupationResponse.TypeOccupation(natureOnTopArea, naturePercentage, 0.0));
+            }
         }
 
         // Always add "unoccupied" area

@@ -182,7 +182,12 @@ function setupInputActions() {
         if (drawingMode === "data") {
             const picked = viewer.scene.pick(event.position);
             if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
-                showPolygonDataInDataMenu(picked.id);
+                // If clicked on green roof overlay, use parent entity instead
+                let targetEntity = picked.id;
+                if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
+                    targetEntity = picked.id._parentEntity;
+                }
+                showPolygonDataInDataMenu(targetEntity);
                 return;
             }
         }
@@ -367,7 +372,8 @@ function terminateShape() {
             properties: new Cesium.PropertyBag({
                 buildType: objType
             }),
-            polygonName: ''  // Initialize with empty name
+            polygonName: '',  // Initialize with empty name
+            hasNatureOnTop: false  // Initialize green roof as disabled
         });
         applyTypeInitPolygon(finalShape);
         
@@ -430,7 +436,8 @@ async function updateOccupationStats() {
         const polygonAreas = [];
         viewer.entities.values.forEach(entity => {
             if (entity.polygon &&
-                (!entity.properties || !entity.properties.isSpoordok)) {
+                (!entity.properties || !entity.properties.isSpoordok) &&
+                (!entity.properties || !entity.properties.isGreenRoofOverlay)) {  // Skip green roof overlays
                 const positions = _getPositionsFromHierarchy(entity.polygon.hierarchy);
                 if (positions && positions.length >= 3) {
                     // Get polygon type
