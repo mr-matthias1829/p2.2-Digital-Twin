@@ -328,8 +328,21 @@ public class CalculationServiceImpl implements CalculationService {
                     if (totalBuildingArea > 0) {
                         currentValue = (commercialArea / totalBuildingArea) * 100.0;
                     }
+                } else if ("residents_count".equals(targetType)) {
+                    // Residents count goal - only count residential building types
+                    String[] residentialTypes = {"detached house", "townhouse", "apartment"};
+                    for (String resType : residentialTypes) {
+                        if (typeBreakdown.containsKey(resType)) {
+                            currentValue += typeBreakdown.get(resType).getPeople();
+                        }
+                    }
+                } else if ("workers_count".equals(targetType)) {
+                    // Workers count goal - only count commercial building people
+                    if (typeBreakdown.containsKey("commercial building")) {
+                        currentValue = typeBreakdown.get("commercial building").getPeople();
+                    }
                 } else if ("people_count".equals(targetType)) {
-                    // People count goal
+                    // Legacy people count goal (all people)
                     for (Map.Entry<String, OccupationResponse.TypeOccupation> entry : typeBreakdown.entrySet()) {
                         currentValue += entry.getValue().getPeople();
                     }
