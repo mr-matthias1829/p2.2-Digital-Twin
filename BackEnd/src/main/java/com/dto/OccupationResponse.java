@@ -52,12 +52,20 @@ public class OccupationResponse {
     public static class TypeOccupation {
         private Double area;
         private Double percentage;
+        private Double people;
 
         public TypeOccupation() {}
 
         public TypeOccupation(Double area, Double percentage) {
             this.area = area;
             this.percentage = percentage;
+            this.people = 0.0;
+        }
+
+        public TypeOccupation(Double area, Double percentage, Double people) {
+            this.area = area;
+            this.percentage = percentage;
+            this.people = people;
         }
 
         public Double getArea() {
@@ -74,6 +82,14 @@ public class OccupationResponse {
 
         public void setPercentage(Double percentage) {
             this.percentage = percentage;
+        }
+
+        public Double getPeople() {
+            return people;
+        }
+
+        public void setPeople(Double people) {
+            this.people = people;
         }
     }
 }

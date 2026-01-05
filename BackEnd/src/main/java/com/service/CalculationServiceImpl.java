@@ -5,12 +5,16 @@ import com.dto.CalculationResponse;
 import com.dto.OccupationRequest;
 import com.dto.OccupationResponse;
 import com.dto.GoalCheckResponse;
+import com.model.BuildingType;
+import com.model.Goal;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Service for calculating area and volume of polygons.
@@ -19,6 +23,12 @@ import java.util.Map;
  */
 @Service
 public class CalculationServiceImpl implements CalculationService {
+
+    @Autowired
+    private BuildingTypeService buildingTypeService;
+
+    @Autowired
+    private GoalService goalService;
 
     @Override
     public CalculationResponse calculateAreaAndVolume(CalculationRequest request) {
@@ -139,6 +149,7 @@ public class CalculationServiceImpl implements CalculationService {
         // Calculate total occupied area and breakdown by type
         double totalOccupiedArea = 0.0;
         Map<String, Double> typeAreas = new HashMap<>();
+        Map<String, Double> typeVolumes = new HashMap<>();
         
         if (request.getPolygonAreas() != null) {
             for (OccupationRequest.PolygonArea polygon : request.getPolygonAreas()) {
@@ -150,6 +161,13 @@ public class CalculationServiceImpl implements CalculationService {
                     // Track area by type
                     String type = polygon.getType() != null ? polygon.getType() : "unknown";
                     typeAreas.put(type, typeAreas.getOrDefault(type, 0.0) + area);
+                    
+                    // Track volume by type (for volume-based calculations)
+                    Double height = polygon.getHeight();
+                    if (height != null && height > 0) {
+                        double volume = area * height;
+                        typeVolumes.put(type, typeVolumes.getOrDefault(type, 0.0) + volume);
+                    }
                 }
             }
         }
@@ -157,17 +175,35 @@ public class CalculationServiceImpl implements CalculationService {
         // Calculate percentage
         double occupationPercentage = (totalOccupiedArea / spoordokArea) * 100.0;
 
-        // Build type breakdown
+        // Build type breakdown with people calculation
         Map<String, OccupationResponse.TypeOccupation> typeBreakdown = new HashMap<>();
         for (Map.Entry<String, Double> entry : typeAreas.entrySet()) {
             double typePercentage = (entry.getValue() / spoordokArea) * 100.0;
-            typeBreakdown.put(entry.getKey(), new OccupationResponse.TypeOccupation(entry.getValue(), typePercentage));
+            String type = entry.getKey();
+            double area = entry.getValue();
+            
+            // Calculate people for this type
+            double people = 0.0;
+            Optional<BuildingType> buildingTypeOpt = buildingTypeService.getBuildingTypeByTypeId(type);
+            if (buildingTypeOpt.isPresent()) {
+                BuildingType buildingType = buildingTypeOpt.get();
+                double measurement = area; // Default to area
+                
+                // Use volume if this type is volume-based and we have volume data
+                if ("volume".equalsIgnoreCase(buildingType.getCalculationBase()) && typeVolumes.containsKey(type)) {
+                    measurement = typeVolumes.get(type);
+                }
+                
+                people = buildingType.getPeople() * measurement;
+            }
+            
+            typeBreakdown.put(type, new OccupationResponse.TypeOccupation(area, typePercentage, people));
         }
 
         // Always add "unoccupied" area
         double unoccupiedArea = spoordokArea - totalOccupiedArea;
         double unoccupiedPercentage = (unoccupiedArea / spoordokArea) * 100.0;
-        typeBreakdown.put("unoccupied", new OccupationResponse.TypeOccupation(unoccupiedArea, unoccupiedPercentage));
+        typeBreakdown.put("unoccupied", new OccupationResponse.TypeOccupation(unoccupiedArea, unoccupiedPercentage, 0.0));
 
         return new OccupationResponse(spoordokArea, totalOccupiedArea, occupationPercentage, typeBreakdown);
     }
@@ -224,54 +260,74 @@ public class CalculationServiceImpl implements CalculationService {
         
         List<GoalCheckResponse.Goal> goals = new ArrayList<>();
         
+        // Get all goals from database
+        List<Goal> dbGoals = goalService.getAllGoals();
+        
         if (occupation.getTypeBreakdown() != null) {
             Map<String, OccupationResponse.TypeOccupation> typeBreakdown = occupation.getTypeBreakdown();
             
-            // Goal 1: Minimum 20% nature
-            double naturePercentage = 0.0;
-            if (typeBreakdown.containsKey("nature")) {
-                naturePercentage = typeBreakdown.get("nature").getPercentage();
-            }
-            boolean natureGoalAchieved = naturePercentage >= 20.0;
-            goals.add(new GoalCheckResponse.Goal(
-                "nature_min",
-                "Minimum 20% nature",
-                natureGoalAchieved,
-                naturePercentage,
-                20.0,
-                "min"
-            ));
-            
-            // Goal 2: Maximum 20% commercial building of total buildings only
-            // Only count actual buildings: houses, apartments, commercial, covered parking
-            double commercialArea = 0.0;
-            if (typeBreakdown.containsKey("commercial building")) {
-                commercialArea = typeBreakdown.get("commercial building").getArea();
-            }
-            
-            // Calculate total building area (excluding nature, water, roads, open parking)
-            String[] buildingTypes = {"detached house", "townhouse", "apartment", "commercial building", "covered parking space"};
-            double totalBuildingArea = 0.0;
-            for (String buildingType : buildingTypes) {
-                if (typeBreakdown.containsKey(buildingType)) {
-                    totalBuildingArea += typeBreakdown.get(buildingType).getArea();
+            // Process each goal from database
+            for (Goal dbGoal : dbGoals) {
+                if (!dbGoal.getEnabled()) {
+                    continue; // Skip disabled goals
                 }
+                
+                double currentValue = 0.0;
+                boolean achieved = false;
+                
+                String goalId = dbGoal.getGoalId();
+                String targetType = dbGoal.getTargetType();
+                Double targetValue = dbGoal.getTargetValue();
+                String comparison = dbGoal.getComparison();
+                
+                // Calculate current value based on goal type
+                if ("nature_percentage".equals(targetType)) {
+                    // Nature percentage goal
+                    if (typeBreakdown.containsKey("nature")) {
+                        currentValue = typeBreakdown.get("nature").getPercentage();
+                    }
+                } else if ("commercial_percentage".equals(targetType)) {
+                    // Commercial percentage of buildings goal
+                    double commercialArea = 0.0;
+                    if (typeBreakdown.containsKey("commercial building")) {
+                        commercialArea = typeBreakdown.get("commercial building").getArea();
+                    }
+                    
+                    // Calculate total building area
+                    String[] buildingTypes = {"detached house", "townhouse", "apartment", "commercial building", "covered parking space"};
+                    double totalBuildingArea = 0.0;
+                    for (String buildingType : buildingTypes) {
+                        if (typeBreakdown.containsKey(buildingType)) {
+                            totalBuildingArea += typeBreakdown.get(buildingType).getArea();
+                        }
+                    }
+                    
+                    if (totalBuildingArea > 0) {
+                        currentValue = (commercialArea / totalBuildingArea) * 100.0;
+                    }
+                } else if ("people_count".equals(targetType)) {
+                    // People count goal
+                    for (Map.Entry<String, OccupationResponse.TypeOccupation> entry : typeBreakdown.entrySet()) {
+                        currentValue += entry.getValue().getPeople();
+                    }
+                }
+                
+                // Check if goal is achieved
+                if ("min".equalsIgnoreCase(comparison)) {
+                    achieved = currentValue >= targetValue;
+                } else if ("max".equalsIgnoreCase(comparison)) {
+                    achieved = currentValue <= targetValue;
+                }
+                
+                goals.add(new GoalCheckResponse.Goal(
+                    goalId,
+                    dbGoal.getDescription(),
+                    achieved,
+                    currentValue,
+                    targetValue,
+                    comparison
+                ));
             }
-            
-            double commercialPercentageOfBuildings = 0.0;
-            if (totalBuildingArea > 0) {
-                commercialPercentageOfBuildings = (commercialArea / totalBuildingArea) * 100.0;
-            }
-            
-            boolean commercialGoalAchieved = commercialPercentageOfBuildings <= 20.0;
-            goals.add(new GoalCheckResponse.Goal(
-                "commercial_max",
-                "Maximum 20% commercial building of total buildings",
-                commercialGoalAchieved,
-                commercialPercentageOfBuildings,
-                20.0,
-                "max"
-            ));
         }
         
         return new GoalCheckResponse(goals);

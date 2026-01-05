@@ -1,8 +1,10 @@
 package com;
 
 import com.model.BuildingType;
+import com.model.Goal;
 import com.model.Model;
 import com.service.BuildingTypeService;
+import com.service.GoalService;
 import com.service.ModelService;
 import com.service.PolygonService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +23,16 @@ public class DataLoader implements CommandLineRunner {
     @Autowired
     private BuildingTypeService buildingTypeService;
 
+    @Autowired
+    private GoalService goalService;
+
     @Override
     public void run(String... args) throws Exception {
         // Load building types FIRST (if not present)
         loadBuildingTypesIfNeeded();
+        
+        // Load goals if not present
+        loadGoalsIfNeeded();
         
         // Polygons are now loaded from the database and managed by the frontend
         // No dummy data needed anymore
@@ -56,6 +64,44 @@ public class DataLoader implements CommandLineRunner {
             System.out.println("✓ Loaded 10 building types");
         } else {
             System.out.println("✓ Building types already present (" + buildingTypeService.getAllBuildingTypes().size() + " types)");
+        }
+    }
+
+    private void loadGoalsIfNeeded() {
+        // Only load if table is empty
+        if (goalService.getAllGoals().isEmpty()) {
+            System.out.println("Initializing goals...");
+
+            // Goal 1: Minimum 20% nature
+            goalService.saveGoal(new Goal(
+                "nature_min",
+                "Minimum 20% nature",
+                20.0,
+                "min",
+                "nature_percentage"
+            ));
+
+            // Goal 2: Maximum 20% commercial building of total buildings
+            goalService.saveGoal(new Goal(
+                "commercial_max",
+                "Maximum 20% commercial building of total buildings",
+                20.0,
+                "max",
+                "commercial_percentage"
+            ));
+
+            // Goal 3: Minimum 3000 people
+            goalService.saveGoal(new Goal(
+                "people_min",
+                "Minimum 3000 people living/working in the area",
+                3000.0,
+                "min",
+                "people_count"
+            ));
+
+            System.out.println("✓ Loaded 3 goals");
+        } else {
+            System.out.println("✓ Goals already present (" + goalService.getAllGoals().size() + " goals)");
         }
     }
 }

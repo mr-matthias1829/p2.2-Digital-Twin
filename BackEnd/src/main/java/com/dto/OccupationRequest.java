@@ -32,12 +32,19 @@ public class OccupationRequest {
     public static class PolygonArea {
         private List<CalculationRequest.Position> positions;
         private String type;
+        private Double height;
 
         public PolygonArea() {}
 
         public PolygonArea(List<CalculationRequest.Position> positions, String type) {
             this.positions = positions;
             this.type = type;
+        }
+
+        public PolygonArea(List<CalculationRequest.Position> positions, String type, Double height) {
+            this.positions = positions;
+            this.type = type;
+            this.height = height;
         }
 
         public List<CalculationRequest.Position> getPositions() {
@@ -54,6 +61,14 @@ public class OccupationRequest {
 
         public void setType(String type) {
             this.type = type;
+        }
+
+        public Double getHeight() {
+            return height;
+        }
+
+        public void setHeight(Double height) {
+            this.height = height;
         }
     }
 }
