@@ -124,6 +124,18 @@ window.showPolygonInfo = async function (entity) {
         html += `<div style="color: #b0b0b0; font-size: 12px;">${positions.length} vertices</div>`;
         html += '</div>';
         
+        // Name input section
+        const currentName = entity.polygonName || '';
+        html += '<div style="margin-bottom: 14px;">';
+        html += '<div style="font-size: 12px; font-weight: 600; color: #80a0ff; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Polygon Name</div>';
+        html += '<input type="text" id="polygonNameInput" value="' + currentName.replace(/"/g, '&quot;') + '" ';
+        html += 'placeholder="Enter name..." ';
+        html += 'style="width: calc(100% - 20px); padding: 8px 10px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 150, 255, 0.3); border-radius: 6px; color: #e0e0e0; font-size: 13px; font-family: Arial, sans-serif; outline: none; transition: all 0.2s;"';
+        html += 'onfocus="this.style.borderColor=\'rgba(100, 150, 255, 0.6)\'; this.style.background=\'rgba(0, 0, 0, 0.4)\';"';
+        html += 'onblur="this.style.borderColor=\'rgba(100, 150, 255, 0.3)\'; this.style.background=\'rgba(0, 0, 0, 0.3)\';"';
+        html += '/>';
+        html += '</div>';
+        
         // Measurements section
         if (heightLine || areaLine || volumeLine) {
             html += '<div style="background: linear-gradient(135deg, rgba(100, 150, 255, 0.08), rgba(80, 130, 255, 0.05)); padding: 12px; border-radius: 8px; margin-bottom: 14px; border: 1px solid rgba(100, 150, 255, 0.15);">';
@@ -179,6 +191,27 @@ window.showPolygonInfo = async function (entity) {
         html += '</div>';
         
         el.innerHTML = html;
+        
+        // Set up name input event listener
+        setTimeout(() => {
+            const nameInput = document.getElementById('polygonNameInput');
+            if (nameInput && entity) {
+                nameInput.addEventListener('input', (e) => {
+                    entity.polygonName = e.target.value;
+                    
+                    // Save to database if entity has an ID
+                    if (entity.polygonId && typeof polygonAPI !== 'undefined') {
+                        // Debounce the save
+                        clearTimeout(entity._nameSaveTimeout);
+                        entity._nameSaveTimeout = setTimeout(() => {
+                            polygonAPI.savePolygon(entity)
+                                .then(() => console.log('✓ Polygon name saved'))
+                                .catch(err => console.error('Failed to save polygon name:', err));
+                        }, 1000);
+                    }
+                });
+            }
+        }, 0);
     } catch (e) {
         console.warn('showPolygonInfo error', e);
     }

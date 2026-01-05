@@ -148,6 +148,7 @@ public class Controller {
             // Update existing polygon properties
             existingPolygon.setHeight(polygon.getHeight() != null ? polygon.getHeight() : 0.0);
             existingPolygon.setBuildingType(polygon.getBuildingType());
+            existingPolygon.setName(polygon.getName());
             
             // Clear existing coordinates and add new ones
             existingPolygon.getCoordinates().clear();

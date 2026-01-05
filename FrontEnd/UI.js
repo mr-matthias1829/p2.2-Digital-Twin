@@ -376,7 +376,7 @@ function showPolygonDataInDataMenu(entity) {
     // Get polygon properties
     const props = entity.properties || {};
     const buildType = props.buildType?.getValue ? props.buildType.getValue() : props.buildType;
-    const name = entity.name || 'Unnamed Polygon';
+    const name = entity.polygonName || 'Unnamed Polygon';
     const polygonId = entity.polygonId || props.polygonId?.getValue?.() || 'N/A';
 
     // Calculate area if polygon hierarchy is available

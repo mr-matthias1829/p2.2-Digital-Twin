@@ -24,6 +24,9 @@ public class Polygon {
     @Column(name = "building_type")
     private String buildingType;  // References BuildingType.typeId (e.g., "commercial building", "nature", etc.)
 
+    @Column(name = "name")
+    private String name;  // User-defined name for the polygon
+
     // Constructors
     public Polygon() {
         this.height = 0.0;
@@ -72,6 +75,14 @@ public class Polygon {
     
     public void setBuildingType(String buildingType) { 
         this.buildingType = buildingType; 
+    }
+
+    public String getName() { 
+        return name; 
+    }
+    
+    public void setName(String name) { 
+        this.name = name; 
     }
 
     // Helper method to add a coordinate

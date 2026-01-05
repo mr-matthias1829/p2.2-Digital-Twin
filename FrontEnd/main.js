@@ -366,7 +366,8 @@ function terminateShape() {
             },
             properties: new Cesium.PropertyBag({
                 buildType: objType
-            })
+            }),
+            polygonName: ''  // Initialize with empty name
         });
         applyTypeInitPolygon(finalShape);
         
