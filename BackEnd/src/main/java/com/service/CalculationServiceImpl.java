@@ -53,45 +53,62 @@ public class CalculationServiceImpl implements CalculationService {
     /**
      * Compute planar polygon area in m² using local ENU projection and 2D shoelace formula.
      * This is a Java port of the JavaScript areaFromCartesianPositions function.
+     *
+     * Has a fallback now whenever local coordinates are received
      */
     private double calculateAreaFromPositions(List<CalculationRequest.Position> positions) {
         if (positions == null || positions.size() < 3) {
             return 0.0;
         }
 
-        // Compute centroid to reduce distortion in local ENU frame
-        double centroidX = 0, centroidY = 0, centroidZ = 0;
-        for (CalculationRequest.Position p : positions) {
-            centroidX += p.getX();
-            centroidY += p.getY();
-            centroidZ += p.getZ();
+        // Compute centroid
+        double cx = 0, cy = 0, cz = 0;
+        for (var p : positions) {
+            cx += p.getX();
+            cy += p.getY();
+            cz += p.getZ();
         }
-        centroidX /= positions.size();
-        centroidY /= positions.size();
-        centroidZ /= positions.size();
+        cx /= positions.size();
+        cy /= positions.size();
+        cz /= positions.size();
 
-        // Transform global points to local East-North-Up coordinates
-        double[][] localPositions = new double[positions.size()][3];
-        
+        // Convert to ENU
+        double[][] enu = new double[positions.size()][3];
         for (int i = 0; i < positions.size(); i++) {
-            CalculationRequest.Position p = positions.get(i);
-            double[] local = cartesianToLocalENU(
-                p.getX(), p.getY(), p.getZ(),
-                centroidX, centroidY, centroidZ
+            var p = positions.get(i);
+            enu[i] = cartesianToLocalENU(
+                    p.getX(), p.getY(), p.getZ(),
+                    cx, cy, cz
             );
-            localPositions[i] = local;
         }
 
-        // Shoelace formula on XY plane
+        double enuArea = shoelaceAreaXY(enu);
+
+        // SAFETY: if ENU collapses, assume local XY input
+        if (enuArea < 1e-6) {
+            double[][] localXY = new double[positions.size()][3];
+            for (int i = 0; i < positions.size(); i++) {
+                var p = positions.get(i);
+                localXY[i][0] = p.getX();
+                localXY[i][1] = p.getY();
+            }
+            return shoelaceAreaXY(localXY);
+        }
+
+        return enuArea;
+    }
+
+    private double shoelaceAreaXY(double[][] pts) {
         double area = 0.0;
-        for (int i = 0; i < localPositions.length; i++) {
-            double[] a = localPositions[i];
-            double[] b = localPositions[(i + 1) % localPositions.length];
+        for (int i = 0; i < pts.length; i++) {
+            double[] a = pts[i];
+            double[] b = pts[(i + 1) % pts.length];
             area += (a[0] * b[1] - b[0] * a[1]);
         }
-
-        return Math.abs(area) * 0.5; // final area in m²
+        return Math.abs(area) * 0.5;
     }
+
+
 
     /**
      * Transform a Cartesian3 point to local East-North-Up coordinates
