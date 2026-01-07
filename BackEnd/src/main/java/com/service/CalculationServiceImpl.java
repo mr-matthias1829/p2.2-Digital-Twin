@@ -33,14 +33,14 @@ public class CalculationServiceImpl implements CalculationService {
     @Override
     public CalculationResponse calculateAreaAndVolume(CalculationRequest request) {
         List<CalculationRequest.Position> positions = request.getPositions();
-        
+
         if (positions == null || positions.size() < 3) {
             return new CalculationResponse(0.0, null, request.getHeight());
         }
 
         // Calculate area using the same algorithm as polygonUtils.js
         double area = calculateAreaFromPositions(positions);
-        
+
         // Calculate volume if height is provided
         Double volume = null;
         if (request.getHeight() != null && request.getHeight() > 0) {
@@ -55,6 +55,10 @@ public class CalculationServiceImpl implements CalculationService {
      * This is a Java port of the JavaScript areaFromCartesianPositions function.
      *
      * Has a fallback now whenever local coordinates are received
+     * However, the output area of the local coords are inaccurate
+     * Local coords are only ever given from testing
+     *
+     * For production, ALWAYS use proper cartesian coords
      */
     private double calculateAreaFromPositions(List<CalculationRequest.Position> positions) {
         if (positions == null || positions.size() < 3) {
@@ -115,10 +119,10 @@ public class CalculationServiceImpl implements CalculationService {
      * relative to a reference point (centroid).
      */
     private double[] cartesianToLocalENU(double x, double y, double z,
-                                          double refX, double refY, double refZ) {
+                                         double refX, double refY, double refZ) {
         // Create East-North-Up transformation matrix at reference point
         // This is a simplified version - in Cesium.js this uses Matrix4 transforms
-        
+
         // Calculate the normalized reference vector
         double refLength = Math.sqrt(refX * refX + refY * refY + refZ * refZ);
         double normRefX = refX / refLength;
@@ -158,7 +162,7 @@ public class CalculationServiceImpl implements CalculationService {
     public OccupationResponse calculateOccupation(OccupationRequest request) {
         // Calculate the total Spoordok area
         double spoordokArea = calculateAreaFromPositions(request.getSpoordokPositions());
-        
+
         if (spoordokArea == 0.0) {
             return new OccupationResponse(0.0, 0.0, 0.0, new HashMap<>());
         }
@@ -168,25 +172,25 @@ public class CalculationServiceImpl implements CalculationService {
         Map<String, Double> typeAreas = new HashMap<>();
         Map<String, Double> typeVolumes = new HashMap<>();
         double natureOnTopArea = 0.0;  // Track nature on top separately (doesn't count for occupation)
-        
+
         if (request.getPolygonAreas() != null) {
             for (OccupationRequest.PolygonArea polygon : request.getPolygonAreas()) {
                 // Check if all vertices are inside the Spoordok polygon
                 if (isPolygonInsideSpoordok(polygon.getPositions(), request.getSpoordokPositions())) {
                     double area = calculateAreaFromPositions(polygon.getPositions());
-                    
+
                     // If has nature on top, add to nature on top counter
                     if (Boolean.TRUE.equals(polygon.getHasNatureOnTop())) {
                         natureOnTopArea += area;
                     }
-                    
+
                     // Always add to occupation (nature on top doesn't change the building's footprint)
                     totalOccupiedArea += area;
-                    
+
                     // Track area by type
                     String type = polygon.getType() != null ? polygon.getType() : "unknown";
                     typeAreas.put(type, typeAreas.getOrDefault(type, 0.0) + area);
-                    
+
                     // Track volume by type (for volume-based calculations)
                     Double height = polygon.getHeight();
                     if (height != null && height > 0) {
@@ -206,22 +210,22 @@ public class CalculationServiceImpl implements CalculationService {
             double typePercentage = (entry.getValue() / spoordokArea) * 100.0;
             String type = entry.getKey();
             double area = entry.getValue();
-            
+
             // Calculate people for this type
             double people = 0.0;
             Optional<BuildingType> buildingTypeOpt = buildingTypeService.getBuildingTypeByTypeId(type);
             if (buildingTypeOpt.isPresent()) {
                 BuildingType buildingType = buildingTypeOpt.get();
                 double measurement = area; // Default to area
-                
+
                 // Use volume if this type is volume-based and we have volume data
                 if ("volume".equalsIgnoreCase(buildingType.getCalculationBase()) && typeVolumes.containsKey(type)) {
                     measurement = typeVolumes.get(type);
                 }
-                
+
                 people = buildingType.getPeople() * measurement;
             }
-            
+
             typeBreakdown.put(type, new OccupationResponse.TypeOccupation(area, typePercentage, people));
         }
 
@@ -251,7 +255,7 @@ public class CalculationServiceImpl implements CalculationService {
     /**
      * Check if a polygon is completely inside the Spoordok boundary using ray casting algorithm.
      */
-    private boolean isPolygonInsideSpoordok(List<CalculationRequest.Position> polygonPositions, 
+    private boolean isPolygonInsideSpoordok(List<CalculationRequest.Position> polygonPositions,
                                             List<CalculationRequest.Position> spoordokPositions) {
         if (polygonPositions == null || polygonPositions.isEmpty()) {
             return false;
@@ -270,7 +274,7 @@ public class CalculationServiceImpl implements CalculationService {
      * Ray casting algorithm to check if a point is inside a polygon.
      * Uses 2D projection (x, y coordinates).
      */
-    private boolean isPointInsidePolygon(CalculationRequest.Position point, 
+    private boolean isPointInsidePolygon(CalculationRequest.Position point,
                                          List<CalculationRequest.Position> polygon) {
         int intersections = 0;
         int n = polygon.size();
@@ -281,8 +285,8 @@ public class CalculationServiceImpl implements CalculationService {
 
             // Check if the ray from point to the right intersects the edge
             if ((p1.getY() > point.getY()) != (p2.getY() > point.getY())) {
-                double xIntersection = (p2.getX() - p1.getX()) * (point.getY() - p1.getY()) / 
-                                       (p2.getY() - p1.getY()) + p1.getX();
+                double xIntersection = (p2.getX() - p1.getX()) * (point.getY() - p1.getY()) /
+                        (p2.getY() - p1.getY()) + p1.getX();
                 if (point.getX() < xIntersection) {
                     intersections++;
                 }
@@ -297,29 +301,29 @@ public class CalculationServiceImpl implements CalculationService {
     public GoalCheckResponse checkGoals(OccupationRequest request) {
         // First calculate occupation to get the type breakdown
         OccupationResponse occupation = calculateOccupation(request);
-        
+
         List<GoalCheckResponse.Goal> goals = new ArrayList<>();
-        
+
         // Get all goals from database
         List<Goal> dbGoals = goalService.getAllGoals();
-        
+
         if (occupation.getTypeBreakdown() != null) {
             Map<String, OccupationResponse.TypeOccupation> typeBreakdown = occupation.getTypeBreakdown();
-            
+
             // Process each goal from database
             for (Goal dbGoal : dbGoals) {
                 if (!dbGoal.getEnabled()) {
                     continue; // Skip disabled goals
                 }
-                
+
                 double currentValue = 0.0;
                 boolean achieved = false;
-                
+
                 String goalId = dbGoal.getGoalId();
                 String targetType = dbGoal.getTargetType();
                 Double targetValue = dbGoal.getTargetValue();
                 String comparison = dbGoal.getComparison();
-                
+
                 // Calculate current value based on goal type
                 if ("nature_percentage".equals(targetType)) {
                     // Nature percentage goal
@@ -332,7 +336,7 @@ public class CalculationServiceImpl implements CalculationService {
                     if (typeBreakdown.containsKey("commercial building")) {
                         commercialArea = typeBreakdown.get("commercial building").getArea();
                     }
-                    
+
                     // Calculate total building area
                     String[] buildingTypes = {"detached house", "townhouse", "apartment", "commercial building", "covered parking space"};
                     double totalBuildingArea = 0.0;
@@ -341,7 +345,7 @@ public class CalculationServiceImpl implements CalculationService {
                             totalBuildingArea += typeBreakdown.get(buildingType).getArea();
                         }
                     }
-                    
+
                     if (totalBuildingArea > 0) {
                         currentValue = (commercialArea / totalBuildingArea) * 100.0;
                     }
@@ -364,25 +368,25 @@ public class CalculationServiceImpl implements CalculationService {
                         currentValue += entry.getValue().getPeople();
                     }
                 }
-                
+
                 // Check if goal is achieved
                 if ("min".equalsIgnoreCase(comparison)) {
                     achieved = currentValue >= targetValue;
                 } else if ("max".equalsIgnoreCase(comparison)) {
                     achieved = currentValue <= targetValue;
                 }
-                
+
                 goals.add(new GoalCheckResponse.Goal(
-                    goalId,
-                    dbGoal.getDescription(),
-                    achieved,
-                    currentValue,
-                    targetValue,
-                    comparison
+                        goalId,
+                        dbGoal.getDescription(),
+                        achieved,
+                        currentValue,
+                        targetValue,
+                        comparison
                 ));
             }
         }
-        
+
         return new GoalCheckResponse(goals);
     }
 }
