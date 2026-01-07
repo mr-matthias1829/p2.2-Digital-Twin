@@ -2,6 +2,9 @@
 (function() {
     const API_BASE = 'http://localhost:8081';
     
+    // Queue to prevent concurrent saves of the same polygon (prevents deadlocks)
+    const saveQueue = new Map(); // polygonId -> Promise
+    
     // Show/hide sync indicator
     function showSyncIndicator() {
         const indicator = document.getElementById('syncIndicator');
@@ -117,7 +120,39 @@
     }
     
     // Save polygon to database (create or update)
+    // Uses a queue to prevent concurrent saves of the same polygon (prevents database deadlocks)
     async function savePolygon(entity) {
+        const polygonId = entity.polygonId;
+        
+        // If there's already a save in progress for this polygon, wait for it to finish
+        if (polygonId && saveQueue.has(polygonId)) {
+            console.log(`⏳ Waiting for previous save to complete for polygon ${polygonId}...`);
+            try {
+                await saveQueue.get(polygonId);
+            } catch (e) {
+                // Ignore errors from previous save
+            }
+        }
+        
+        // Create the save promise and add it to the queue
+        const savePromise = performSave(entity);
+        if (polygonId) {
+            saveQueue.set(polygonId, savePromise);
+        }
+        
+        try {
+            const result = await savePromise;
+            return result;
+        } finally {
+            // Remove from queue when done
+            if (polygonId) {
+                saveQueue.delete(polygonId);
+            }
+        }
+    }
+    
+    // Actual save implementation
+    async function performSave(entity) {
         showSyncIndicator();
         try {
             const polygonDTO = entityToPolygonDTO(entity);
