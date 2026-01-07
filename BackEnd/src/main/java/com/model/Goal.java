@@ -2,31 +2,54 @@ package com.model;
 
 import jakarta.persistence.*;
 
+/**
+ * DATABASE MODEL: Goal
+ * 
+ * Represents project goals stored in the database.
+ * Each goal defines a target metric that the city plan should achieve.
+ * 
+ * DATABASE TABLE: goals
+ * - Stores all configurable goals (nature %, residents, workers, etc.)
+ * - Goals can be enabled/disabled dynamically
+ * - Frontend fetches and displays goal progress in real-time
+ */
 @Entity
 @Table(name = "goals")
 public class Goal {
     
+    // Auto-incrementing primary key in database
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    // Unique identifier for this goal (e.g., "nature_min", "commercial_max")
     @Column(nullable = false, unique = true)
-    private String goalId;  // e.g., "nature_min", "commercial_max", "people_min"
+    private String goalId;
     
+    // Human-readable description shown in UI (e.g., "Minimum 20% nature")
     @Column(nullable = false)
-    private String description;  // e.g., "Minimum 20% nature"
+    private String description;
     
+    // The target value to achieve (e.g., 20.0 for 20%, 3000.0 for 3000 people)
     @Column(nullable = false)
-    private Double targetValue;  // The target value (e.g., 20.0, 3000.0)
+    private Double targetValue;
     
+    // Comparison type: "min" (must be at least) or "max" (must not exceed)
     @Column(nullable = false)
-    private String comparison;  // "min" or "max"
+    private String comparison;
     
+    // Whether this goal is currently active (can be toggled on/off)
     @Column(nullable = false)
-    private Boolean enabled = true;  // Whether this goal is active
+    private Boolean enabled = true;
     
+    // What metric to measure:
+    // - "nature_percentage": % of nature coverage
+    // - "commercial_percentage": % of commercial buildings
+    // - "residents_count": Number of residents
+    // - "workers_count": Number of workers
+    // - "people_count": Total people (legacy)
     @Column
-    private String targetType;  // What to measure: "percentage", "nature_percentage", "commercial_percentage", "people_count"
+    private String targetType;
     
     // Constructors
     public Goal() {
