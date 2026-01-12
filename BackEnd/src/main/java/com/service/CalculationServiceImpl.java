@@ -215,6 +215,7 @@ public class CalculationServiceImpl implements CalculationService {
         double totalOccupiedArea = 0.0;
         Map<String, Double> typeAreas = new HashMap<>();
         Map<String, Double> typeVolumes = new HashMap<>();
+        Map<String, Double> typePeople = new HashMap<>();  // Track people/parking spaces per type
         double natureOnTopArea = 0.0;  // Track nature on top separately (doesn't count for occupation)
 
         if (request.getPolygonAreas() != null) {
@@ -241,6 +242,32 @@ public class CalculationServiceImpl implements CalculationService {
                         double volume = area * height;
                         typeVolumes.put(type, typeVolumes.getOrDefault(type, 0.0) + volume);
                     }
+                    
+                    // Calculate people/parking spaces for THIS polygon
+                    Optional<BuildingType> buildingTypeOpt = buildingTypeService.getBuildingTypeByTypeId(type);
+                    if (buildingTypeOpt.isPresent()) {
+                        BuildingType buildingType = buildingTypeOpt.get();
+                        double measurement = area; // Default to area
+                        
+                        // Use volume if this type is volume-based
+                        if ("volume".equalsIgnoreCase(buildingType.getCalculationBase()) && height != null && height > 0) {
+                            measurement = area * height;
+                        }
+                        
+                        double polygonPeople = buildingType.getPeople() * measurement;
+                        
+                        // For parking spaces: multiply by number of floors for THIS polygon
+                        if ("parking space".equals(type) || "covered parking space".equals(type)) {
+                            final double FLOOR_HEIGHT = 5.0;
+                            if (height != null && height > 0) {
+                                double numberOfFloors = Math.floor(height / FLOOR_HEIGHT);
+                                polygonPeople = polygonPeople * numberOfFloors;
+                            }
+                        }
+                        
+                        // Add to running total for this type
+                        typePeople.put(type, typePeople.getOrDefault(type, 0.0) + polygonPeople);
+                    }
                 }
             }
         }
@@ -248,39 +275,13 @@ public class CalculationServiceImpl implements CalculationService {
         // Calculate percentage
         double occupationPercentage = (totalOccupiedArea / spoordokArea) * 100.0;
 
-        // Build type breakdown with people calculation
+        // Build type breakdown
         Map<String, OccupationResponse.TypeOccupation> typeBreakdown = new HashMap<>();
         for (Map.Entry<String, Double> entry : typeAreas.entrySet()) {
             double typePercentage = (entry.getValue() / spoordokArea) * 100.0;
             String type = entry.getKey();
             double area = entry.getValue();
-
-            // Calculate people for this type
-            double people = 0.0;
-            Optional<BuildingType> buildingTypeOpt = buildingTypeService.getBuildingTypeByTypeId(type);
-            if (buildingTypeOpt.isPresent()) {
-                BuildingType buildingType = buildingTypeOpt.get();
-                double measurement = area; // Default to area
-
-                // Use volume if this type is volume-based and we have volume data
-                if ("volume".equalsIgnoreCase(buildingType.getCalculationBase()) && typeVolumes.containsKey(type)) {
-                    measurement = typeVolumes.get(type);
-                }
-
-                people = buildingType.getPeople() * measurement;
-                
-                // Special calculation for parking spaces: multiply by number of floors
-                // Each 5 meters = 1 floor. At 5m: 1x, at 10m: 2x, at 20m: 4x, etc.
-                if ("parking space".equals(type) || "covered parking space".equals(type)) {
-                    final double FLOOR_HEIGHT = 5.0;
-                    if (typeVolumes.containsKey(type) && area > 0.0) {
-                        double volume = typeVolumes.get(type);
-                        double height = volume / area;
-                        double numberOfFloors = Math.floor(height / FLOOR_HEIGHT);
-                        people = people * numberOfFloors;
-                    }
-                }
-            }
+            double people = typePeople.getOrDefault(type, 0.0);
 
             typeBreakdown.put(type, new OccupationResponse.TypeOccupation(area, typePercentage, people));
         }
