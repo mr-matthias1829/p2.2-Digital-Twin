@@ -1,13 +1,32 @@
+/**
+ * main.js
+ * 
+ * Coordinates drawing modes, state management, and all component interactions.
+ * Handles polygon/line drawing, model placement, editing, and data visualization.
+ * 
+ * @module UrbanPlanner/Core
+ * @requires module:Cesium
+ * @requires module:UI
+ * @requires module:ObjectEditor
+ * @requires module:polygonAPI
+ * @requires module:boundsChecker
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
-    setup();          // mainPreSetup.js
+    setup();          // mainInit.js
     laterSetup();     // main.js
 });
 
-var measure;
+/** @type {import('cesium').Viewer} Global Cesium viewer instance */
 var viewer;
-var Editor;
-var Server;
 
+/** @type {import('./ObjectEditor.js').default} Global object editor instance */
+var Editor;
+
+/**
+ * Sets up UI components and state change subscriptions
+ * Called during application initialization
+ */
 function setupSetups() {
     UIsetup();
     subscribeToStateChangesSetup();
@@ -18,6 +37,10 @@ function setupSetups() {
     }
 }
 
+/**
+ * Subscribes to UI state changes and updates drawing state accordingly
+ * Handles mode switching, object type changes, and model selection
+ */
 function subscribeToStateChangesSetup() {
     onUIStateChange('modeSelect', (newMode) => {
         // Cut off drawing the shape to prevent issues
@@ -43,15 +66,26 @@ function subscribeToStateChangesSetup() {
     });
 }
 
-
+/** @type {string|null} Default model to create when in model mode */
 let modelToCreateDEFAULT = null; // Temporary to init the var, later set to id 0 of models
+
+/** @type {string} Default object type when no type is selected */
 const objTypeDEFAULT = 'none';
 
 // Make sure these are the same defaults as in UI.js to prevent offsets with UI!
 let modelToCreate = modelToCreateDEFAULT;
+
+/** @type {('polygon'|'line'|'model'|'edit'|'data'|'ai'|'none')} Current drawing mode */
 let drawingMode = "data"; // Start in data mode by default
+
+/** @type {string} Current object type for polygon creation */
 let objType = objTypeDEFAULT;
 
+/**
+ * Performs asynchronous setup after initial page load
+ * Fetches available models and sets up occupation stats
+ * @async
+ */
 async function laterSetup(){
     setupSetups();
 
@@ -68,7 +102,11 @@ async function laterSetup(){
     }, 2000);
 }
 
-
+/**
+ * Creates a point entity at the specified world position
+ * @param {import('cesium').Cartesian3} worldPosition - Position in 3D world coordinates
+ * @returns {import('cesium').Entity} The created point entity
+ */
 function createPoint(worldPosition) {
     const point = viewer.entities.add({
         position: worldPosition,
@@ -76,6 +114,15 @@ function createPoint(worldPosition) {
     return point;
 }
 
+/**
+ * Draws a shape (line or polygon) based on current drawing mode
+ * @param {import('cesium').PolygonHierarchy|import('cesium').Cartesian3[]} positionData 
+ * - For polygon mode: Cesium.PolygonHierarchy object
+ * - For line mode: Array of Cesium.Cartesian3 positions
+ * @returns {import('cesium').Entity} The created shape entity
+ * @throws {Error} If drawingMode is not 'line' or 'polygon'
+ * @note Line mode is currently unused but kept for future features
+ */
 function drawShape(positionData) {
     let shape;
 
@@ -104,10 +151,19 @@ function drawShape(positionData) {
  return shape;
 }
 
+/** @type {import('cesium').Cartesian3[]} Array of points for the currently active shape */
 let activeShapePoints = [];
+
+/** @type {import('cesium').Entity|null} Currently active shape being drawn */
 let activeShape;
+
+/** @type {import('cesium').Entity|null} Floating point that follows mouse during drawing */
 let floatingPoint;
 
+/**
+ * Sets up Cesium screen space event handlers for drawing and editing
+ * Configures mouse click, move, and double-click interactions
+ */
 function setupInputActions() {
     viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
         Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK,
@@ -234,6 +290,10 @@ function setupInputActions() {
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
+    /**
+     * Handles click events for drawing based on current mode
+     * @param {import('cesium').Cartesian3} earthPosition - Click position in world coordinates
+     */
     function handleClickToDraw(earthPosition) { // Split into a function so the code can be tested
         
         if (!Cesium.defined(earthPosition)) return;
@@ -294,6 +354,10 @@ function setupInputActions() {
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 }
 
+/**
+ * Opens the generation UI for interacting with a Cesium Man entity
+ * @param {Object} cesiumManPrimitive - The Cesium Man primitive to interact with
+ */
 function openCesiumManUI(cesiumManPrimitive) {
     let genUI = document.getElementById('generationUI');
 
@@ -312,10 +376,11 @@ function openCesiumManUI(cesiumManPrimitive) {
     }
 }
 
-
-
-// Terminate the current shape drawing
-
+/**
+ * Finalizes the current shape being drawn
+ * Creates a permanent entity, validates bounds, and cleans up drawing state
+ * @param {boolean} [saveToAPI=true] - Whether to save the polygon to the backend
+ */
 function terminateShape() {
     if (activeShapePoints.length === 0) return;
     
@@ -384,7 +449,11 @@ function terminateShape() {
     }
 }
 
-// Update occupation statistics by calling backend
+/**
+ * Calculates and updates occupation statistics by calling backend API
+ * Shows area breakdown by building type and updates pie chart
+ * @async
+ */
 async function updateOccupationStats() {
     try {
         // Find the Spoordok polygon
@@ -479,6 +548,11 @@ async function updateOccupationStats() {
     }
 }
 
+/**
+ * Draws a pie chart visualizing area breakdown by building type
+ * @param {Object} typeBreakdown - Object mapping type IDs to area/percentage data
+ * @param {Object.<string, {area: number, percentage: number}>} typeBreakdown
+ */
 function drawPieChart(typeBreakdown) {
     const canvas = document.getElementById('pieChart');
     if (!canvas) return;
@@ -519,6 +593,11 @@ function drawPieChart(typeBreakdown) {
     });
 }
 
+/**
+ * Displays a textual breakdown of area by building type
+ * @param {Object} typeBreakdown - Object mapping type IDs to area/percentage data
+ * @param {Object.<string, {area: number, percentage: number}>} typeBreakdown
+ */
 function displayTypeBreakdown(typeBreakdown) {
     const container = document.getElementById('typeBreakdown');
     if (!container) return;
@@ -543,6 +622,11 @@ function displayTypeBreakdown(typeBreakdown) {
     });
 }
 
+/**
+ * Gets the color associated with a building type
+ * @param {string} typeId - The building type identifier
+ * @returns {string} CSS color string (rgba format)
+ */
 function getTypeColor(typeId) {
     // Special case for unoccupied area
     if (typeId === 'unoccupied') {
@@ -567,25 +651,22 @@ function getTypeColor(typeId) {
 // Call updateOccupationStats when polygons change
 window.updateOccupationStats = updateOccupationStats;
 
-
-    window.handleClickToDraw = handleClickToDraw;
-    window.terminateShape = terminateShape;
-    window.drawShape = drawShape;
-    window.createPoint = createPoint;
-    window.setupInputActions = setupInputActions;
-    window.laterSetup = laterSetup;
-    window.setupSetups = setupSetups;
-    window.subscribeToStateChangesSetup = subscribeToStateChangesSetup;
-    window.updateOccupationStats = updateOccupationStats;
-    window.drawPieChart = drawPieChart;
-    window.displayTypeBreakdown = displayTypeBreakdown;
-    window.getTypeColor = getTypeColor;
+// Expose functions globally for testing and debugging
+window.handleClickToDraw = handleClickToDraw;
+window.terminateShape = terminateShape;
+window.drawShape = drawShape;
+window.createPoint = createPoint;
+window.setupInputActions = setupInputActions;
+window.laterSetup = laterSetup;
+window.setupSetups = setupSetups;
+window.subscribeToStateChangesSetup = subscribeToStateChangesSetup;
+window.updateOccupationStats = updateOccupationStats;
+window.drawPieChart = drawPieChart;
+window.displayTypeBreakdown = displayTypeBreakdown;
+window.getTypeColor = getTypeColor;
 
 if (typeof global !== 'undefined') {
-
-    //global._getPositionsFromHierarchy = _getPositionsFromHierarchy;
-    
-    // Expose variables with getters/setters
+    // Expose variables with getters/setters for testing
     Object.defineProperty(global, 'drawingMode', {
       get: () => drawingMode,
       set: (val) => { drawingMode = val; }
