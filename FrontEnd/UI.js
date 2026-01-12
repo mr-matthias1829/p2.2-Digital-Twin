@@ -464,6 +464,10 @@ async function showPolygonDataInDataMenu(entity) {
                 const peopleFormatted = polygonDataCalculations.formatNumber(data.people, 0);
                 const measurementFormatted = polygonDataCalculations.formatNumber(data.measurement, 2);
                 const measurementUnit = data.calculationBase === 'area' ? 'm²' : 'm³';
+                
+                // Determine label and icon for people/parking spaces
+                const isParkingType = buildType === 'parking space' || buildType === 'covered parking space';
+                const peopleLabel = isParkingType ? '🅿️ Parking Spaces:' : '👥 People:';
 
                 resultsContainer.innerHTML = `
                     <h4 style="margin: 0 0 12px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
@@ -477,7 +481,7 @@ async function showPolygonDataInDataMenu(entity) {
                             <span style="color: #fff; font-size: 12px; font-weight: 600;">${incomeFormatted}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(100,150,255,0.1); border-radius: 6px; border-left: 3px solid #64a0ff;">
-                            <span style="color: #b3d4ff; font-size: 12px;">👥 People:</span>
+                            <span style="color: #b3d4ff; font-size: 12px;">${peopleLabel}</span>
                             <span style="color: #fff; font-size: 12px; font-weight: 600;">${peopleFormatted}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(255,200,100,0.1); border-radius: 6px; border-left: 3px solid #ffa726;">
