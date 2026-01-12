@@ -50,8 +50,8 @@ public class DataLoader implements CommandLineRunner {
             buildingTypeService.saveBuildingType(new BuildingType("nature", "#008000", 150.0, 0.0, 0.0, 10.0, "area"));
             buildingTypeService.saveBuildingType(new BuildingType("water", "#1E88E5", 300.0, 0.0, 0.0, 7.0, "area"));
             buildingTypeService.saveBuildingType(new BuildingType("road", "#A9A9A9", 100.0, 5.0, 0.0, 8.0, "area"));
-            buildingTypeService.saveBuildingType(new BuildingType("parking space", "#78909C", 100.0, 10.0, 0.0, 6.0, "area"));
-            buildingTypeService.saveBuildingType(new BuildingType("covered parking space", "#8D6E63", 1500.0, 15.0, 0.0, 10.0, "area"));
+            buildingTypeService.saveBuildingType(new BuildingType("parking space", "#78909C", 100.0, 10.0, 0.08, 6.0, "area"));
+            buildingTypeService.saveBuildingType(new BuildingType("covered parking space", "#8D6E63", 1500.0, 15.0, 0.08, 10.0, "volume"));
             
             // Residential buildings (use VOLUME)
             buildingTypeService.saveBuildingType(new BuildingType("detached house", "#E53935", 500.0, 12.0, 0.005, 4.0, "volume"));
