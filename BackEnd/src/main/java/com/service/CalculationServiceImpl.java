@@ -268,6 +268,18 @@ public class CalculationServiceImpl implements CalculationService {
                 }
 
                 people = buildingType.getPeople() * measurement;
+                
+                // Special calculation for parking spaces: multiply by number of floors
+                // Each 5 meters = 1 floor. At 5m: 1x, at 10m: 2x, at 20m: 4x, etc.
+                if ("parking space".equals(type) || "covered parking space".equals(type)) {
+                    final double FLOOR_HEIGHT = 5.0;
+                    if (typeVolumes.containsKey(type) && area > 0.0) {
+                        double volume = typeVolumes.get(type);
+                        double height = volume / area;
+                        double numberOfFloors = Math.floor(height / FLOOR_HEIGHT);
+                        people = people * numberOfFloors;
+                    }
+                }
             }
 
             typeBreakdown.put(type, new OccupationResponse.TypeOccupation(area, typePercentage, people));

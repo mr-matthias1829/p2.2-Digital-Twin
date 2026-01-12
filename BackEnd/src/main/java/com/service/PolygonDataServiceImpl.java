@@ -69,14 +69,15 @@ public class PolygonDataServiceImpl implements PolygonDataService {
         Double people = buildingType.getPeople() * measurement;
         Double livability = buildingType.getLivability();  // Livability is a fixed score, not multiplied
         
-        // Special calculation for covered parking: multiply by number of floors
-        // Each 5 meters = 1 floor. At 5m: 1x, at 10m: 2x, etc.
-        if ("covered parking space".equals(buildingTypeId)) {
+        // Special calculation for parking spaces: multiply by number of floors
+        // Each 5 meters = 1 floor. At 5m: 1x, at 10m: 2x, at 20m: 4x, etc.
+        // This applies to both covered and non-covered parking spaces
+        if ("covered parking space".equals(buildingTypeId) || "parking space".equals(buildingTypeId)) {
             final double FLOOR_HEIGHT = 5.0;
             if (volume != null && volume > 0.0 && area != null && area > 0.0) {
                 double height = volume / area;
                 double numberOfFloors = Math.floor(height / FLOOR_HEIGHT);
-                // Multiply by number of floors (at 5m = 1x, at 10m = 2x)
+                // Multiply by number of floors (at 5m = 1x, at 10m = 2x, at 20m = 4x)
                 people = people * numberOfFloors;
             }
         }
