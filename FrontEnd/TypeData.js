@@ -34,6 +34,7 @@ const buildTypes = {
         income: 0, // % of cost as financial income per unit
         people: 0, // Amount of home owners or workers per unit
         livability: 5, // Score for livability on a scale of 1 to 10
+        default: "default", // Test property for fallback functionality
     },
     // All other types are loaded from the database via API
     // See loadBuildingTypesFromAPI() function below
