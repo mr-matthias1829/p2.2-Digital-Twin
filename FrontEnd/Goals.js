@@ -229,8 +229,8 @@ function displayGoals(goals) {
         value.className = 'goal-value';
         
         // Format display based on goal type
-        if (goal.id === 'people_min' || goal.id === 'residents_min' || goal.id === 'workers_min') {
-            // People goals: Show as numbers (e.g., "2500 / 3000")
+        if (goal.id === 'people_min' || goal.id === 'residents_min' || goal.id === 'workers_min' || goal.id === 'parking_min') {
+            // People/parking goals: Show as numbers (e.g., "2500 / 3000" or "4200 / 4500")
             value.textContent = `(${Math.round(goal.currentValue)} / ${Math.round(goal.targetValue)})`;
         } else {
             // Percentage goals: Show as % (e.g., "25.3%")

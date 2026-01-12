@@ -47,6 +47,7 @@ public class Goal {
     // - "commercial_percentage": % of commercial buildings
     // - "residents_count": Number of residents
     // - "workers_count": Number of workers
+    // - "parking_count": Total parking spaces (covered + non-covered)
     // - "people_count": Total people (legacy)
     @Column
     private String targetType;

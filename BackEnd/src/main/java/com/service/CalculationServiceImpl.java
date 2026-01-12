@@ -444,6 +444,17 @@ public class CalculationServiceImpl implements CalculationService {
                         currentValue = typeBreakdown.get("commercial building").getPeople();
                     }
                     
+                } else if ("parking_count".equals(targetType)) {
+                    // GOAL TYPE: Parking Count
+                    // Measures: Total number of parking spaces (covered + non-covered)
+                    // Example: Goal = 4500 parking spaces minimum
+                    if (typeBreakdown.containsKey("parking space")) {
+                        currentValue += typeBreakdown.get("parking space").getPeople();
+                    }
+                    if (typeBreakdown.containsKey("covered parking space")) {
+                        currentValue += typeBreakdown.get("covered parking space").getPeople();
+                    }
+                    
                 } else if ("people_count".equals(targetType)) {
                     // GOAL TYPE: Total People (legacy)
                     // Measures: All people (residents + workers)
