@@ -1,4 +1,4 @@
-﻿package com.model;
+package com.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
