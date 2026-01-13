@@ -2,7 +2,7 @@ class ObjectEditor {
     constructor(viewer) {
         this.viewer = viewer;
         this.editMode = false;
-        this.editingEntity = null;
+        this.editingEntity = null; // polygon or line
         this.editingModel = null;
         this.vertexEntities = [];
         this.originalMaterial = null;
@@ -13,7 +13,7 @@ class ObjectEditor {
         this.setupKeyboardControls();
     }
 
-    // Helper: mark certain entities as protected (not editable/moveable)
+    // Helper: mark certain entities as protected
     isProtectedEntity(entity) {
         if (!entity) return false;
         try {
@@ -23,118 +23,143 @@ class ObjectEditor {
         return false;
     }
 
-    // === POLYGON EDITING ===
-
+    // === POLYGON & LINE EDITING ===
     startEditingPolygon(entity) {
         if (!entity.polygon) return console.log("No polygon found");
+        // Only allow editing when in edit mode
+        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit")  return; 
+        if (this.editMode) this.stopEditing();
+
+        this._startEditingGeneric(entity, 'polygon');
+    }
+
+    startEditingLine(entity) {
+        if (!entity.polyline) return console.log("No line found");
+
         // Only allow editing when in edit mode
         if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") {
             return;
         }
+
         if (this.editMode) this.stopEditing();
 
         this.editMode = true;
         this.editingEntity = entity;
         this._emitEditModeChanged();
 
-        // Protected polygons: show info only, no vertex editing
+        const positions = entity.polyline.positions.getValue
+            ? entity.polyline.positions.getValue(Cesium.JulianDate.now())
+            : entity.polyline.positions;
+        if (!positions.length) {
+            console.error("No line positions found!");
+            return this.stopEditing();
+        }
+
+        // 🔥 FIX: maak polyline ALTIJD dynamisch
+        const editor = this;
+        this._lineCallback = new Cesium.CallbackProperty(() => {
+            return editor.vertexEntities.map(v =>
+                v.position.getValue
+                    ? v.position.getValue(Cesium.JulianDate.now())
+                    : v.position
+            );
+        }, false);
+
+        entity.polyline.positions = this._lineCallback;
+
+        positions.forEach((position, index) => {
+            this.vertexEntities.push(this.viewer.entities.add({
+                point: {
+                    pixelSize: 18,
+                    color: Cesium.Color.RED,
+                    outlineColor: Cesium.Color.WHITE,
+                    outlineWidth: 2,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                },
+                position,
+                properties: { isVertex: true, vertexIndex: index }
+            }));
+        });
+
+        console.log("📏 LINE EDIT MODE");
+        if (window.showPolygonInfo) window.showPolygonInfo(entity);
+    }
+
+
+    _startEditingGeneric(entity, type) {
+        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") return;
+        if (this.editMode) this.stopEditing();
+
+        this.editMode = true;
+        this.editingEntity = entity;
+        this._emitEditModeChanged();
+
+        // Protected entities: show info only
         if (this.isProtectedEntity(entity)) {
-            console.log("Protected polygon — info only (no edit).");
+            console.log("Protected entity — info only (no edit).");
             if (window.showPolygonInfo) window.showPolygonInfo(entity);
             return;
         }
 
         // Create vertex markers
-        const positions = this.getPositions(entity.polygon.hierarchy);
-        if (!positions.length) {
-            console.error("No positions found!");
-            return this.stopEditing();
-        }
+        let positions = [];
+        if (type === 'polygon') positions = this.getPositions(entity.polygon.hierarchy);
+        if (type === 'polyline') positions = this.getPositions(entity.polyline.positions);
+        if (!positions.length) return console.error("No positions found!");
 
+        this.vertexEntities = [];
         positions.forEach((position, index) => {
-        // Add small height offset to position vertices above polygon
-        const cartographic = Cesium.Cartographic.fromCartesian(position);
-        const elevatedPosition = Cesium.Cartesian3.fromRadians(
-            cartographic.longitude,
-            cartographic.latitude,
-            cartographic.height + 0.2
-        );
-        
-        this.vertexEntities.push(this.viewer.entities.add({
-            point: {
-                pixelSize: 20,
-                color: Cesium.Color.RED,
-                outlineColor: Cesium.Color.WHITE,
-                outlineWidth: 3,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
-            
-            },
-            position: elevatedPosition,
-            properties: { isVertex: true, vertexIndex: index }
+            const cartographic = Cesium.Cartographic.fromCartesian(position);
+            const elevatedPosition = Cesium.Cartesian3.fromRadians(
+                cartographic.longitude,
+                cartographic.latitude,
+                cartographic.height + 0.2
+            );
+
+            this.vertexEntities.push(this.viewer.entities.add({
+                point: {
+                    pixelSize: 20,
+                    color: Cesium.Color.RED,
+                    outlineColor: Cesium.Color.WHITE,
+                    outlineWidth: 3,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                },
+                position: elevatedPosition,
+                properties: { isVertex: true, vertexIndex: index }
             }));
         });
-        
-        console.log("📐 POLYGON EDIT MODE");
+
+        if (type === 'polygon') console.log("📐 POLYGON EDIT MODE");
+        if (type === 'polyline') console.log("📏 LINE EDIT MODE");
+
         if (window.showPolygonInfo) window.showPolygonInfo(entity);
     }
 
-    rotatePolygon(degrees) {
-        if (!this.editingEntity?.polygon) return;
-        const positions = this.vertexEntities.map(v => 
-            v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
-        );
-        if (!positions.length) return;
-        
-        const center = positions.reduce((sum, pos) => 
-            Cesium.Cartesian3.add(sum, pos, sum), new Cesium.Cartesian3()
-        );
-        Cesium.Cartesian3.divideByScalar(center, positions.length, center);
-        
-        const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
-        const rotation = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(degrees));
-        const inverseTransform = Cesium.Matrix4.inverse(transform, new Cesium.Matrix4());
-        
-        const newPositions = positions.map(pos => {
-            const localPos = Cesium.Matrix4.multiplyByPoint(inverseTransform, pos, new Cesium.Cartesian3());
-            const rotatedLocal = Cesium.Matrix3.multiplyByVector(rotation, localPos, new Cesium.Cartesian3());
-            return Cesium.Matrix4.multiplyByPoint(transform, rotatedLocal, new Cesium.Cartesian3());
-        });
-        
-        this.vertexEntities.forEach((v, i) => v.position = newPositions[i]);
-        this.updatePolygonFromVertices();
-        console.log(`↻ Rotated ${degrees}°`);
+    updatePolygonFromVertices() {
+        if (!this.editingEntity || !this.vertexEntities.length || !this.editingEntity.polygon) return;
+        const positions = this.vertexEntities.map(v => v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position);
+        this.editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(positions);
+
+        if (typeof boundsChecker !== 'undefined') boundsChecker.validateAndMarkPolygon(this.editingEntity, this.viewer);
+        if (typeof updateGreenRoofVisualization === 'function') updateGreenRoofVisualization(this.editingEntity);
+        if (window.showPolygonInfo) window.showPolygonInfo(this.editingEntity);
     }
 
-    updatePolygonFromVertices() {
-        if (!this.editingEntity || !this.vertexEntities.length) return;
-        const positions = this.vertexEntities.map(v => 
-            v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
-        );
-        this.editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(positions);
-        
-        // Check bounds and mark if out of bounds
-        if (typeof boundsChecker !== 'undefined') {
-            boundsChecker.validateAndMarkPolygon(this.editingEntity, this.viewer);
-        }
-        
-        // Update green roof overlay if it exists
-        if (typeof updateGreenRoofVisualization === 'function') {
-            updateGreenRoofVisualization(this.editingEntity);
-        }
-        
-        if (window.showPolygonInfo) {
-            try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
-        }
+    updateLineFromVertices() {
+    if (!this.editingEntity || !this.editingEntity.polyline) return;
+
+    if (window.showPolygonInfo) {
+        try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
+    }
     }
 
     addVertexBetween(index1, index2) {
         if (!this.editMode || !this.vertexEntities.length) return;
-        const pos1 = this.vertexEntities[index1].position;
-        const pos2 = this.vertexEntities[index2].position;
-        const cart1 = pos1.getValue ? pos1.getValue(Cesium.JulianDate.now()) : pos1;
-        const cart2 = pos2.getValue ? pos2.getValue(Cesium.JulianDate.now()) : pos2;
-        const midpoint = Cesium.Cartesian3.lerp(cart1, cart2, 0.5, new Cesium.Cartesian3());
-        
+
+        const pos1 = this.vertexEntities[index1].position.getValue ? this.vertexEntities[index1].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[index1].position;
+        const pos2 = this.vertexEntities[index2].position.getValue ? this.vertexEntities[index2].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[index2].position;
+        const midpoint = Cesium.Cartesian3.lerp(pos1, pos2, 0.5, new Cesium.Cartesian3());
+
         this.vertexEntities.splice(index2, 0, this.viewer.entities.add({
             position: midpoint,
             point: {
@@ -146,134 +171,101 @@ class ObjectEditor {
             },
             properties: { isVertex: true, vertexIndex: index2 }
         }));
-        
+
         this.vertexEntities.forEach((v, i) => v.properties.vertexIndex = i);
-        this.updatePolygonFromVertices();
+
+        if (this.editingEntity.polygon) this.updatePolygonFromVertices();
+        if (this.editingEntity?.polyline) this.updateLineFromVertices();
         console.log(`+ Added vertex between ${index1} and ${index2}`);
     }
 
     deleteVertex(vertexEntity) {
-        if (!this.editMode || this.vertexEntities.length <= 3) {
-            return console.log("⚠ Cannot delete - minimum 3 vertices required");
+        if (!this.editMode) return;
+
+        const minVertices = this.editingEntity?.polyline ? 2 : 3;
+        if (!this.editMode || this.vertexEntities.length <= minVertices) {
+            return console.log(`⚠ Cannot delete - minimum ${minVertices} vertices required`);
         }
-        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
-            return console.log("Protected polygon - cannot delete vertex");
-        }
+        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) return console.log("Protected entity - cannot delete vertex");
+
         const index = this.vertexEntities.indexOf(vertexEntity);
         if (index === -1) return;
         this.viewer.entities.remove(vertexEntity);
         this.vertexEntities.splice(index, 1);
         this.vertexEntities.forEach((v, i) => v.properties.vertexIndex = i);
-        this.updatePolygonFromVertices();
+
+        if (this.editingEntity.polygon) this.updatePolygonFromVertices();
+        if (this.editingEntity?.polyline) this.updateLineFromVertices();
         console.log(`✗ Deleted vertex ${index}`);
     }
 
-    getPositions(hierarchy) {
-        if (hierarchy instanceof Cesium.CallbackProperty) {
-            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
-        }
-        if (typeof hierarchy.getValue === 'function') {
-            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
-        }
-        if (hierarchy instanceof Cesium.PolygonHierarchy) {
-            return hierarchy.positions;
-        }
-        return hierarchy.positions || (Array.isArray(hierarchy) ? hierarchy : []);
+    getPositions(hierarchyOrPositions) {
+        if (!hierarchyOrPositions) return [];
+        if (typeof hierarchyOrPositions.getValue === 'function') hierarchyOrPositions = hierarchyOrPositions.getValue(Cesium.JulianDate.now());
+        if (hierarchyOrPositions instanceof Cesium.PolygonHierarchy) return hierarchyOrPositions.positions;
+        return hierarchyOrPositions.positions || (Array.isArray(hierarchyOrPositions) ? hierarchyOrPositions : []);
     }
 
-    // === MODEL EDITING ===
-
-    startEditingModel(model) {
-        // Only allow editing when in edit mode
-        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") {
-            return;
-        }
-        if (this.editMode) this.stopEditing();
-        
-        this.editMode = true;
-        this.editingModel = model;
-        this._emitEditModeChanged();
-        
-        // Highlight model with yellow
-        model._originalColor = model.color ? Cesium.Color.clone(model.color) : null;
-        model._originalSilhouette = model.silhouetteColor ? Cesium.Color.clone(model.silhouetteColor) : null;
-        model._originalSilhouetteSize = model.silhouetteSize || 0;
-        
-        model.color = Cesium.Color.YELLOW.withAlpha(0.6);
-        model.silhouetteColor = Cesium.Color.YELLOW;
-        model.silhouetteSize = 3.0;
-        
-        console.log("🎯 MODEL EDIT MODE");
-        console.log("  • Drag to move");
-        console.log("  • Arrow Left/Right to rotate (±3°)");
-        console.log("  • Arrow Up/Down to scale (±0.1)");
-        console.log("  • R key to rotate 90°");
-        console.log("  • Right-click or ESC to finish");
+    getLinePositions(positions) {
+    if (!positions) return [];
+    if (typeof positions.getValue === 'function') {
+        return positions.getValue(Cesium.JulianDate.now());
+    }
+    return Array.isArray(positions) ? positions : [];
     }
 
-    rotateModel(degrees) {
-        if (!this.editingModel) return;
-        updateModelRotation(this.editingModel, this.editingModel.modelRotation + degrees);
-        console.log(`↻ Model rotated ${degrees > 0 ? '+' : ''}${degrees}°`);
-    }
-
-    scaleModel(newScale) {
-        if (!this.editingModel) return;
-        updateModelScale(this.editingModel, newScale);
-        console.log(`↔ Model scaled to ${newScale.toFixed(2)}`);
-    }
-
-    // === UNIFIED STOP EDITING ===
-
+    // === STOP EDITING ===
     stopEditing(skipAutoSave = false) {
         if (!this.editMode) return;
         this.editMode = false;
         this._emitEditModeChanged();
-        
-        // Clean up polygon editing
+
         if (this.editingEntity) {
-            // Clean up vertex markers
-            this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
-            this.vertexEntities = [];
-            
-            // Auto-save polygon changes to database (unless explicitly skipped, e.g., during deletion)
-            const entityToSave = this.editingEntity;
-            if (!skipAutoSave && entityToSave.polygon && typeof polygonAPI !== 'undefined' && entityToSave.polygonId) {
-                polygonAPI.savePolygon(entityToSave)
-                    .then(() => console.log('✓ Polygon changes saved to database'))
-                    .catch(err => console.error('Failed to save polygon changes:', err));
-            }
-            
-            this.editingEntity = null;
-        }
-        
-        // Clean up model editing
+
+    // 🔒 FIX: behoud line geometry bij stoppen met edit
+    if (this.editingEntity.polyline && this.vertexEntities.length > 0) {
+        const finalPositions = this.vertexEntities.map(v =>
+            v.position.getValue
+                ? v.position.getValue(Cesium.JulianDate.now())
+                : v.position
+        );
+
+        // Zet polyline terug naar statische posities
+        this.editingEntity.polyline.positions = finalPositions;
+    }
+
+    // Verwijder vertex markers
+    this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
+    this.vertexEntities = [];
+
+    // Alleen polygonen autosaven
+    if (!skipAutoSave &&
+        typeof polygonAPI !== 'undefined' &&
+        this.editingEntity.polygon &&
+        this.editingEntity.polygonId
+    ) {
+        polygonAPI.savePolygon(this.editingEntity)
+            .then(() => console.log('✓ Polygon saved'))
+            .catch(err => console.error(err));
+    }
+
+    this.editingEntity = null;
+}
+
         if (this.editingModel) {
-            // Restore original appearance
-            if (this.editingModel._originalColor !== null) {
-                this.editingModel.color = this.editingModel._originalColor;
-            } else {
-                this.editingModel.color = undefined;
-            }
-            
-            if (this.editingModel._originalSilhouette !== null) {
-                this.editingModel.silhouetteColor = this.editingModel._originalSilhouette;
-            } else {
-                this.editingModel.silhouetteColor = undefined;
-            }
-            
+            if (this.editingModel._originalColor !== null) this.editingModel.color = this.editingModel._originalColor;
+            if (this.editingModel._originalSilhouette !== null) this.editingModel.silhouetteColor = this.editingModel._originalSilhouette;
             this.editingModel.silhouetteSize = this.editingModel._originalSilhouetteSize;
-            
-            console.log(`✓ Model editing finished`);
             this.editingModel = null;
         }
-        
+
+        this._lineCallback = null;
         this.draggedVertex = null;
         this.moveStart = null;
         this.viewer.scene.screenSpaceCameraController.enableRotate = true;
         this.viewer.scene.screenSpaceCameraController.enableTranslate = true;
-        console.log("EDIT MODE OFF");
         if (window.clearPolygonInfo) window.clearPolygonInfo();
+        console.log("EDIT MODE OFF");
     }
 
     // === KEYBOARD CONTROLS ===
@@ -316,7 +308,9 @@ class ObjectEditor {
             // POLYGON CONTROLS
             if (this.editingEntity) {
                 const isProtected = this.isProtectedEntity(this.editingEntity);
-                const h = this.editingEntity.polygon.extrudedHeight || 0;
+                if (this.editingEntity.polygon) {
+                    const h = this.editingEntity.polygon.extrudedHeight || 0;
+                }
                 
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
@@ -488,7 +482,11 @@ class ObjectEditor {
             const newPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
             if (Cesium.defined(newPos)) {
                 this.draggedVertex.position = newPos;
-                this.updatePolygonFromVertices();
+                if (this.editingEntity?.polygon) {
+                    this.updatePolygonFromVertices();
+                } else if (this.editingEntity?.polyline) {
+                    this.updateLineFromVertices();
+                }
             }
         } else if (this.editMode && this.moveStart && !this.editingModel) {
             if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) return;
@@ -514,94 +512,85 @@ class ObjectEditor {
     }
     
     handleDoubleClick(event) {
-        // PRIORITY 1: If already in edit mode, handle vertex addition
-        if (this.editMode && this.editingEntity) {
-            if (this.isProtectedEntity(this.editingEntity)) return false;
-            
-            const picked = this.viewer.scene.pick(event.position);
-            
-            // If clicked on a vertex, add new vertex after it
-            if (Cesium.defined(picked) && picked.id?.properties?.isVertex) {
-                const idx = picked.id.properties.vertexIndex;
-                this.addVertexBetween(idx, (idx + 1) % this.vertexEntities.length);
-                return true;
-            }
-            
-            // Resolve green roof overlay to parent entity
-            let targetEntity = picked.id;
-            if (picked.id?.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
-                targetEntity = picked.id._parentEntity;
-            }
-            
-            // If clicked on the polygon edge, find closest edge
-            if (Cesium.defined(picked) && targetEntity === this.editingEntity) {
-                const ray = this.viewer.camera.getPickRay(event.position);
-                const clickedPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
-                
-                if (Cesium.defined(clickedPos)) {
-                    let closestEdge = { index: 0, distance: Infinity };
-                    
-                    for (let i = 0; i < this.vertexEntities.length; i++) {
-                        const nextIdx = (i + 1) % this.vertexEntities.length;
-                        const v1 = this.vertexEntities[i].position;
-                        const v2 = this.vertexEntities[nextIdx].position;
-                        
-                        const pos1 = v1.getValue ? v1.getValue(Cesium.JulianDate.now()) : v1;
-                        const pos2 = v2.getValue ? v2.getValue(Cesium.JulianDate.now()) : v2;
-                        
-                        const edge = Cesium.Cartesian3.subtract(pos2, pos1, new Cesium.Cartesian3());
-                        const edgeLen = Cesium.Cartesian3.magnitude(edge);
-                        const toClick = Cesium.Cartesian3.subtract(clickedPos, pos1, new Cesium.Cartesian3());
-                        
-                        let t = Cesium.Cartesian3.dot(toClick, edge) / (edgeLen * edgeLen);
-                        t = Math.max(0, Math.min(1, t));
-                        
-                        const closestPoint = Cesium.Cartesian3.add(
-                            pos1,
-                            Cesium.Cartesian3.multiplyByScalar(edge, t, new Cesium.Cartesian3()),
-                            new Cesium.Cartesian3()
-                        );
-                        
-                        const distance = Cesium.Cartesian3.distance(clickedPos, closestPoint);
-                        
-                        if (distance < closestEdge.distance) {
-                            closestEdge = { index: i, distance };
-                        }
-                    }
-                    
-                    if (closestEdge.distance < 50) {
-                        this.addVertexBetween(closestEdge.index, (closestEdge.index + 1) % this.vertexEntities.length);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-        
-        // PRIORITY 2: Not in edit mode, start editing
-        const picked = this.viewer.scene.pick(event.position);
-        
-        // Check for model primitive
-        if (Cesium.defined(picked) && Cesium.defined(picked.primitive)) {
-            if (picked.primitive instanceof Cesium.Model || 
-                (picked.primitive.modelMatrix && !picked.id)) {
-                this.startEditingModel(picked.primitive);
-                return true;
-            }
-        }
-        
-        // Check for polygon entity
-        if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
-            // If clicked on green roof overlay, use parent entity instead
-            let targetEntity = picked.id;
-            if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
-                targetEntity = picked.id._parentEntity;
-            }
-            this.startEditingPolygon(targetEntity);
+    const picked = this.viewer.scene.pick(event.position);
+    if (!Cesium.defined(picked) || !picked.id) return false;
+
+    // PRIORITY 1: Polygon editing
+    if (this.editMode && this.editingEntity) {
+        if (this.isProtectedEntity(this.editingEntity)) return false;
+
+        // Clicked on vertex → add vertex
+        if (picked.id.properties?.isVertex) {
+            const idx = picked.id.properties.vertexIndex;
+            this.addVertexBetween(idx, (idx + 1) % this.vertexEntities.length);
             return true;
         }
-        
+
+        // If clicked on polygon or line edges → add vertex
+        let targetEntity = picked.id;
+        if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
+            targetEntity = picked.id._parentEntity;
+        }
+
+        if (targetEntity === this.editingEntity) {
+            const ray = this.viewer.camera.getPickRay(event.position);
+            const clickedPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+            if (!Cesium.defined(clickedPos)) return false;
+
+            let closestEdge = { index: 0, distance: Infinity };
+            for (let i = 0; i < this.vertexEntities.length; i++) {
+                const nextIdx = (i + 1) % this.vertexEntities.length;
+                const v1 = this.vertexEntities[i].position.getValue ? this.vertexEntities[i].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[i].position;
+                const v2 = this.vertexEntities[nextIdx].position.getValue ? this.vertexEntities[nextIdx].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[nextIdx].position;
+
+                const edge = Cesium.Cartesian3.subtract(v2, v1, new Cesium.Cartesian3());
+                const edgeLen = Cesium.Cartesian3.magnitude(edge);
+                const toClick = Cesium.Cartesian3.subtract(clickedPos, v1, new Cesium.Cartesian3());
+
+                let t = Cesium.Cartesian3.dot(toClick, edge) / (edgeLen * edgeLen);
+                t = Math.max(0, Math.min(1, t));
+
+                const closestPoint = Cesium.Cartesian3.add(
+                    v1,
+                    Cesium.Cartesian3.multiplyByScalar(edge, t, new Cesium.Cartesian3()),
+                    new Cesium.Cartesian3()
+                );
+
+                const distance = Cesium.Cartesian3.distance(clickedPos, closestPoint);
+                if (distance < closestEdge.distance) closestEdge = { index: i, distance };
+            }
+
+            if (closestEdge.distance < 50) {
+                this.addVertexBetween(closestEdge.index, (closestEdge.index + 1) % this.vertexEntities.length);
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    // PRIORITY 2: Not in edit mode → start editing
+    // MODEL
+    if (picked.primitive && (picked.primitive instanceof Cesium.Model || (picked.primitive.modelMatrix && !picked.id))) {
+        this.startEditingModel(picked.primitive);
+        return true;
+    }
+
+    // POLYGON
+    if (picked.id.polygon) {
+        let targetEntity = picked.id;
+        if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) targetEntity = picked.id._parentEntity;
+        this.startEditingPolygon(targetEntity);
+        return true;
+    }
+
+    // LINE
+    if (Cesium.defined(picked) && picked.id?.polyline && !picked.id.properties?.isVertex) {
+        this.startEditingLine(picked.id);
+        return true;
+    }
+
+    return false;
     }
 
     handleRightClick(event) {
@@ -616,52 +605,26 @@ class ObjectEditor {
 
     editingWhat() {
         if (this.editingModel) return "model";
-        if (this.editingEntity) return "polygon";
+        if (this.editingEntity?.polygon) return "polygon";
+        if (this.editingEntity?.polyline) return "line";
         return null;
     }
 
     _emitEditModeChanged() {
         const detail = {
             editMode: !!this.editMode,
-            what: this.editingWhat(),
+            what: this.editingModel ? "model" : (this.editingEntity?.polygon ? "polygon" : (this.editingEntity?.polyline ? "line" : null)),
             object: this.editingModel || this.editingEntity || null,
             timestamp: Date.now()
         };
-
-        // Add polygon-specific info
-        if (this.editingEntity?.polygon) {
-            detail.polygonType = getEntityType(this.editingEntity);
-            detail.setPolygonType = (newType) => {
-                setEntityType(this.editingEntity, getTypeById(newType));
-                if (window.showPolygonInfo) {
-                    try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
-                }
-            };
-        }
-
-        // Add model-specific info
-        if (this.editingModel) {
-            detail.modelType = this.editingModel.buildType || "DEFAULT";
-            detail.setModelType = (newType) => {
-                updateModelType(this.editingModel, getTypeById(newType));
-            };
-        }
-
         try {
             document.dispatchEvent(new CustomEvent('object-editor-editmode-changed', { detail }));
-        } catch (e) {
-            console.warn("Failed to dispatch editmode event:", e);
-        }
-
+        } catch (e) { console.warn("Failed to dispatch editmode event:", e); }
         if (typeof this.onEditModeChanged === 'function') {
             try { this.onEditModeChanged(detail); } catch (e) { console.warn("onEditModeChanged error:", e); }
         }
     }
 }
 
-if (typeof global !== "undefined") {
-  global.ObjectEditor = ObjectEditor;
-}
-if (typeof window !== "undefined") {
-  window.ObjectEditor = ObjectEditor;
-}
+if (typeof global !== "undefined") global.ObjectEditor = ObjectEditor;
+if (typeof window !== "undefined") window.ObjectEditor = ObjectEditor;

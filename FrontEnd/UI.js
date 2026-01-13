@@ -62,7 +62,7 @@ function UIsetup() {
 
 function createStaticUI() {
     const uiContainer = document.getElementById("myUI");
-    uiContainer.appendChild(createDropdown("modeSelect", ["Data", "Polygon", "Model", "Edit", "AI"], "Mode:"));
+    uiContainer.appendChild(createDropdown("modeSelect", ["Data", "Polygon" , "Line", "Model", "Edit", "AI"], "Mode:"));
     onUIStateChange("modeSelect", refreshDynamicUI);
     document.addEventListener('object-editor-editmode-changed', (evt) => {
         console.log("Edit mode changed (event):", evt.detail);
