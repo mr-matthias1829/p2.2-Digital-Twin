@@ -1,6 +1,8 @@
 package com.service;
 
 import com.model.Model;
+import com.repository.ModelRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,35 +14,31 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ModelServiceImpl implements ModelService {
 
     // Tijdelijke opslag in geheugen (later vervangen door database)
-    private final Map<Long, Model> modelStore = new HashMap<>();
-    private final AtomicLong idCounter = new AtomicLong(1);
+    @Autowired
+    private ModelRepository modelRepository;
 
     @Override
     public Model saveModel(Model model) {
-        if (model.getId() == null) {
-            model.setId(idCounter.getAndIncrement());
-        }
-        modelStore.put(model.getId(), model);
-        return model;
+        return modelRepository.save(model);
     }
 
     @Override
     public List<Model> getAllModels() {
-        return new ArrayList<>(modelStore.values());
+        return modelRepository.findAll();
     }
 
     @Override
     public Model getModelById(Long id) {
-        return modelStore.get(id);
+        return modelRepository.findById(id).orElse(null);
     }
 
     @Override
     public void deleteModel(Long id) {
-        modelStore.remove(id);
+        modelRepository.deleteById(id);
     }
 
     @Override
     public void deleteAllModels() {
-        modelStore.clear();
+        modelRepository.deleteAll();
     }
 }
