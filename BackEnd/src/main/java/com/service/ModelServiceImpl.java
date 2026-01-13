@@ -8,10 +8,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Implementation of ModelService.
+ * Currently uses in-memory storage (will be replaced with database later).
+ */
 @Service
 public class ModelServiceImpl implements ModelService {
 
-    // Tijdelijke opslag in geheugen (later vervangen door database)
+    // Temporary in-memory storage (to be replaced with database)
     private final Map<Long, Model> modelStore = new HashMap<>();
     private final AtomicLong idCounter = new AtomicLong(1);
 

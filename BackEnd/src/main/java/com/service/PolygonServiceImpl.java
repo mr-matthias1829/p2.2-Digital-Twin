@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Implementation of PolygonService.
+ * Handles all database operations for polygons and their coordinates.
+ */
 @Service
 public class PolygonServiceImpl implements PolygonService {
 
