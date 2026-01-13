@@ -268,47 +268,86 @@ public class Controller {
     }
 
     // ========== GOAL ENDPOINTS ==========
+    // REST API for managing goals in the database
 
+    /**
+     * GET /api/data/goals-config
+     * 
+     * Retrieve all goals from database.
+     * Frontend calls this to display current goal configuration.
+     */
     @GetMapping("/goals-config")
     public ResponseEntity<List<Goal>> getAllGoals() {
-        List<Goal> goals = goalService.getAllGoals();
-        return ResponseEntity.ok(goals);
+        List<Goal> goals = goalService.getAllGoals();  // Query database
+        return ResponseEntity.ok(goals);  // Return as JSON
     }
 
+    /**
+     * GET /api/data/goals-config/{id}
+     * 
+     * Retrieve a single goal by database ID.
+     * Returns 404 if goal not found.
+     */
     @GetMapping("/goals-config/{id}")
     public ResponseEntity<Goal> getGoalById(@PathVariable Long id) {
-        return goalService.getGoalById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return goalService.getGoalById(id)  // Query database
+                .map(ResponseEntity::ok)  // If found, return 200 OK
+                .orElse(ResponseEntity.notFound().build());  // If not found, return 404
     }
 
+    /**
+     * GET /api/data/goals-config/goalId/{goalId}
+     * 
+     * Retrieve a goal by its custom goalId string (e.g., "nature_min").
+     * Returns 404 if goal not found.
+     */
     @GetMapping("/goals-config/goalId/{goalId}")
     public ResponseEntity<Goal> getGoalByGoalId(@PathVariable String goalId) {
-        return goalService.getGoalByGoalId(goalId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return goalService.getGoalByGoalId(goalId)  // Query database
+                .map(ResponseEntity::ok)  // If found, return 200 OK
+                .orElse(ResponseEntity.notFound().build());  // If not found, return 404
     }
 
+    /**
+     * POST /api/data/goals-config
+     * 
+     * Create a new goal in the database.
+     * Request body should contain goal JSON (without id).
+     * Returns the created goal with assigned ID.
+     */
     @PostMapping("/goals-config")
     public ResponseEntity<Goal> createGoal(@RequestBody Goal goal) {
-        Goal savedGoal = goalService.saveGoal(goal);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedGoal);
+        Goal savedGoal = goalService.saveGoal(goal);  // INSERT into database
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedGoal);  // Return 201 Created
     }
 
+    /**
+     * PUT /api/data/goals-config/{id}
+     * 
+     * Update an existing goal in the database.
+     * Request body should contain complete goal JSON.
+     * Returns 404 if goal doesn't exist.
+     */
     @PutMapping("/goals-config/{id}")
     public ResponseEntity<Goal> updateGoal(@PathVariable Long id, @RequestBody Goal goal) {
-        return goalService.getGoalById(id)
+        return goalService.getGoalById(id)  // Check if goal exists
                 .map(existingGoal -> {
-                    goal.setId(id);
-                    Goal updatedGoal = goalService.saveGoal(goal);
-                    return ResponseEntity.ok(updatedGoal);
+                    goal.setId(id);  // Ensure ID matches URL parameter
+                    Goal updatedGoal = goalService.saveGoal(goal);  // UPDATE in database
+                    return ResponseEntity.ok(updatedGoal);  // Return 200 OK
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());  // Return 404 if not found
     }
 
+    /**
+     * DELETE /api/data/goals-config/{id}
+     * 
+     * Delete a goal from the database.
+     * Returns 204 No Content on success.
+     */
     @DeleteMapping("/goals-config/{id}")
     public ResponseEntity<Void> deleteGoal(@PathVariable Long id) {
-        goalService.deleteGoal(id);
-        return ResponseEntity.noContent().build();
+        goalService.deleteGoal(id);  // DELETE from database
+        return ResponseEntity.noContent().build();  // Return 204 No Content
     }
 }

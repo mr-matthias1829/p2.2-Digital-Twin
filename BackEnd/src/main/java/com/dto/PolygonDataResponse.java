@@ -8,7 +8,7 @@ public class PolygonDataResponse {
     
     private Double cost;           // Total cost in euros
     private Double income;         // Total income in euros
-    private Double people;         // Number of people (residents or workers)
+    private Double people;         // Number of people (residents or workers) or parking spaces (for parking types)
     private Double livability;     // Livability score (1-10)
     private Double measurement;    // The area or volume used in calculation
     private String calculationBase; // "area" or "volume"

@@ -41,6 +41,24 @@ class CalculationServiceImplTest {
     private BuildingType commercialType;
     private BuildingType natureType;
 
+    /**
+     * Testing for the CalculationService:
+     * 1. default expected behavior for area with cartesian (production values)
+     * 2. default expected behavior for area with local (which are used by all tests below)
+     * 3. asking for volume with no height
+     * 4. asking for area with only 2 points
+     * 5. asking for area with no points
+     * 6. default expected behavior for occupation stats using 1 polygon
+     * 7. default expected behavior for a polygon outside spoordok
+     * 8. expected behavior for a polygon with nature on a roof set to true
+     * 9. default expected behavior for occupation stats using 2 polygons
+     * 8. expected behavior when spoordok doesn't exist
+     * 9. testing nature goal
+     * 10. testing population goal
+     * 11. testing commercial goal
+     * 12. testing disabled goal
+     * 13. testing worker goal
+     */
     @BeforeEach
     void setUp() {
         // Setup building types
@@ -130,6 +148,11 @@ class CalculationServiceImplTest {
      /**
       * From the previous test (2nd test) on out, we are going to use the local coordinates instead of real Cartesian-scale
       * This will make testing slightly more bearable
+      *
+      * And while the area output from sending local coords is inaccurate,
+      * at least something is returned which is good enough in the testing cases
+      *
+      * For production, ALWAYS use proper cartesian coords
      */
 
     @Test

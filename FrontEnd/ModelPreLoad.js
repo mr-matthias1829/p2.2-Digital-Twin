@@ -1,20 +1,57 @@
+/**
+ * ModelPreLoad.js - 3D model loading and management system
+ * 
+ * Handles preloading, caching, and spawning of 3D models
+ * Manages model configurations (scale, type) and provides editing utilities
+ * 
+ * @module ModelLoader
+ * @requires Cesium
+ * @requires TypeData.js (via setEntityType)
+ */
+
+/** @type {Object.<string, {model: Cesium.Model, uri: string, scale: number, buildType: string}>} */
 const modelCache = {};
+
+/** @type {string[]} Maintains original loading order of models */
 const modelOrder = [];
+
+/** @type {Object.<string, Promise>} Tracks preload promises to prevent duplicates */
 const preloadPromises = {};
+
+/** @type {Promise|null} Global promise for all model preloading */
 let preloadAllPromise = null;
 
 // Preload models in this method
 // Use ID's to reference them later
 const Folder = "Models";
-async function preloadModels() {
 
+/**
+ * Preloads all application models asynchronously
+ * Models are cached for instant spawning later
+ * 
+ * @async
+ * @function preloadModels
+ * @returns {Promise<void>} Resolves when all models are loaded
+ * 
+ * @example
+ * await preloadModels();
+ * // Now models can be spawned instantly
+ * spawnModel('man', {lon: 5.79, lat: 53.19});
+ * // The method only has to be used once, after which it's preloaded forever until reloaded
+ */
+async function preloadModels() {
     const models = [
+        // Format: [id, file name, {scale, buildtype}]
+        // The id is used later to fetch the model, also known as the key
+        // The file name is used to find the model
+        // Scale and buildtype are properties of the model
         ["man", "Cesium_Man.glb", { scale: 1.0, buildType: "nature" }],
         ["building", "strange_building.glb", { scale: 3, buildType: "detached_house" }],
         ["tree", "tree.glb", { scale: 0.65, buildType: "nature" }],
         ["tree2", "Tree2.glb", { scale: 0.65, buildType: "nature" }],
         ["lamp", "Lamp.glb", { scale: 0.45, buildType: "road" }],
         ["bush", "Bush.glb", { scale: 0.37, buildType: "nature" }]
+        // Some models spawn in oversized. Scale's stated here are set based to roughly get them to a reasonable size
     ];
 
     // Record order exactly as written
@@ -38,8 +75,12 @@ async function preloadModels() {
     return preloadAllPromise;
 }
 
-// This function is like... used in one case
-// Only used for a small bug fix in the code currently
+/**
+ * Returns all model IDs (waits for preloading if needed)
+ * @async
+ * @function getAllModelIDsAsync
+ * @returns {Promise<string[]>} Array of model IDs in loading order
+ */
 async function getAllModelIDsAsync() {
     if (preloadAllPromise) {
         await preloadAllPromise;
@@ -47,14 +88,26 @@ async function getAllModelIDsAsync() {
     return modelOrder.slice();
 }
 
-// Returns all model id's that are already pre-loaded and ready for use
+/**
+ * Returns IDs of already-loaded models
+ * @function getAllModelIDs
+ * @returns {string[]} Array of preloaded model IDs
+ */
 function getAllModelIDs() {
     return modelOrder.filter(key => key in modelCache);
 }
 
-
-// Preload a model with configuration
-// Options is a dictionary to prevent too many arguments (is also optional, but very recommended)
+/**
+ * Preloads a single model with configuration
+ * @async
+ * @function preloadModel
+ * @param {string} key - Unique identifier for the model (also known as the id)
+ * @param {string} uri - GLB/GLTF file name
+ * @param {Object} [options={}] - Model configuration
+ * @param {number} [options.scale=1.0] - Default scale factor
+ * @param {string} [options.buildType="DEFAULT"] - Building type category
+ * @returns {Promise<Cesium.Model>} The loaded model primitive
+ */
 function preloadModel(key, uri, options = {}) {
     if (preloadPromises[key]) return preloadPromises[key];
 
@@ -95,7 +148,21 @@ function preloadModel(key, uri, options = {}) {
     return preloadPromises[key];
 }
 
-// Spawn model from cache
+/**
+ * Spawns a preloaded model at the specified location
+ * @async
+ * @function spawnModel
+ * @param {string} key - Model identifier from preload
+ * @param {Object} position - Geographic position
+ * @param {number} position.lon - Longitude in degrees
+ * @param {number} position.lat - Latitude in degrees
+ * @param {number} [height=0] - Height in meters
+ * @param {number} [rotationDegrees=0] - Rotation in degrees
+ * @param {Object} [overrideOptions={}] - Override cached configuration
+ * @param {number} [overrideOptions.scale] - Override scale
+ * @param {string} [overrideOptions.buildType] - Override building type
+ * @returns {Promise<Cesium.Model|null>} The spawned model or null if failed
+ */
 async function spawnModel(key, position, height = 0, rotationDegrees = 0, overrideOptions = {}) {
     // Ensure the model is preloaded
     await preloadPromises[key];
@@ -149,7 +216,15 @@ async function spawnModel(key, position, height = 0, rotationDegrees = 0, overri
     return clone;
 }
 
-// Update a spawned model's position
+/**
+ * Updates position of an editable model
+ * @function updateModelPosition
+ * @param {Cesium.Model} model - Model primitive with isEditableModel flag
+ * @param {Object} newPosition - New geographic position
+ * @param {number} newPosition.lon - Longitude in degrees
+ * @param {number} newPosition.lat - Latitude in degrees
+ * @param {number} newHeight - New height in meters
+ */
 function updateModelPosition(model, newPosition, newHeight) {
     if (!model.isEditableModel) {
         console.warn("Cannot update position: not an editable model");
@@ -165,7 +240,7 @@ function updateModelPosition(model, newPosition, newHeight) {
         newHeight
     );
     
-    const heading = Cesium.Math.toRadians(model.modelRotation);
+    const heading = Cesium.Math.toDegrees(model.modelRotation);
     const hpr = new Cesium.HeadingPitchRoll(heading, 0, 0);
     const orientation = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
     
@@ -178,7 +253,12 @@ function updateModelPosition(model, newPosition, newHeight) {
     console.log(`Updated position to (${newPosition.lon}, ${newPosition.lat}, ${newHeight})`);
 }
 
-// Update a spawned model's rotation
+/**
+ * Updates rotation of an editable model
+ * @function updateModelRotation
+ * @param {Cesium.Model} model - Model primitive with isEditableModel flag
+ * @param {number} newRotationDegrees - New rotation in degrees
+ */
 function updateModelRotation(model, newRotationDegrees) {
     if (!model.isEditableModel) {
         console.warn("Cannot update rotation: not an editable model");
@@ -206,7 +286,12 @@ function updateModelRotation(model, newRotationDegrees) {
     console.log(`Updated rotation to ${newRotationDegrees}°`);
 }
 
-// Updating model scale
+/**
+ * Updates scale of an editable model
+ * @function updateModelScale
+ * @param {Cesium.Model} model - Model primitive with isEditableModel flag
+ * @param {number} newScale - New scale factor
+ */
 function updateModelScale(model, newScale) {
     if (!model.isEditableModel) {
         console.warn("Cannot update scale: not an editable model");
@@ -234,7 +319,12 @@ function updateModelScale(model, newScale) {
     console.log(`Updated scale to ${newScale}`);
 }
 
-// Helper function to update buildType of a already existing model
+/**
+ * Updates building type of an editable model
+ * @function updateModelType
+ * @param {Cesium.Model} model - Model primitive with isEditableModel flag
+ * @param {string} newType - New building type identifier
+ */
 function updateModelType(model, newType) {
     if (!model.isEditableModel) {
         console.warn("Cannot update type: not an editable model");
@@ -246,6 +336,20 @@ function updateModelType(model, newType) {
     console.log(`Updated buildType to '${newType}'`);
 }
 
+/**
+ * Gets metadata about an editable model
+ * @function getModelInfo
+ * @param {Cesium.Model} model - Model primitive with isEditableModel flag
+ * @returns {Object|null} Model information or null if not editable
+ * @property {string} key - Model identifier
+ * @property {Object} position - Geographic position
+ * @property {number} position.lon - Longitude
+ * @property {number} position.lat - Latitude
+ * @property {number} height - Height in meters
+ * @property {number} rotation - Rotation in degrees
+ * @property {number} scale - Scale factor
+ * @property {string} buildType - Building type category
+ */
 function getModelInfo(model) {
     if (!model.isEditableModel) {
         return null;

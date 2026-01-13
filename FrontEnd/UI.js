@@ -1,8 +1,32 @@
+/**
+ * UI.js
+ * 
+ * Handles UI creation, state management, and dynamic interface updates.
+ * Manages mode selection, building type selection, and connection status.
+ * 
+ * @module UI
+ * @requires TypeData.js (via getTypeProperty, getAllTypeIds, etc.)
+ * @requires ModelPreLoad.js (via getAllModelIDs)
+ * @requires ObjectEditor.js (via Editor)
+ * @requires polygonDataCalculations.js (via polygonDataCalculations)
+ */
+
+/**
+ * Global UI state storage
+ * @type {Object.<string, string>}
+ */
 const UIState = {};
+
+/**
+ * State change listener registry
+ * @type {Object.<string, Function[]>}
+ */
 const stateChangeListeners = {};
 
-
-
+/**
+ * Creates information panels (polygon info, data menu, occupation stats)
+ * @function createInfoPanels
+ */
 function createInfoPanels() {
     const createPanel = (id, attrs) => {
         const el = document.createElement(attrs.tag || 'div');
@@ -32,16 +56,19 @@ function createInfoPanels() {
     });
 }
 
+/**
+ * Toggles visibility of occupation statistics panel
+ * @function toggleOccupation
+ */
 function toggleOccupation() {
     ['occupationInfo', 'occupationToggle'].forEach(id => document.getElementById(id)?.classList.toggle(id === 'occupationInfo' ? 'collapsed' : 'open'));
-
 }
 
-
+/**
+ * Main UI setup function - creates all UI components
+ * @function UIsetup
+ */
 function UIsetup() {
-
-
-
     createInfoPanels();
 
     const uiContainer = Object.assign(document.createElement("div"), {
@@ -50,16 +77,16 @@ function UIsetup() {
     });
     document.body.appendChild(uiContainer);
 
-
     createStaticUI();
-
-
     createConnectionUI();
-
-
     refreshDynamicUI();
 }
 
+/**
+ * Creates static UI elements (mode selector)
+ * This UI is created once and then never again modified
+ * @function createStaticUI
+ */
 function createStaticUI() {
     const uiContainer = document.getElementById("myUI");
     uiContainer.appendChild(createDropdown("modeSelect", ["Data", "Polygon", "Model", "Edit", "AI"], "Mode:"));
@@ -73,6 +100,16 @@ function createStaticUI() {
     // Note: try to not add cases that also activate other cases or activate on their own
 }
 
+/**
+ * Refreshes dynamic UI based on current state
+ * 
+ * To 'refresh' this UI container, we need to clear what's already in it
+ * Thus we straight up delete the dynamic container and then rebuild it
+ * Of course, we use statements to check what actually should go into the container on rebuild
+ * This is effectively as close as to a refresh we can get
+ * 
+ * @function refreshDynamicUI
+ */
 function refreshDynamicUI() {
     const uiContainer = document.getElementById("myUI");
     const oldDynamic = document.getElementById("dynamicUI");
@@ -98,9 +135,15 @@ function refreshDynamicUI() {
     uiContainer.appendChild(dynamicContainer);
 }
 
-
-
-
+/**
+ * Creates a dropdown UI element
+ * This is created since the code uses a handful of dropdowns, and this method makes it easier to create them
+ * @function createDropdown
+ * @param {string} id - Element ID
+ * @param {string[]} options - Array of option values
+ * @param {string} labeltxt - Label text
+ * @returns {HTMLDivElement} Container with label and select element
+ */
 function createDropdown(id, options, labeltxt) {
     const container = document.createElement("div");
     container.style.marginBottom = "10px";
@@ -123,12 +166,23 @@ function createDropdown(id, options, labeltxt) {
     return container;
 }
 
+/**
+ * Registers a callback for UI state changes
+ * @function onUIStateChange
+ * @param {string} key - State key to listen for (e.g., "modeSelect")
+ * @param {Function} callback - Function to call when state changes
+ */
 function onUIStateChange(key, callback) {
     if (!stateChangeListeners[key]) stateChangeListeners[key] = [];
     stateChangeListeners[key].push(callback);
 }
 
-
+/**
+ * Updates connection status display
+ * @function setConnectionStatus
+ * @param {'Connected'|'Disconnected'|'Unknown'} status - Connection status
+ * @param {string} [message] - Additional status message
+ */
 function setConnectionStatus(status, message) {
     const el = document.getElementById('connectionStatus');
     const info = document.getElementById('connectionStatusInfo');
@@ -140,7 +194,10 @@ function setConnectionStatus(status, message) {
 
 window.setConnectionStatus = setConnectionStatus;
 
-
+/**
+ * Creates server connection status UI
+ * @function createConnectionUI
+ */
 function createConnectionUI() {
     const conn = Object.assign(document.createElement('div'), {
         id: 'connectionUI',
@@ -158,6 +215,10 @@ function createConnectionUI() {
     document.body.appendChild(conn);
 }
 
+/**
+ * Creates AI analysis/generation UI for Cesium Man
+ * @function createGenerationUI
+ */
 function createGenerationUI() {
     const gen = document.createElement('div');
     gen.id = 'generationUI';
@@ -225,12 +286,12 @@ function createGenerationUI() {
 
     const intervalContainer = document.createElement('div');
     intervalContainer.style.display = 'none';
+    intervalContainer.style.display = 'flex';
     intervalContainer.style.alignItems = 'center';
 
     const intervalLabel = document.createElement('span');
     intervalLabel.textContent = 'Interval (s):';
     intervalLabel.style.marginRight = '8px';
-
 
     const intervalInput = document.createElement('input');
     intervalInput.type = 'number';
@@ -280,9 +341,13 @@ function createGenerationUI() {
     document.body.appendChild(gen);
 }
 
+/**
+ * Adds editor-specific content to dynamic UI container
+ * @function editorDynamicContainerContent
+ * @param {HTMLDivElement} Con - Container element to populate
+ */
 function editorDynamicContainerContent(Con) {
     const what = Editor.editingWhat();
-
 
     if (what === "polygon" && Editor.editMode) {
         // Don't show type dropdown for protected polygons (like Spoordok)
@@ -296,36 +361,31 @@ function editorDynamicContainerContent(Con) {
             objType.querySelector("select").value = buildTypes[currentTypeKey]?.id || "none";
 
             objType.querySelector("select").onchange = (e) => {
-
-            const newTypeId = e.target.value;
-
-            const newTypeKey = getTypeById(newTypeId);
-            
-            if (Editor.editingEntity?.properties && newTypeKey) {
-                Editor.editingEntity.properties.buildType = newTypeId;
-                console.log(`✓ Polygon type changed to: ${newTypeId} (key: ${newTypeKey})`);
+                const newTypeId = e.target.value;
+                const newTypeKey = getTypeById(newTypeId);
                 
-
-                applyTypeToEntity(Editor.editingEntity);
-                
-
-                if (Editor.editingEntity.polygonId && typeof polygonAPI !== 'undefined') {
-                    polygonAPI.savePolygon(Editor.editingEntity)
-                        .then(() => {
-                            console.log('✓ Type change saved to database');
-                            if (typeof updateOccupationStats === 'function') updateOccupationStats();
-                        })
-                        .catch(err => console.error('Failed to save type change:', err));
+                if (Editor.editingEntity?.properties && newTypeKey) {
+                    Editor.editingEntity.properties.buildType = newTypeId;
+                    console.log(`✓ Polygon type changed to: ${newTypeId} (key: ${newTypeKey})`);
+                    
+                    applyTypeToEntity(Editor.editingEntity);
+                    
+                    if (Editor.editingEntity.polygonId && typeof polygonAPI !== 'undefined') {
+                        polygonAPI.savePolygon(Editor.editingEntity)
+                            .then(() => {
+                                console.log('✓ Type change saved to database');
+                                if (typeof updateOccupationStats === 'function') updateOccupationStats();
+                            })
+                            .catch(err => console.error('Failed to save type change:', err));
+                    }
+                    
+                    try { window.showPolygonInfo?.(Editor.editingEntity); } catch {}
                 }
-                
-                try { window.showPolygonInfo?.(Editor.editingEntity); } catch {}
-            }
-        };
+            };
 
             Con.appendChild(objType);
         }
     }
-
 
     if (UIState.modeSelect === "edit") {
         const helpTexts = {
@@ -342,6 +402,10 @@ function editorDynamicContainerContent(Con) {
     }
 }
 
+/**
+ * Shows data analysis menu
+ * @function showDataMenu
+ */
 function showDataMenu() {
     const dataMenu = document.getElementById('dataMenu');
     if (dataMenu) {
@@ -360,6 +424,10 @@ function showDataMenu() {
     }
 }
 
+/**
+ * Hides data analysis menu
+ * @function hideDataMenu
+ */
 function hideDataMenu() {
     const dataMenu = document.getElementById('dataMenu');
     if (dataMenu) {
@@ -367,6 +435,12 @@ function hideDataMenu() {
     }
 }
 
+/**
+ * Displays polygon data in the data menu
+ * @async
+ * @function showPolygonDataInDataMenu
+ * @param {import('cesium').Entity} entity - Polygon entity to display data for
+ */
 async function showPolygonDataInDataMenu(entity) {
     const dataMenu = document.getElementById('dataMenu');
     if (!dataMenu) return;
@@ -464,6 +538,10 @@ async function showPolygonDataInDataMenu(entity) {
                 const peopleFormatted = polygonDataCalculations.formatNumber(data.people, 0);
                 const measurementFormatted = polygonDataCalculations.formatNumber(data.measurement, 2);
                 const measurementUnit = data.calculationBase === 'area' ? 'm²' : 'm³';
+                
+                // Determine label and icon for people/parking spaces
+                const isParkingType = buildType === 'parking space' || buildType === 'covered parking space';
+                const peopleLabel = isParkingType ? '🅿️ Parking Spaces:' : '👥 People:';
 
                 resultsContainer.innerHTML = `
                     <h4 style="margin: 0 0 12px 0; color: #9e9e9e; font-size: 13px; font-weight: 600;">Backend Calculations</h4>
@@ -477,7 +555,7 @@ async function showPolygonDataInDataMenu(entity) {
                             <span style="color: #fff; font-size: 12px; font-weight: 600;">${incomeFormatted}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(100,150,255,0.1); border-radius: 6px; border-left: 3px solid #64a0ff;">
-                            <span style="color: #b3d4ff; font-size: 12px;">👥 People:</span>
+                            <span style="color: #b3d4ff; font-size: 12px;">${peopleLabel}</span>
                             <span style="color: #fff; font-size: 12px; font-weight: 600;">${peopleFormatted}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(255,200,100,0.1); border-radius: 6px; border-left: 3px solid #ffa726;">
@@ -516,6 +594,12 @@ async function showPolygonDataInDataMenu(entity) {
     }
 }
 
+/**
+ * Calculates polygon area from positions (frontend approximation)
+ * @function calculatePolygonArea
+ * @param {import('cesium').Cartesian3[]} positions - Polygon vertices
+ * @returns {number} Approximate area in square meters
+ */
 function calculatePolygonArea(positions) {
     if (!positions || positions.length < 3) return 0;
 
@@ -532,3 +616,8 @@ function calculatePolygonArea(positions) {
     area = Math.abs(area * ellipsoid.maximumRadius * ellipsoid.maximumRadius / 2.0);
     return area;
 }
+
+// Expose functions globally
+window.onUIStateChange = onUIStateChange;
+window.UIsetup = UIsetup;
+window.showPolygonDataInDataMenu = showPolygonDataInDataMenu;
