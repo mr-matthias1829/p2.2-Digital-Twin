@@ -308,12 +308,13 @@ class ObjectEditor {
         return hierarchy.positions || (Array.isArray(hierarchy) ? hierarchy : []);
     }
 
-       getLinePositions(positions) {
-    if (!positions) return [];
-    if (typeof positions.getValue === 'function') {
-        return positions.getValue(Cesium.JulianDate.now());
+    getLinePositions(positions) {
+        if (!positions) return [];
+        if (typeof positions.getValue === 'function') {
+            return positions.getValue(Cesium.JulianDate.now());
+        }
+        return Array.isArray(positions) ? positions : [];
     }
-    return Array.isArray(positions) ? positions : [];
 
     // === MODEL EDITING ===
 
