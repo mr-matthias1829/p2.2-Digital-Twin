@@ -82,11 +82,16 @@ function drawShape(positionData) {
     // Line drawing mode is unused, but still here if needed later
     if (drawingMode === "line") {
         shape = viewer.entities.add({
-            polyline: {
+            corridor: {
                 positions: positionData,
+                width: 3.0, // meters (pas aan!)
+                material: Cesium.Color.ORANGE.withAlpha(0.9),
+                height: 0,
+                extrudedHeight: 0,
                 clampToGround: true,
-                width: 3,
             },
+            lineName: '',
+            lineId: null
         });
     } else if (drawingMode === "polygon") {
         shape = viewer.entities.add({
