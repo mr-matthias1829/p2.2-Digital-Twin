@@ -100,7 +100,30 @@ await import('../main.js');
 
 
 
-
+/**
+ * Testing the main.js file
+ * The tests in this file test everything around state changes and drawing modes,
+ * technically main also includes methods that init other files or are helpers for other files,
+ * but those are trickier to test and fit better with others tests that test the file that uses those methods, which isn't the case here
+ * 
+ * TL;DR: we only test methods here that main handles by itself
+ * 
+ * One note: to run these tests, this testing file has to mock nearly, if not everything that main needs, which is ALOT
+ * 
+ * Tests rundown:
+ * 1. testing if drawing mode(s) work as expected
+ *    this includes polygons and models, and also tests some small edge cases
+ * 2. testing if we can terminate a shape as expected
+ *    basically a handful of tests to check if we correctly stop making a polygon when we should, be it cancelation or finalization
+ * 3. testing state changes
+ *    main doesn't know when a state changes unless we tell it
+ *    these tests simply check if it correctly receives and uses data as we expect
+ * 4. one small test that simply tests if we can place a point entity at a position
+ *    we need this to work to be able to draw polygons, and there's no edge cases for this
+ * 5. testing if we can create a line or polygon
+ *    creating a model is already handled in pointer 1 since it isn't a drawn shape
+ *    line mode might not be visibly enabled in production as it's usage might be redundant
+ */
 
 describe('main', () => {
   beforeEach(() => {

@@ -5,7 +5,24 @@ import '../ObjectEditor.js';
 const { ObjectEditor } = global;
 
 
-// The actual tests are here:
+/**
+ * Testing the ObjectEditor.js file
+ * The tests in this file test everything that the object editor handles
+ * 
+ * Tests rundown:
+ * 1. testing if contructor is started with the correct values
+ * 2. testing protected entities, including edge cases
+ * 3. testing if we can properly return what we are editting
+ * 4. testing if we can stop editting and if the behavior is expected
+ * 5. testing if we handle the position of the editted entity correctly
+ * 6. testing if we can correctly delete a vertex
+ * 
+ * @todo Add tests for:
+ * - Polygon rotation (rotatePolygon method)
+ * - Vertex addition (addVertexBetween method)
+ * - Polygon scaling (height changes via arrow keys)
+ * - Model manipulation (rotateModel, scaleModel methods)
+ */
 describe('ObjectEditor', () => {
   let mockViewer;
   let editor;

@@ -1,3 +1,40 @@
+/**
+ * mainInit.js - Initializes the Cesium viewer and sets up the application
+ * 
+ * This function handles:
+ * 1. Cesium viewer creation and configuration
+ * 2. Base map setup (OpenStreetMap)
+ * 3. Spoordok boundary polygon creation
+ * 4. Building type loading and polygon synchronization
+ * 5. Input handlers and editor setup
+ * 6. Ollama analyzer initialization
+ * 
+ * Split from main.js to keep initialization logic separate
+ * 
+ * @function setup
+ * @global
+ * @async
+ * @requires Cesium
+ * @requires ModelPreLoad.js
+ * @requires ObjectEditor.js
+ * @requires OllamaAnalyzer.js
+ * @requires polygonAPI.js
+ * 
+ * @example
+ * // Called automatically on DOMContentLoaded of main.js
+ * // Can also be called manually for re-initialization, though unused for now
+ * setup();
+ * 
+ * @sideeffects
+ * - Creates global viewer, Editor, Server, ollamaAnalyzer objects
+ * - Modifies Cesium.Camera defaults
+ * - Sets up screen space event handlers
+ * - Clears existing polygons (if any, somehow) except Spoordok
+ * - Starts polygon loading from database
+ * 
+ * @throws {Error} If Cesium fails to load or viewer creation fails
+ * @throws {Error} If OpenStreetMap tiles are unavailable
+ */
 function setup() {
     preloadModels();
     
@@ -87,6 +124,7 @@ function setup() {
         prompt: "You are a citizen giving an opinion about the environment. This image is your Point of view. Describe what you see and give your opinion about it in 2-3 sentences. Dont do startup talk like: 'here is a perspective of cesium man.' after finishing those 2-3 sentences give a final score of 1-10 with a last small explanation of 1-2 sentences (decimal scores are allowed but only in .5's). Also dont prepare that you're going to talk just talk.",
     });
 
+    // TODO: maybe get rid of these? they were used back when the ai was console only, but that changed recently? perfably move them out of console since these commands do still work
     console.log('Ollama analyzer ready! Use these commands:');
     console.log('  ollamaAnalyzer.start()  - Start analysis');
     console.log('  ollamaAnalyzer.stop()   - Stop analysis');
@@ -98,8 +136,10 @@ function setup() {
     console.log('  ollamaAnalyzer.stopTracking() = Stops tracking selected Cesium Man');
     
 
+    // Create object editor
     Editor = new ObjectEditor(viewer);
-    Server = new serverPoller(viewer);
+    // Create server poller
+    Server = new serverPoller();
 }
 
 

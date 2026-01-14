@@ -2,7 +2,14 @@ package com.dto;
 
 import java.util.List;
 
+/**
+ * Data Transfer Object for goal checking results.
+ * Contains a list of goals with their achievement status and values.
+ */
 public class GoalCheckResponse {
+    /**
+     * List of goals with their achievement status.
+     */
     private List<Goal> goals;
 
     public GoalCheckResponse() {}
@@ -19,13 +26,40 @@ public class GoalCheckResponse {
         this.goals = goals;
     }
 
+    /**
+     * Represents a single goal with its achievement status.
+     * Tracks whether a target value has been reached based on comparison criteria.
+     */
     public static class Goal {
+        /**
+         * Unique identifier for the goal.
+         */
         private String id;
+        
+        /**
+         * Human-readable description of the goal.
+         */
         private String description;
+        
+        /**
+         * Indicates whether the goal has been achieved.
+         */
         private boolean achieved;
+        
+        /**
+         * Current value being measured for this goal.
+         */
         private Double currentValue;
+        
+        /**
+         * Target value that needs to be reached.
+         */
         private Double targetValue;
-        private String comparison; // "min" or "max"
+        
+        /**
+         * Comparison type: "min" (current must be >= target) or "max" (current must be <= target).
+         */
+        private String comparison;
 
         public Goal() {}
 

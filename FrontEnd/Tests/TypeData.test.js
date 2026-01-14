@@ -4,6 +4,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import '../TypeData.js';
 const { getAllType, getAllTypeIds, addBuildType, getTypeProperty, getTypeById } = global;
 
+
+/**
+ * Testing the TypeData.js file
+ * The tests in this file test everything that the typedata handles
+ * 
+ * Tests rundown:
+ * 1. Type listing - getAllType() and getAllTypeIds()
+ * 2. Type property retrieval with fallback logic
+ * 3. Type ID to key conversion
+ * 
+ * @todo Add tests for:
+ * - fetching type from a entity
+ * - tests to check if we can correctly fetch from api...?
+ */
 describe('TypeData', () => {
   describe('getAllTypes', () => {
     it('returns nothing as there are no types yet', () => {
@@ -74,5 +88,3 @@ describe('TypeData', () => {
     });
   });
 });
-
-// TODO: add more tests for types onto test objects

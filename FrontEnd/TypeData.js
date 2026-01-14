@@ -1,23 +1,57 @@
-// Building types object - will be populated from API
-// Keep only DEFAULT as fallback
+/**
+ * TypeData.js - Building type management system
+ * 
+ * Handles building type definitions, colors, properties, and visual styling.
+ * Types are loaded from backend API and applied to polygons/models dynamically.
+ * 
+ * @module TypeData
+ * @requires Cesium
+ * 
+ * @typedef {Object} BuildingType
+ * @property {string} id - Display ID (e.g., "commercial building")
+ * @property {Cesium.Color} color - Visual color for this type
+ * @property {number} cost - Cost per cubic meter (€)
+ * @property {number} income - Income percentage of cost (%)
+ * @property {number} people - People (residents/workers) per unit
+ * @property {number} livability - Livability score (1-10)
+ * 
+ * @typedef {'color'|'cost'|'income'|'people'|'livability'|'uri'|'scale'} TypeProperty
+ */
+
+/**
+ * Building types object - will be populated from API
+ * only DEFAULT is defined, which is used as fallback within the frontend
+ * @type {Object.<string, BuildingType>}
+ */
 const buildTypes = {
     DEFAULT: {
         id: "DEFAULT", // used if a type is requested but obj has no type (or fallback for non-existing property on a type)
                        // This type is filtered and not sent when prompted for all types
                        // NOTE: type 'none' IS A VALID TYPE NOT STATED IN THIS LIST AND IS NOT THIS TYPE!
 
-        default: 'default',
         color: Cesium.Color.WHITE, // Color of the polygon
         cost: 0, // In euro, for each cubical meter
         income: 0, // % of cost as financial income per unit
         people: 0, // Amount of home owners or workers per unit
         livability: 5, // Score for livability on a scale of 1 to 10
+        default: "default", // Test property for fallback functionality
     },
     // All other types are loaded from the database via API
     // See loadBuildingTypesFromAPI() function below
 };
 
 // Function to load building types from the API
+
+/**
+ * Loads building types from backend API and populates buildTypes object
+ * @async
+ * @function loadBuildingTypesFromAPI
+ * @returns {Promise<boolean>} True if loaded successfully, false if using fallback
+ * 
+ * @example
+ * await loadBuildingTypesFromAPI();
+ * // Now buildTypes contains types from database
+ */
 async function loadBuildingTypesFromAPI() {
     try {
         const response = await fetch('http://localhost:8081/api/data/building-types');
@@ -57,11 +91,23 @@ async function loadBuildingTypesFromAPI() {
 }
 
 // Helper function to get all existing type (no id)
+
+/**
+ * Gets all type keys (excluding DEFAULT)
+ * @function getAllType
+ * @returns {string[]} Array of type keys (e.g., ["commercial_building", "residential"])
+ */
 function getAllType() {
     return Object.keys(buildTypes).filter(key => key.toUpperCase() !== "DEFAULT");
 }
 
-// Helper function to get all existing type IDs (exlcuding default)
+// Helper function to get all existing type IDs (excluding default)
+
+/**
+ * Gets all type display IDs (excluding DEFAULT)
+ * @function getAllTypeIds
+ * @returns {string[]} Array of type IDs (e.g., ["commercial building", "residential"])
+ */
 function getAllTypeIds() {
     return Object.values(buildTypes)
         .filter(type => type.id.toUpperCase() !== "DEFAULT")
@@ -69,6 +115,14 @@ function getAllTypeIds() {
 }
 
 // Helper function to add a new type dynamically
+
+/**
+ * Adds a new building type dynamically
+ * @function addBuildType
+ * @param {string} key - Internal key (e.g., "commercial_building")
+ * @param {string} id - Display ID (e.g., "commercial building")
+ * @param {Partial<BuildingType>} properties - Type properties (color, cost, etc.)
+ */
 function addBuildType(key, id, properties) {
     buildTypes[key] = {
         id: id,
@@ -78,6 +132,18 @@ function addBuildType(key, id, properties) {
 
 // Function to fetch a property of a type
 // Handy because a type might not have a certain value defined, after which it will fallback to the default type
+
+/**
+ * Gets a property from a building type with fallback logic, looking through 3 cases
+ * @function getTypeProperty
+ * @param {string} key - Type key (e.g., "commercial_building") or "none"
+ * @param {TypeProperty} propertyName - Property to retrieve
+ * @returns {*} Property value, DEFAULT fallback value, or null if not found
+ * 
+ * @example
+ * const color = getTypeProperty('commercial_building', 'color');
+ * const cost = getTypeProperty('none', 'cost'); // Falls back to DEFAULT
+ */
 function getTypeProperty(key, propertyName) {
     const type = buildTypes[key];
 
@@ -127,6 +193,13 @@ function getTypeProperty(key, propertyName) {
 
 // Get the buildType from an entity's properties
 // Returns the object key for internal use (e.g., "commercial_building")
+
+/**
+ * Gets the type key from a Cesium entity
+ * @function getEntityType
+ * @param {import('cesium').Entity} entity - Polygon or model entity
+ * @returns {string} Type key or "DEFAULT" if not found
+ */
 function getEntityType(entity) {
     if (!entity.properties || !entity.properties.buildType) {
         return "DEFAULT";
@@ -143,6 +216,17 @@ function getEntityType(entity) {
 }
 
 // Set the type on an entity and update visuals
+
+/**
+ * Sets building type on entity and updates visuals
+ * @function setEntityType
+ * @param {import('cesium').Entity|import('cesium').Model} entity - Entity to update
+ * @param {string} typeId - Type ID to apply (e.g., "commercial building")
+ * 
+ * @example
+ * setEntityType(polygon, 'commercial_building');
+ * setEntityType(model, 'nature');
+ */
 function setEntityType(entity, typeId) {
     // Validate the type exists
     if (!buildTypes[typeId] && typeId !== "none") {
@@ -166,6 +250,12 @@ function setEntityType(entity, typeId) {
 }
 
 // Apply type initialization for POLYGONS (modifies entity directly)
+
+/**
+ * Applies type styling to a polygon entity (color, materials)
+ * @function applyTypeInitPolygon
+ * @param {import('cesium').Entity} entity - Polygon entity to style
+ */
 function applyTypeInitPolygon(entity) {
     if (!entity.polygon) {
         console.warn("applyTypeInitPolygon called on entity without polygon");
@@ -202,6 +292,12 @@ function applyTypeInitPolygon(entity) {
 }
 
 // Apply type initialization for MODELS (modifies entity directly)
+
+/**
+ * Applies type styling to a model entity (color, scale, URI)
+ * @function applyTypeInitModel
+ * @param {import('cesium').Entity} entity - Model entity to style
+ */
 function applyTypeInitModel(entity) {
     if (!entity.model) {
         console.warn("applyTypeInitModel called on entity without model");
@@ -250,6 +346,12 @@ function applyTypeInitModel(entity) {
 }
 
 // Unified function to apply type initialization to any entity
+
+/**
+ * Applies type styling to any entity (polygon or model)
+ * @function applyTypeToEntity
+ * @param {import('cesium').Entity} entity - Entity to style
+ */
 function applyTypeToEntity(entity) {
     if (entity.polygon) {
         applyTypeInitPolygon(entity);
@@ -260,6 +362,12 @@ function applyTypeToEntity(entity) {
 }
 
 // Update green roof visualization by creating/removing a top surface overlay
+
+/**
+ * Creates or removes green roof visualization overlay
+ * @function updateGreenRoofVisualization
+ * @param {import('cesium').Entity} entity - Polygon entity to update
+ */
 function updateGreenRoofVisualization(entity) {
     if (!entity || !entity.polygon) return;
     
@@ -306,6 +414,14 @@ function updateGreenRoofVisualization(entity) {
 }
 
 // Helper function to get positions from hierarchy (reused from other files)
+
+/**
+ * Extracts positions from polygon hierarchy (handles various formats)
+ * @private
+ * @function _getPositionsFromHierarchy
+ * @param {*} hierarchy - Polygon hierarchy in various formats
+ * @returns {import('cesium').Cartesian3[]} Array of positions
+ */
 function _getPositionsFromHierarchy(hierarchy) {
     if (!hierarchy) return [];
     if (typeof hierarchy.getValue === 'function') {
@@ -320,6 +436,13 @@ function _getPositionsFromHierarchy(hierarchy) {
 }
 
 // Function to get the object key for a build type by its id
+
+/**
+ * Converts type display ID to internal key
+ * @function getTypeById
+ * @param {string} searchId - Display ID (e.g., "commercial building")
+ * @returns {string|null} Internal key (e.g., "commercial_building") or null
+ */
 function getTypeById(searchId) {
     if (!searchId) return null;
 
@@ -333,7 +456,8 @@ function getTypeById(searchId) {
     return null;
 }
 
-// Expose helper functions globally if needed
+// Expose helper functions globally
+// Also needed for testing!
 window.buildTypes = buildTypes;
 window.getTypeProperty = getTypeProperty;
 window.getAllTypeIds = getAllTypeIds;

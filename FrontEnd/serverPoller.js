@@ -1,10 +1,30 @@
+/**
+ * Monitors backend server connection status
+ * @class serverPoller
+ * @description Polls the Spring Boot API endpoint to track connectivity
+ * @example
+ * const poller = new serverPoller(); // localhost has a default defined, arguments optional
+ * await poller.checkConnection(); // Manual check
+ */
 class serverPoller {
-    constructor(viewer, apiBaseUrl = 'http://localhost:8081') {
-        this.viewer = viewer;
+    /**
+     * Creates a server connection monitor
+     * @param {string} [apiBaseUrl='http://localhost:8081'] - Spring Boot API base URL
+     */
+    constructor(apiBaseUrl = 'http://localhost:8081') {
+        /** @type {string} API base URL */
         this.apiBase = apiBaseUrl;
-        this.serverPolygonEntities = new Map(); // serverId -> entity
-        this.serverModelPrimitives = new Map(); // serverId -> model primitive
+        
+        /** @type {Map} Unused - kept for backward compatibility */
+        this.serverPolygonEntities = new Map();
+        
+        /** @type {Map} Unused - kept for backward compatibility */
+        this.serverModelPrimitives = new Map();
+        
+        /** @type {number|null} Connection polling interval ID */
         this.connectionPollInterval = null;
+        
+        /** @type {boolean} Current connection status */
         this.isConnected = false;
         
         // Expose globally for backward compatibility
@@ -14,8 +34,10 @@ class serverPoller {
         this.startConnectionPolling();
     }
 
-    // ========== CONNECTION MONITORING ==========
-
+    /**
+     * Starts polling the server every 10 seconds
+     * @async
+     */
     async startConnectionPolling() {
         await this.checkConnection(false);
         if (this.isConnected) {
@@ -25,6 +47,9 @@ class serverPoller {
         this.connectionPollInterval = setInterval(() => this.checkConnection(false), 10000);
     }
 
+    /**
+     * Stops connection polling
+     */
     stopConnectionPolling() {
         if (this.connectionPollInterval) {
             clearInterval(this.connectionPollInterval);
@@ -32,6 +57,12 @@ class serverPoller {
         }
     }
 
+    /**
+     * Checks if the backend server is reachable
+     * @async
+     * @param {boolean} [manualTrigger=false] - Whether this is a manual check
+     * @returns {Promise<boolean>} True if connected, false otherwise
+     */
     async checkConnection(manualTrigger = false) {
         // CHANGED: Now checking /api/data instead of /api/polygons
         const url = `${this.apiBase}/api/data`;
@@ -86,8 +117,6 @@ class serverPoller {
             return false;
         }
     }
-
-    
 }
 
 // Auto-initialize if viewer exists globally

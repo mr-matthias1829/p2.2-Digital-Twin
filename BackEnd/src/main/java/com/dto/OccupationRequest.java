@@ -2,8 +2,19 @@ package com.dto;
 
 import java.util.List;
 
+/**
+ * Data Transfer Object for land occupation analysis requests.
+ * Contains the Spoordok boundary and polygon areas to analyze occupation percentages.
+ */
 public class OccupationRequest {
+    /**
+     * List of positions defining the Spoordok (railroad dock) boundary.
+     */
     private List<CalculationRequest.Position> spoordokPositions;
+    
+    /**
+     * List of polygon areas with their types and properties to analyze.
+     */
     private List<PolygonArea> polygonAreas;
 
     public OccupationRequest() {}
@@ -29,10 +40,29 @@ public class OccupationRequest {
         this.polygonAreas = polygonAreas;
     }
 
+    /**
+     * Represents a polygon area with its properties.
+     * Used for calculating occupation and area distribution by type.
+     */
     public static class PolygonArea {
+        /**
+         * List of positions defining the polygon vertices.
+         */
         private List<CalculationRequest.Position> positions;
+        
+        /**
+         * Type of the polygon area (e.g., "residential", "commercial", "nature").
+         */
         private String type;
+        
+        /**
+         * Height of the polygon in meters.
+         */
         private Double height;
+        
+        /**
+         * Indicates whether there is nature (green space) on top of the polygon.
+         */
         private Boolean hasNatureOnTop;
 
         public PolygonArea() {}

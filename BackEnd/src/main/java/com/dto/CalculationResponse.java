@@ -1,8 +1,23 @@
 package com.dto;
 
+/**
+ * Data Transfer Object for polygon calculation results.
+ * Contains the computed area, volume, and height of a polygon.
+ */
 public class CalculationResponse {
+    /**
+     * Calculated area of the polygon in square meters.
+     */
     private Double area;
+    
+    /**
+     * Calculated volume of the polygon in cubic meters.
+     */
     private Double volume;
+    
+    /**
+     * Height of the polygon in meters.
+     */
     private Double height;
 
     public CalculationResponse() {}

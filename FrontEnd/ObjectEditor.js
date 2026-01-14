@@ -1,5 +1,27 @@
+/**
+ * ObjectEditor - Handles editing of polygons and 3D models in the Cesium viewer
+ * 
+ * Provides vertex-based polygon editing (add/delete/move vertices, rotate, resize)
+ * and model manipulation (move, rotate, scale). Integrates with UI state and database.
+ * 
+ * @class ObjectEditor
+ * @property {boolean} editMode - Whether editor is currently active
+ * @property {Cesium.Entity|null} editingEntity - Currently edited polygon entity
+ * @property {Cesium.Model|null} editingModel - Currently edited 3D model
+ * @property {Function|null} onEditModeChanged - Callback when edit mode changes
+ * 
+ * @example
+ * const editor = new ObjectEditor(viewer);
+ * // Double-click polygon to start editing
+ * // Use arrow keys, Delete, R key for transformations
+ */
 class ObjectEditor {
+    /**
+     * Creates an object editor for the given Cesium viewer
+     * @param {import('cesium').Viewer} viewer - Cesium viewer instance
+     */
     constructor(viewer) {
+        /** @type {import('cesium').Viewer} */
         this.viewer = viewer;
         this.editMode = false;
         this.editingEntity = null; // polygon or line
@@ -24,6 +46,12 @@ class ObjectEditor {
     }
 
     // === POLYGON & LINE EDITING ===
+
+    /**
+     * Starts editing a polygon entity (adds vertex markers)
+     * @param {import('cesium').Entity} entity - Polygon entity to edit
+     * @returns {void}
+     */
     startEditingPolygon(entity) {
         if (!entity.polygon) return console.log("No polygon found");
         this._startEditingGeneric(entity, 'polygon');
@@ -131,6 +159,10 @@ class ObjectEditor {
         if (window.showPolygonInfo) window.showPolygonInfo(entity);
     }
 
+    /**
+     * Rotates the currently edited polygon
+     * @param {number} degrees - Rotation angle in degrees
+     */
     rotatePolygon(degrees) {
         if (!this.editingEntity?.polygon) return;
         const positions = this.vertexEntities.map(v => 
@@ -158,6 +190,10 @@ class ObjectEditor {
         console.log(`↻ Rotated ${degrees}°`);
     }
 
+    /**
+     * Updates polygon geometry from current vertex positions
+     * @private
+     */
     updatePolygonFromVertices() {
         if (!this.editingEntity || !this.vertexEntities.length) return;
         const positions = this.vertexEntities.map(v => 
@@ -188,6 +224,19 @@ class ObjectEditor {
     }
     }
 
+    updateLineFromVertices() {
+    if (!this.editingEntity || !this.editingEntity.corridor) return;
+
+    if (window.showPolygonInfo) {
+        try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
+    }
+    }
+
+    /**
+     * Adds a new vertex between two existing vertices
+     * @param {number} index1 - First vertex index
+     * @param {number} index2 - Second vertex index
+     */
     addVertexBetween(index1, index2) {
         if (!this.editMode || !this.vertexEntities.length) return;
 
@@ -216,6 +265,10 @@ class ObjectEditor {
         console.log(`+ Added vertex between ${index1} and ${index2}`);
     }
 
+    /**
+     * Deletes a vertex from the polygon (minimum 3 vertices required)
+     * @param {import('cesium').Entity} vertexEntity - Vertex entity to delete
+     */
     deleteVertex(vertexEntity) {
         if (!this.editMode) return;
 
@@ -236,22 +289,92 @@ class ObjectEditor {
         console.log(`✗ Deleted vertex ${index}`);
     }
 
-    getPositions(hierarchyOrPositions) {
-        if (!hierarchyOrPositions) return [];
-        if (typeof hierarchyOrPositions.getValue === 'function') hierarchyOrPositions = hierarchyOrPositions.getValue(Cesium.JulianDate.now());
-        if (hierarchyOrPositions instanceof Cesium.PolygonHierarchy) return hierarchyOrPositions.positions;
-        return hierarchyOrPositions.positions || (Array.isArray(hierarchyOrPositions) ? hierarchyOrPositions : []);
+    /**
+     * Extracts positions from polygon hierarchy (handles various formats)
+     * @private
+     * @param {*} hierarchy - Polygon hierarchy in various formats
+     * @returns {import('cesium').Cartesian3[]} Array of positions
+     */
+    getPositions(hierarchy) {
+        if (hierarchy instanceof Cesium.CallbackProperty) {
+            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
+        }
+        if (typeof hierarchy.getValue === 'function') {
+            hierarchy = hierarchy.getValue(Cesium.JulianDate.now());
+        }
+        if (hierarchy instanceof Cesium.PolygonHierarchy) {
+            return hierarchy.positions;
+        }
+        return hierarchy.positions || (Array.isArray(hierarchy) ? hierarchy : []);
     }
 
-    getLinePositions(positions) {
+       getLinePositions(positions) {
     if (!positions) return [];
     if (typeof positions.getValue === 'function') {
         return positions.getValue(Cesium.JulianDate.now());
     }
     return Array.isArray(positions) ? positions : [];
+
+    // === MODEL EDITING ===
+
+    /**
+     * Starts editing a 3D model
+     * @param {import('cesium').Model} model - Model primitive to edit
+     */
+    startEditingModel(model) {
+        // Only allow editing when in edit mode
+        if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") {
+            return;
+        }
+        if (this.editMode) this.stopEditing();
+        
+        this.editMode = true;
+        this.editingModel = model;
+        this._emitEditModeChanged();
+        
+        // Highlight model with yellow
+        model._originalColor = model.color ? Cesium.Color.clone(model.color) : null;
+        model._originalSilhouette = model.silhouetteColor ? Cesium.Color.clone(model.silhouetteColor) : null;
+        model._originalSilhouetteSize = model.silhouetteSize || 0;
+        
+        model.color = Cesium.Color.YELLOW.withAlpha(0.6);
+        model.silhouetteColor = Cesium.Color.YELLOW;
+        model.silhouetteSize = 3.0;
+        
+        console.log("🎯 MODEL EDIT MODE");
+        console.log("  • Drag to move");
+        console.log("  • Arrow Left/Right to rotate (±3°)");
+        console.log("  • Arrow Up/Down to scale (±0.1)");
+        console.log("  • R key to rotate 90°");
+        console.log("  • Right-click or ESC to finish");
     }
 
-    // === STOP EDITING ===
+    /**
+     * Rotates the currently edited model
+     * @param {number} degrees - Rotation angle in degrees
+     */
+    rotateModel(degrees) {
+        if (!this.editingModel) return;
+        updateModelRotation(this.editingModel, this.editingModel.modelRotation + degrees);
+        console.log(`↻ Model rotated ${degrees > 0 ? '+' : ''}${degrees}°`);
+    }
+
+    /**
+     * Scales the currently edited model
+     * @param {number} newScale - New scale factor
+     */
+    scaleModel(newScale) {
+        if (!this.editingModel) return;
+        updateModelScale(this.editingModel, newScale);
+        console.log(`↔ Model scaled to ${newScale.toFixed(2)}`);
+    }
+
+    // === UNIFIED STOP EDITING ===
+
+    /**
+     * Stops editing current object and cleans up
+     * @param {boolean} [skipAutoSave=false] - Skip database auto-save (e.g., during deletion)
+     */
     stopEditing(skipAutoSave = false) {
         if (!this.editMode) return;
         this.editMode = false;
@@ -307,6 +430,10 @@ class ObjectEditor {
 
     // === KEYBOARD CONTROLS ===
 
+    /**
+     * Sets up keyboard shortcuts for editing operations
+     * @private
+     */
     setupKeyboardControls() {
         document.addEventListener('keydown', (e) => {
             // Prevent keyboard shortcuts when typing in input fields
@@ -443,6 +570,10 @@ class ObjectEditor {
 
     // === MOUSE HANDLERS ===
 
+    /**
+     * Handles left mouse button down (start dragging)
+     * @param {Cesium.ScreenSpaceEventHandler.PositionedEvent} event - Mouse event
+     */
     handleLeftDown(event) {
         // CRITICAL: Only handle edit mode actions if in edit mode
         if (!this.editMode) return;
@@ -480,6 +611,10 @@ class ObjectEditor {
         }
     }
 
+    /**
+     * Handles left mouse button up (stop dragging)
+     * @param {Cesium.ScreenSpaceEventHandler.PositionedEvent} event - Mouse event
+     */
     handleLeftUp(event) {
         if (this.draggedVertex || this.moveStart) {
             if (this.draggedVertex) console.log("✓ Stopped dragging vertex");
@@ -496,6 +631,10 @@ class ObjectEditor {
         }
     }
 
+    /**
+     * Handles mouse movement (dragging, hovering)
+     * @param {Cesium.ScreenSpaceEventHandler.MotionEvent} event - Mouse move event
+     */
     handleMouseMove(event) {
         // Model movement
         if (this.editingModel && this.moveStart) {
@@ -548,6 +687,11 @@ class ObjectEditor {
         }
     }
     
+    /**
+     * Handles double-click (add vertex or start editing)
+     * @param {Cesium.ScreenSpaceEventHandler.PositionedEvent} event - Double-click event
+     * @returns {boolean} True if event was handled
+     */
     handleDoubleClick(event) {
     const picked = this.viewer.scene.pick(event.position);
     if (!Cesium.defined(picked) || !picked.id) return false;
@@ -630,6 +774,11 @@ class ObjectEditor {
     return false;
     }
 
+    /**
+     * Handles right-click (stop editing)
+     * @param {Cesium.ScreenSpaceEventHandler.PositionedEvent} event - Right-click event
+     * @returns {boolean} True if event was handled
+     */
     handleRightClick(event) {
         if (this.editMode) {
             this.stopEditing();
@@ -640,6 +789,10 @@ class ObjectEditor {
 
     // === UTILITIES ===
 
+    /**
+     * Returns what type of object is being edited
+     * @returns {'model'|'polygon'|null}
+     */
     editingWhat() {
         if (this.editingModel) return "model";
         if (this.editingEntity?.polygon) return "polygon";
@@ -647,6 +800,10 @@ class ObjectEditor {
         return null;
     }
 
+    /**
+     * Emits edit mode change event
+     * @private
+     */
     _emitEditModeChanged() {
         const detail = {
             editMode: !!this.editMode,
