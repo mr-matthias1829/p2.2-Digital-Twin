@@ -224,13 +224,7 @@ class ObjectEditor {
     }
     }
 
-    updateLineFromVertices() {
-    if (!this.editingEntity || !this.editingEntity.corridor) return;
-
-    if (window.showPolygonInfo) {
-        try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
-    }
-    }
+    
 
     /**
      * Adds a new vertex between two existing vertices
@@ -675,7 +669,11 @@ class ObjectEditor {
                     const oldPos = v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position;
                     v.position = Cesium.Cartesian3.add(oldPos, offset, new Cesium.Cartesian3());
                 });
-                this.updatePolygonFromVertices();
+                if (this.editingEntity?.polygon) {
+                    this.updatePolygonFromVertices();
+                } else if (this.editingEntity?.corridor) {
+                    this.updateLineFromVertices();
+                }
                 this.moveStart = currentPos;
             }
         } else if (this.editMode && !this.editingModel) {

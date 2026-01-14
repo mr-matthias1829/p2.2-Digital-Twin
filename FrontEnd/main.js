@@ -131,8 +131,10 @@ function drawShape(positionData) {
         shape = viewer.entities.add({
             corridor: {
                 positions: positionData,
-                width: 3.0, // meters (pas aan!)
-                material: Cesium.Color.ORANGE.withAlpha(0.9),
+                width: 3.0, // meters 
+                material: Cesium.Color.DARKGREY.withAlpha(0.9),
+                outlineWidth: 1,
+                outline: true,
                 height: 0,
                 extrudedHeight: 0,
                 clampToGround: true,
