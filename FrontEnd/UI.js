@@ -387,6 +387,32 @@ function editorDynamicContainerContent(Con) {
         }
     }
 
+    if (what === "line" && Editor.editMode) {
+        // Corridor type selector
+        const objType = createDropdown("objtype", ["road", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Road Type:");
+
+        const bt = Editor.editingEntity?.properties?.buildType;
+        const currentType = typeof bt?.getValue === "function" ? bt.getValue() : bt || "road";
+        objType.querySelector("select").value = currentType;
+
+        objType.querySelector("select").onchange = (e) => {
+            const newTypeId = e.target.value;
+            
+            if (Editor.editingEntity?.properties) {
+                Editor.editingEntity.properties.buildType = newTypeId;
+                console.log(`✓ Corridor type changed to: ${newTypeId}`);
+                
+                if (typeof updateOccupationStats === 'function') {
+                    setTimeout(() => updateOccupationStats(), 100);
+                }
+                
+                try { window.showPolygonInfo?.(Editor.editingEntity); } catch {}
+            }
+        };
+
+        Con.appendChild(objType);
+    }
+
     if (UIState.modeSelect === "edit") {
         const helpTexts = {
             base: "Double click on an object to start editing\nPress Esc or right-click to stop editing",
@@ -447,19 +473,48 @@ async function showPolygonDataInDataMenu(entity) {
 
     dataMenu.style.display = 'block';
 
-    // Get polygon properties
-    const props = entity.properties || {};
-    const buildType = props.buildType?.getValue ? props.buildType.getValue() : props.buildType;
-    const name = entity.polygonName || 'Unnamed Polygon';
-    const polygonId = entity.polygonId || props.polygonId?.getValue?.() || null;
+    const isCorridor = !!entity.corridor;
+    const isPolygon = !!entity.polygon;
 
-    // Calculate area and volume using the same method as polygonInfoDisplay (backend calculations)
+    // Get properties
+    const props = entity.properties || {};
+    let buildType = props.buildType?.getValue ? props.buildType.getValue() : props.buildType;
+    
+    // For corridors, default to 'road' if no type is set
+    if (isCorridor && (!buildType || buildType === 'none')) {
+        buildType = 'road';
+    }
+    
+    const name = entity.polygonName || entity.lineName || (isCorridor ? 'Unnamed Corridor' : 'Unnamed Polygon');
+    const polygonId = entity.polygonId || entity.lineId || props.polygonId?.getValue?.() || null;
+
+    // Calculate area and volume
     let area = 0;
     let volume = 0;
     let areaText = 'Calculating...';
     
-    // Use polygonUtils for accurate backend calculations
-    if (entity.polygon?.hierarchy && typeof window.polygonUtils !== 'undefined') {
+    // Handle corridors
+    if (isCorridor) {
+        let positions = entity.corridor.positions;
+        if (typeof positions?.getValue === 'function') {
+            positions = positions.getValue(Cesium.JulianDate.now());
+        }
+        
+        if (positions && positions.length >= 2) {
+            // Calculate corridor length
+            let length = 0;
+            for (let i = 0; i < positions.length - 1; i++) {
+                length += Cesium.Cartesian3.distance(positions[i], positions[i + 1]);
+            }
+            const width = 3.0;
+            area = length * width;
+            areaText = `${area.toFixed(2)} m² (${length.toFixed(2)}m × ${width}m)`;
+        } else {
+            areaText = 'N/A';
+        }
+    }
+    // Handle polygons - Use polygonUtils for accurate backend calculations
+    else if (entity.polygon?.hierarchy && typeof window.polygonUtils !== 'undefined') {
         try {
             // Get accurate area from backend
             const areaResult = await window.polygonUtils.computeAreaFromHierarchy(entity.polygon.hierarchy);
@@ -489,7 +544,7 @@ async function showPolygonDataInDataMenu(entity) {
         </div>
         <div class="data-menu-content">
             <div style="margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid #b896ff;">
-                <h4 style="margin: 0 0 8px 0; color: #b896ff; font-size: 14px; font-weight: 600;">Selected Polygon</h4>
+                <h4 style="margin: 0 0 8px 0; color: #b896ff; font-size: 14px; font-weight: 600;">Selected ${isCorridor ? 'Corridor' : 'Polygon'}</h4>
                 <div style="font-size: 12px; line-height: 1.8;">
                     <div><strong>Name:</strong> ${name}</div>
                     <div><strong>ID:</strong> ${polygonId || 'N/A'}</div>
@@ -513,10 +568,25 @@ async function showPolygonDataInDataMenu(entity) {
         </style>
     `;
 
-    // Fetch and display polygon data calculations if polygon has an ID
-    if (polygonId && area > 0 && typeof polygonDataCalculations !== 'undefined') {
-        polygonDataCalculations.getPolygonData(polygonId, area, volume)
-            .then(data => {
+    // Fetch and display data calculations if area > 0 and type is set
+    // Works for both polygons and corridors
+    if (area > 0 && buildType && buildType !== 'none' && typeof polygonDataCalculations !== 'undefined') {
+        // Use polygonId if available, otherwise use a temporary ID based on type
+        const dataId = polygonId || `temp_${buildType}_${Date.now()}`;
+        
+        // Determine if we should fetch corridor or polygon data
+        let dataPromise;
+        if (isCorridor) {
+            // For corridors, calculate length from area and width
+            const width = 3.0;
+            const length = area / width;
+            dataPromise = polygonDataCalculations.getCorridorData(dataId, length);
+        } else {
+            // For polygons, use regular polygon data
+            dataPromise = polygonDataCalculations.getPolygonData(dataId, area, volume);
+        }
+        
+        dataPromise.then(data => {
                 const resultsContainer = document.getElementById('calculationResults');
                 if (!resultsContainer) return;
 
