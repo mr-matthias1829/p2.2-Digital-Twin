@@ -22,8 +22,8 @@ function _getPositionsFromEntity(entity) {
         return _getPositionsFromHierarchy(entity.polygon.hierarchy);
     }
 
-    if (entity.polyline) {
-        let positions = entity.polyline.positions;
+    if (entity.corridor) {
+        let positions = entity.corridor.positions;
         if (typeof positions?.getValue === 'function') {
             positions = positions.getValue(Cesium.JulianDate.now());
         }
@@ -41,7 +41,7 @@ window.showPolygonInfo = async function (entity) {
         el.style.display = 'block';
 
         // Nothing selected
-        if (!entity || (!entity.polygon && !entity.polyline)) {
+        if (!entity || (!entity.polygon && !entity.corridor)) {
             el.innerHTML = '<div style="text-align: center; padding: 30px; color: #b0b0b0; font-size: 13px;">No polygon or line selected</div>';
             return;
         }
@@ -53,7 +53,7 @@ window.showPolygonInfo = async function (entity) {
         }
 
         const isPolygon = !!entity.polygon;
-        const isLine = !!entity.polyline;
+        const isLine = !!entity.corridor;
 
         // Height, area, volume only for polygon
         let heightLine = '';
