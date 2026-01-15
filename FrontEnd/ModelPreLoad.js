@@ -49,7 +49,9 @@ async function preloadModels() {
         ["building", "strange_building.glb", { scale: 3, buildType: "detached_house" }],
         ["tree", "tree.glb", { scale: 0.65, buildType: "nature" }],
         ["tree2", "Tree2.glb", { scale: 0.65, buildType: "nature" }],
+        ["tree3", "Tree3.glb", { scale: 0.80, buildType: "nature" }],
         ["lamp", "Lamp.glb", { scale: 0.45, buildType: "road" }],
+        ["bench", "Bench.glb", { scale: 0.5, buildType: "road" }],
         ["bush", "Bush.glb", { scale: 0.37, buildType: "nature" }]
         // Some models spawn in oversized. Scale's stated here are set based to roughly get them to a reasonable size
     ];
