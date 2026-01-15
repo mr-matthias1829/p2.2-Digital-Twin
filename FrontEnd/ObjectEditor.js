@@ -467,9 +467,8 @@ class ObjectEditor {
             // POLYGON CONTROLS
             if (this.editingEntity) {
                 const isProtected = this.isProtectedEntity(this.editingEntity);
-                if (this.editingEntity.polygon) {
-                    const h = this.editingEntity.polygon.extrudedHeight || 0;
-                }
+                const h = this.editingEntity.polygon.extrudedHeight || 0;
+                
                 
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
