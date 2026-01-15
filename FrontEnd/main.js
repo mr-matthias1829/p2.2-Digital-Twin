@@ -126,13 +126,12 @@ function createPoint(worldPosition) {
 function drawShape(positionData) {
     let shape;
 
-    // Line drawing mode is unused, but still here if needed later
     if (drawingMode === "line") {
         shape = viewer.entities.add({
             corridor: {
                 positions: positionData,
                 width: 3.0, // meters 
-                material: Cesium.Color.DARKGREY.withAlpha(0.9),
+                material: Cesium.Color.DARKGREY,
                 outlineWidth: 1,
                 outline: true,
                 height: 0,
@@ -300,6 +299,18 @@ function setupInputActions() {
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
+    // RIGHT CLICK - Finish drawing, editing, or moving
+    handler.setInputAction(function (event) {
+        // Editor gets first priority
+        const editorHandled = Editor.handleRightClick(event);
+        
+        // If editor didn't handle it and we're drawing, finish the shape
+        if (!editorHandled && activeShapePoints.length > 0) {
+            terminateShape();
+        }
+    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+}
+
     /**
      * Handles click events for drawing based on current mode
      * @param {import('cesium').Cartesian3} earthPosition - Click position in world coordinates
@@ -351,18 +362,6 @@ function setupInputActions() {
             }
         }
     }
-
-    // RIGHT CLICK - Finish drawing, editing, or moving
-    handler.setInputAction(function (event) {
-        // Editor gets first priority
-        const editorHandled = Editor.handleRightClick(event);
-        
-        // If editor didn't handle it and we're drawing, finish the shape
-        if (!editorHandled && activeShapePoints.length > 0) {
-            terminateShape();
-        }
-    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-}
 
 /**
  * Opens the generation UI for interacting with a Cesium Man entity
