@@ -320,4 +320,210 @@
         polygonDTOToEntity,
         removeDuplicatePolygons  // Expose for manual cleanup if needed
     };
+
+    // ========== CORRIDOR API FUNCTIONS ==========
+
+    /**
+     * Save a corridor to the backend database
+     * Creates new corridor if no lineId exists, updates if it does
+     */
+    async function saveCorridor(entity) {
+        try {
+            showSyncIndicator();
+
+            const corridorDTO = entityToCorridorDTO(entity);
+            if (!corridorDTO) {
+                hideSyncIndicator();
+                return null;
+            }
+
+            const isUpdate = !!corridorDTO.id;
+            const url = isUpdate 
+                ? `${API_BASE}/api/data/corridors/${corridorDTO.id}`
+                : `${API_BASE}/api/data/corridors`;
+            const method = isUpdate ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(corridorDTO)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to save corridor: HTTP ${response.status}`);
+            }
+
+            const savedCorridor = await response.json();
+            console.log(`✓ Corridor ${isUpdate ? 'updated' : 'created'} with ID:`, savedCorridor.id);
+
+            // Update entity with database ID
+            entity.lineId = savedCorridor.id;
+
+            return savedCorridor;
+        } catch (error) {
+            console.error('Error saving corridor:', error);
+            throw error;
+        } finally {
+            hideSyncIndicator();
+        }
+    }
+
+    /**
+     * Convert Cesium entity corridor to backend format
+     */
+    function entityToCorridorDTO(entity) {
+        if (!entity.corridor) {
+            console.error('Entity does not have a corridor');
+            return null;
+        }
+
+        // Get positions
+        let positions = entity.corridor.positions;
+        if (typeof positions.getValue === 'function') {
+            positions = positions.getValue(Cesium.JulianDate.now());
+        }
+
+        // Convert Cartesian3 positions to lon/lat coordinates
+        const coordinates = positions.map((pos, index) => {
+            const cartographic = Cesium.Cartographic.fromCartesian(pos);
+            return {
+                longitude: Cesium.Math.toDegrees(cartographic.longitude),
+                latitude: Cesium.Math.toDegrees(cartographic.latitude),
+                altitude: cartographic.height,
+                sequenceOrder: index
+            };
+        });
+
+        // Get building type (default to 'road')
+        let buildingType = 'road';
+        if (entity.properties && entity.properties.buildType) {
+            buildingType = typeof entity.properties.buildType.getValue === 'function'
+                ? entity.properties.buildType.getValue(Cesium.JulianDate.now())
+                : entity.properties.buildType;
+        }
+
+        // Get corridor name
+        let name = entity.lineName || null;
+
+        // Get width (default 3.0m)
+        let width = 3.0;
+
+        return {
+            id: entity.lineId || null,
+            coordinates: coordinates,
+            width: width,
+            buildingType: buildingType,
+            name: name
+        };
+    }
+
+    /**
+     * Convert backend corridor DTO to Cesium entity
+     */
+    function corridorDTOToEntity(corridorDTO, viewer) {
+        // Convert lon/lat coordinates to Cartesian3 positions
+        const positions = corridorDTO.coordinates
+            .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+            .map(coord => 
+                Cesium.Cartesian3.fromDegrees(coord.longitude, coord.latitude, coord.altitude || 0)
+            );
+        
+        // Create entity
+        const entity = viewer.entities.add({
+            corridor: {
+                positions: positions,
+                width: corridorDTO.width || 3.0,
+                material: Cesium.Color.DARKGREY.withAlpha(0.9),
+                outlineWidth: 1,
+                outline: true,
+                height: 0,
+                extrudedHeight: 0,
+                clampToGround: true,
+            },
+            properties: new Cesium.PropertyBag({
+                buildType: corridorDTO.buildingType || 'road'
+            }),
+            lineId: corridorDTO.id,
+            lineName: corridorDTO.name || ''
+        });
+
+        // Apply color based on type if TypeData is available
+        if (typeof window.applyTypeInitLine === 'function') {
+            window.applyTypeInitLine(entity);
+        }
+
+        return entity;
+    }
+
+    /**
+     * Load all corridors from database
+     */
+    async function loadAllCorridors(viewer) {
+        showSyncIndicator();
+        try {
+            const response = await fetch(`${API_BASE}/api/data/corridors`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load corridors: HTTP ${response.status}`);
+            }
+            
+            const corridors = await response.json();
+            
+            console.log(`✓ Loading ${corridors.length} corridors from database...`);
+            
+            const entities = [];
+            for (const corridorDTO of corridors) {
+                const entity = corridorDTOToEntity(corridorDTO, viewer);
+                entities.push(entity);
+            }
+            
+            console.log(`✓ Loaded ${entities.length} corridors`);
+            
+            return entities;
+        } catch (error) {
+            console.error('Error loading corridors:', error);
+            return [];
+        } finally {
+            hideSyncIndicator();
+        }
+    }
+
+    /**
+     * Delete corridor from database
+     */
+    async function deleteCorridor(entity) {
+        showSyncIndicator();
+        try {
+            if (!entity.lineId) {
+                console.warn('Entity does not have a database ID, cannot delete');
+                hideSyncIndicator();
+                return false;
+            }
+            
+            const response = await fetch(`${API_BASE}/api/data/corridors/${entity.lineId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to delete corridor: HTTP ${response.status}`);
+            }
+            
+            console.log(`✓ Corridor deleted with ID: ${entity.lineId}`);
+            return true;
+        } catch (error) {
+            console.error('Error deleting corridor:', error);
+            throw error;
+        } finally {
+            hideSyncIndicator();
+        }
+    }
+
+    // Expose corridor API globally
+    window.corridorAPI = {
+        saveCorridor,
+        loadAllCorridors,
+        deleteCorridor
+    };
 })();

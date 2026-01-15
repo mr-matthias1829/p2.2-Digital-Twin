@@ -100,7 +100,7 @@ function setup() {
         polygonsToRemove.forEach(entity => viewer.entities.remove(entity));
         console.log(`Cleared ${polygonsToRemove.length} polygons before database load`);
         
-        // THEN: Load polygons from database
+        // THEN: Load polygons and corridors from database
         if (typeof polygonAPI !== 'undefined') {
             polygonAPI.loadAllPolygons(viewer)
                 .then(() => {
@@ -111,6 +111,15 @@ function setup() {
                     }
                 })
                 .catch(err => console.error('Failed to load polygons:', err));
+        }
+        
+        // Load corridors from database
+        if (typeof corridorAPI !== 'undefined') {
+            corridorAPI.loadAllCorridors(viewer)
+                .then(() => {
+                    console.log('\u2713 Corridors loaded from database');
+                })
+                .catch(err => console.error('Failed to load corridors:', err));
         }
     });
 

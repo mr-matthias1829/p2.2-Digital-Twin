@@ -4,6 +4,7 @@ import com.model.BuildingType;
 import com.model.Goal;
 import com.model.Model;
 import com.service.BuildingTypeService;
+import com.service.CorridorService;
 import com.service.GoalService;
 import com.service.ModelService;
 import com.service.PolygonService;
@@ -26,6 +27,9 @@ public class DataLoader implements CommandLineRunner {
     @Autowired
     private GoalService goalService;
 
+    @Autowired
+    private CorridorService corridorService;
+
     @Override
     public void run(String... args) throws Exception {
         // Load building types FIRST (if not present)
@@ -34,10 +38,11 @@ public class DataLoader implements CommandLineRunner {
         // Load goals if not present
         loadGoalsIfNeeded();
         
-        // Polygons are now loaded from the database and managed by the frontend
+        // Polygons and corridors are now loaded from the database and managed by the frontend
         // No dummy data needed anymore
         System.out.println("✓ Application initialized. Polygons: " + polygonService.getAllPolygons().size() + 
-                         ", Models: " + modelService.getAllModels().size());
+                         ", Models: " + modelService.getAllModels().size() +
+                         ", Corridors: " + corridorService.getAllCorridors().size());
     }
 
     private void loadBuildingTypesIfNeeded() {

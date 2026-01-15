@@ -7,11 +7,14 @@ import com.dto.OccupationResponse;
 import com.dto.GoalCheckResponse;
 import com.dto.PolygonDataResponse;
 import com.model.BuildingType;
+import com.model.Corridor;
 import com.model.Goal;
 import com.model.Model;
 import com.model.Polygon;
 import com.service.BuildingTypeService;
 import com.service.CalculationService;
+import com.service.CorridorService;
+import com.service.CorridorDataService;
 import com.service.GoalService;
 import com.service.ModelService;
 import com.service.PolygonService;
@@ -48,6 +51,12 @@ public class Controller {
 
     @Autowired
     private PolygonDataService polygonDataService;
+
+    @Autowired
+    private CorridorService corridorService;
+
+    @Autowired
+    private CorridorDataService corridorDataService;
 
     @Autowired
     private GoalService goalService;
@@ -263,6 +272,110 @@ public class Controller {
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             logger.error("Error calculating polygon data for ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // ========== CORRIDOR ENDPOINTS ==========
+
+    @GetMapping("/corridors")
+    public ResponseEntity<List<Corridor>> getAllCorridors() {
+        List<Corridor> corridors = corridorService.getAllCorridors();
+        return ResponseEntity.ok(corridors);
+    }
+
+    @GetMapping("/corridors/{id}")
+    public ResponseEntity<Corridor> getCorridorById(@PathVariable Long id) {
+        Corridor corridor = corridorService.getCorridorById(id);
+        if (corridor != null) {
+            return ResponseEntity.ok(corridor);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/corridors")
+    public ResponseEntity<Corridor> createCorridor(@RequestBody Corridor corridor) {
+        try {
+            logger.info("Creating new corridor with {} coordinates", 
+                       corridor.getCoordinates() != null ? corridor.getCoordinates().size() : 0);
+            
+            // Ensure width has a default value
+            if (corridor.getWidth() == null) {
+                corridor.setWidth(3.0);
+            }
+            
+            // Ensure bidirectional relationship is set
+            if (corridor.getCoordinates() != null) {
+                for (com.model.CorridorCoordinate coord : corridor.getCoordinates()) {
+                    coord.setCorridor(corridor);
+                }
+            }
+            Corridor savedCorridor = corridorService.saveCorridor(corridor);
+            logger.info("Successfully created corridor with ID: {}", savedCorridor.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedCorridor);
+        } catch (Exception e) {
+            logger.error("Error creating corridor: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/corridors/{id}")
+    public ResponseEntity<Corridor> updateCorridor(@PathVariable Long id, @RequestBody Corridor corridor) {
+        try {
+            logger.info("Updating corridor with ID: {}", id);
+            
+            Corridor existingCorridor = corridorService.getCorridorById(id);
+            if (existingCorridor == null) {
+                logger.warn("Corridor not found with ID: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Update existing corridor properties
+            existingCorridor.setWidth(corridor.getWidth() != null ? corridor.getWidth() : 3.0);
+            existingCorridor.setBuildingType(corridor.getBuildingType());
+            existingCorridor.setName(corridor.getName());
+            
+            // Clear existing coordinates and add new ones
+            existingCorridor.getCoordinates().clear();
+            if (corridor.getCoordinates() != null) {
+                logger.info("Updating with {} coordinates", corridor.getCoordinates().size());
+                for (com.model.CorridorCoordinate coord : corridor.getCoordinates()) {
+                    coord.setCorridor(existingCorridor);
+                    existingCorridor.getCoordinates().add(coord);
+                }
+            }
+            
+            Corridor updatedCorridor = corridorService.saveCorridor(existingCorridor);
+            logger.info("Successfully updated corridor with ID: {}", updatedCorridor.getId());
+            return ResponseEntity.ok(updatedCorridor);
+        } catch (Exception e) {
+            logger.error("Error updating corridor {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @DeleteMapping("/corridors/{id}")
+    public ResponseEntity<Void> deleteCorridor(@PathVariable Long id) {
+        corridorService.deleteCorridor(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/corridors")
+    public ResponseEntity<Void> deleteAllCorridors() {
+        corridorService.deleteAllCorridors();
+        return ResponseEntity.noContent().build();
+    }
+
+    // GET corridor data (cost, income, people, livability)
+    @GetMapping("/corridors/{id}/data")
+    public ResponseEntity<PolygonDataResponse> getCorridorData(
+            @PathVariable Long id,
+            @RequestParam(required = false) Double length) {
+        try {
+            PolygonDataResponse data = corridorDataService.calculateCorridorData(id, length);
+            return ResponseEntity.ok(data);
+        } catch (Exception e) {
+            logger.error("Error calculating corridor data for ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

@@ -244,17 +244,25 @@ function setupInputActions() {
 
     // DOUBLE CLICK - Start editing (or add vertex if already editing) OR show data in Data mode
     handler.setInputAction(function (event) {
-        // If in Data mode, show polygon data instead of editing
+        // If in Data mode, show polygon/corridor data instead of editing
         if (drawingMode === "data") {
             const picked = viewer.scene.pick(event.position);
-            if (Cesium.defined(picked) && picked.id?.polygon && !picked.id.properties?.isVertex) {
-                // If clicked on green roof overlay, use parent entity instead
-                let targetEntity = picked.id;
-                if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
-                    targetEntity = picked.id._parentEntity;
+            if (Cesium.defined(picked) && picked.id) {
+                // Handle polygons
+                if (picked.id.polygon && !picked.id.properties?.isVertex) {
+                    // If clicked on green roof overlay, use parent entity instead
+                    let targetEntity = picked.id;
+                    if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
+                        targetEntity = picked.id._parentEntity;
+                    }
+                    showPolygonDataInDataMenu(targetEntity);
+                    return;
                 }
-                showPolygonDataInDataMenu(targetEntity);
-                return;
+                // Handle corridors
+                if (picked.id.corridor && !picked.id.properties?.isVertex) {
+                    showPolygonDataInDataMenu(picked.id);
+                    return;
+                }
             }
         }
         
@@ -443,6 +451,14 @@ function terminateShape() {
         console.log(`✓ Polygon created with ${activeShapePoints.length} vertices`);
     } else if (drawingMode === "line") {
         finalShape = drawShape(activeShapePoints);
+        
+        // Auto-save corridor to database
+        if (typeof corridorAPI !== 'undefined' && finalShape) {
+            corridorAPI.saveCorridor(finalShape)
+                .then(() => console.log('✓ Corridor saved to database'))
+                .catch(err => console.error('Failed to save corridor:', err));
+        }
+        
         console.log(`✓ Line created with ${activeShapePoints.length} points`);
     }
     

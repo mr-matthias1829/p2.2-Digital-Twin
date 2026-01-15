@@ -420,7 +420,7 @@ class ObjectEditor {
             this.vertexEntities.forEach(v => this.viewer.entities.remove(v));
             this.vertexEntities = [];
 
-            // Alleen polygonen autosaven
+            // Auto-save polygons to database
             if (!skipAutoSave &&
                 typeof polygonAPI !== 'undefined' &&
                 this.editingEntity.polygon &&
@@ -428,6 +428,17 @@ class ObjectEditor {
             ) {
                 polygonAPI.savePolygon(this.editingEntity)
                     .then(() => console.log('✓ Polygon saved'))
+                    .catch(err => console.error(err));
+            }
+
+            // Auto-save corridors to database
+            if (!skipAutoSave &&
+                typeof corridorAPI !== 'undefined' &&
+                this.editingEntity.corridor &&
+                this.editingEntity.lineId
+            ) {
+                corridorAPI.saveCorridor(this.editingEntity)
+                    .then(() => console.log('✓ Corridor saved'))
                     .catch(err => console.error(err));
             }
 
@@ -543,16 +554,26 @@ class ObjectEditor {
                     if (this.hoveredVertex) {
                         this.deleteVertex(this.hoveredVertex);
                     } else if (this.editingEntity) {
-                        const ok = window.confirm ? window.confirm('Delete the selected polygon?') : true;
+                        const isCorridorEntity = !!this.editingEntity.corridor;
+                        const entityName = isCorridorEntity ? 'corridor' : 'polygon';
+                        const ok = window.confirm ? window.confirm(`Delete the selected ${entityName}?`) : true;
                         if (!ok) return;
                         
                         const entityToRemove = this.editingEntity;
                         
-                        // Delete from database if it has an ID
+                        // Delete polygon from database if it has an ID
                         if (entityToRemove.polygonId && typeof polygonAPI !== 'undefined') {
+                            console.log('Deleting polygon from database, ID:', entityToRemove.polygonId);
                             polygonAPI.deletePolygon(entityToRemove)
-                                .then(() => console.log('Polygon deleted from database'))
+                                .then(() => console.log('✓ Polygon deleted from database'))
                                 .catch(err => console.error('Failed to delete polygon from database:', err));
+                        }
+                        // Delete corridor from database if it has an ID
+                        if (entityToRemove.lineId && typeof corridorAPI !== 'undefined') {
+                            console.log('Deleting corridor from database, ID:', entityToRemove.lineId);
+                            corridorAPI.deleteCorridor(entityToRemove)
+                                .then(() => console.log('✓ Corridor deleted from database'))
+                                .catch(err => console.error('Failed to delete corridor from database:', err));
                         }
                         
                         this.stopEditing(true); // Pass true to skip auto-save
@@ -614,6 +635,15 @@ class ObjectEditor {
                         if (!ok) return;
                         
                         const entityToRemove = this.editingEntity;
+                        
+                        // Delete corridor from database if it has an ID
+                        if (entityToRemove.lineId && typeof corridorAPI !== 'undefined') {
+                            console.log('Deleting corridor from database, ID:', entityToRemove.lineId);
+                            corridorAPI.deleteCorridor(entityToRemove)
+                                .then(() => console.log('✓ Corridor deleted from database'))
+                                .catch(err => console.error('Failed to delete corridor from database:', err));
+                        }
+                        
                         this.stopEditing(true); // Pass true to skip auto-save
                         
                         try {
