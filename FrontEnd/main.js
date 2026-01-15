@@ -305,6 +305,11 @@ function setupInputActions() {
             const lat = Cesium.Math.toDegrees(cartographic.latitude);
             
             spawnModel(modelToCreate, { lon, lat }, 0);
+
+            if (typeof ModelAPI !== 'undefined') {
+                modelAPI.saveModel(modelToCreate)
+            }
+
             return; // Exit after placing model
         }
         
