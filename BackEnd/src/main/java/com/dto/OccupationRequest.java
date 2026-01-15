@@ -64,6 +64,11 @@ public class OccupationRequest {
          * Indicates whether there is nature (green space) on top of the polygon.
          */
         private Boolean hasNatureOnTop;
+        
+        /**
+         * Pre-calculated area for corridors (roads). When provided, this overrides the calculated area.
+         */
+        private Double corridorArea;
 
         public PolygonArea() {}
 
@@ -115,6 +120,14 @@ public class OccupationRequest {
 
         public void setHasNatureOnTop(Boolean hasNatureOnTop) {
             this.hasNatureOnTop = hasNatureOnTop;
+        }
+        
+        public Double getCorridorArea() {
+            return corridorArea;
+        }
+        
+        public void setCorridorArea(Double corridorArea) {
+            this.corridorArea = corridorArea;
         }
     }
 }

@@ -139,6 +139,9 @@ function drawShape(positionData) {
                 extrudedHeight: 0,
                 clampToGround: true,
             },
+            properties: {
+                buildType: 'road' // Default type for corridors/roads
+            },
             lineName: '',
             lineId: null
         });
@@ -450,10 +453,26 @@ function terminateShape() {
     activeShape = undefined;
     activeShapePoints = [];
 
-    // Update occupation stats after drawing a polygon
-    if (drawingMode === "polygon" && typeof updateOccupationStats === 'function') {
+    // Update occupation stats after drawing a polygon or line
+    if ((drawingMode === "polygon" || drawingMode === "line") && typeof updateOccupationStats === 'function') {
         setTimeout(() => updateOccupationStats(), 100);
     }
+}
+
+/**
+ * Calculates the length of a corridor by summing distances between consecutive positions
+ * @param {Cesium.Cartesian3[]} positions - Array of positions defining the corridor center line
+ * @returns {number} Total length in meters
+ */
+function calculateCorridorLength(positions) {
+    if (!positions || positions.length < 2) return 0;
+    
+    let totalLength = 0;
+    for (let i = 0; i < positions.length - 1; i++) {
+        const distance = Cesium.Cartesian3.distance(positions[i], positions[i + 1]);
+        totalLength += distance;
+    }
+    return totalLength;
 }
 
 /**
@@ -484,6 +503,7 @@ async function updateOccupationStats() {
         // Get all other polygons (excluding Spoordok) with their types
         const polygonAreas = [];
         viewer.entities.values.forEach(entity => {
+            // Handle polygons
             if (entity.polygon &&
                 (!entity.properties || !entity.properties.isSpoordok) &&
                 (!entity.properties || !entity.properties.isGreenRoofOverlay)) {  // Skip green roof overlays
@@ -503,6 +523,39 @@ async function updateOccupationStats() {
                             z: p.z
                         })),
                         type: type
+                    });
+                }
+            }
+            
+            // Handle corridors (roads) - calculate area as length * 3m width
+            if (entity.corridor) {
+                let positions = entity.corridor.positions;
+                if (typeof positions?.getValue === 'function') {
+                    positions = positions.getValue(Cesium.JulianDate.now());
+                }
+                
+                if (positions && positions.length >= 2) {
+                    // Get corridor type (default to 'road')
+                    let type = 'road';
+                    if (entity.properties && entity.properties.buildType) {
+                        const bt = entity.properties.buildType;
+                        type = typeof bt.getValue === 'function' ? bt.getValue() : bt;
+                    }
+                    
+                    // Calculate corridor length
+                    const length = calculateCorridorLength(positions);
+                    const width = 3.0; // Fixed width in meters
+                    const area = length * width;
+                    
+                    // Pass all corridor positions so backend can check if corridor is inside Spoordok
+                    polygonAreas.push({
+                        positions: positions.map(p => ({
+                            x: p.x,
+                            y: p.y,
+                            z: p.z
+                        })),
+                        type: type,
+                        corridorArea: area // Pass pre-calculated area
                     });
                 }
             }

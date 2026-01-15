@@ -97,14 +97,29 @@ window.showPolygonInfo = async function (entity) {
             }
         }
 
-        // Length for line
+        // Length for line/corridor
         let lengthLine = '';
+        let corridorAreaLine = '';
+        let corridorTypeLine = '';
         if (isLine && positions.length >= 2) {
             let totalLength = 0;
             for (let i = 1; i < positions.length; i++) {
                 totalLength += Cesium.Cartesian3.distance(positions[i - 1], positions[i]);
             }
             lengthLine = `<small>Length: ${totalLength.toFixed(2)} m</small>`;
+            
+            // Calculate corridor area (length * 3m width)
+            const corridorWidth = 3.0;
+            const corridorArea = totalLength * corridorWidth;
+            corridorAreaLine = `<small>Area: ${corridorArea.toFixed(2)} m² (${totalLength.toFixed(2)}m × ${corridorWidth}m)</small>`;
+            
+            // Get corridor type
+            let corridorType = 'road'; // default
+            if (entity.properties && entity.properties.buildType) {
+                const bt = entity.properties.buildType;
+                corridorType = typeof bt.getValue === 'function' ? bt.getValue() : bt;
+            }
+            corridorTypeLine = corridorType;
         }
 
         // Build HTML
@@ -141,10 +156,21 @@ window.showPolygonInfo = async function (entity) {
         }
 
         // Measurements section
-        if (heightLine || areaLine || volumeLine || lengthLine) {
+        if (heightLine || areaLine || volumeLine || lengthLine || corridorAreaLine) {
             html += '<div style="background: linear-gradient(135deg, rgba(100, 150, 255, 0.08), rgba(80, 130, 255, 0.05)); padding: 12px; border-radius: 8px; margin-bottom: 14px; border:1px solid rgba(100,150,255,0.15);">';
             html += '<div style="font-size:12px;font-weight:600;color:#80a0ff;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Measurements</div>';
 
+            if (corridorTypeLine) {
+                html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><span style="color:#b0c4de;">Type:</span><span style="font-weight:600;color:#c0d4ee;">${corridorTypeLine}</span></div>`;
+            }
+            if (lengthLine) {
+                const lengthVal = lengthLine.match(/([\d.]+)/)?.[1] || '';
+                html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><span style="color:#b0c4de;">Length:</span><span style="font-weight:600;color:#ffd700;">${lengthVal} m</span></div>`;
+            }
+            if (corridorAreaLine) {
+                const areaVal = corridorAreaLine.match(/([\d.]+)/)?.[1] || '';
+                html += `<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:#b0c4de;">Area:</span><span style="font-weight:600;color:#90ee90;">${areaVal} m²</span></div>`;
+            }
             if (heightLine) {
                 const heightVal = heightLine.match(/([\d.]+)/)?.[1] || '';
                 html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><span style="color:#b0c4de;">Height:</span><span style="font-weight:600;color:#c0d4ee;">${heightVal} m</span></div>`;
@@ -157,10 +183,7 @@ window.showPolygonInfo = async function (entity) {
                 const volumeVal = volumeLine.match(/([\d.]+)/)?.[1] || '';
                 html += `<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:#b0c4de;">Volume:</span><span style="font-weight:600;color:#ffa07a;">${volumeVal} m³</span></div>`;
             }
-            if (lengthLine) {
-                const lengthVal = lengthLine.match(/([\d.]+)/)?.[1] || '';
-                html += `<div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:#b0c4de;">Length:</span><span style="font-weight:600;color:#ffd700;">${lengthVal} m</span></div>`;
-            }
+            
 
             html += '</div>';
         }

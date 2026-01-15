@@ -79,7 +79,7 @@ class ObjectEditor {
             return this.stopEditing();
         }
 
-        // 🔥 FIX: maak line ALTIJD dynamisch
+        
         const editor = this;
         this._lineCallback = new Cesium.CallbackProperty(() => {
             return editor.vertexEntities.map(v =>
@@ -224,6 +224,33 @@ class ObjectEditor {
     }
     }
 
+    rotateCorridor(degrees) {
+        if (!this.editingEntity?.corridor) return;
+        const positions = this.vertexEntities.map(v => 
+            v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
+        );
+        if (!positions.length) return;
+        
+        const center = positions.reduce((sum, pos) => 
+            Cesium.Cartesian3.add(sum, pos, sum), new Cesium.Cartesian3()
+        );
+        Cesium.Cartesian3.divideByScalar(center, positions.length, center);
+        
+        const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+        const rotation = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(degrees));
+        const inverseTransform = Cesium.Matrix4.inverse(transform, new Cesium.Matrix4());
+        
+        const newPositions = positions.map(pos => {
+            const localPos = Cesium.Matrix4.multiplyByPoint(inverseTransform, pos, new Cesium.Cartesian3());
+            const rotatedLocal = Cesium.Matrix3.multiplyByVector(rotation, localPos, new Cesium.Cartesian3());
+            return Cesium.Matrix4.multiplyByPoint(transform, rotatedLocal, new Cesium.Cartesian3());
+        });
+        
+        this.vertexEntities.forEach((v, i) => v.position = newPositions[i]);
+        this.updateLineFromVertices();
+        console.log(`Rotated corridor ${degrees}°`);
+    }
+
     
 
     /**
@@ -336,7 +363,7 @@ class ObjectEditor {
         model.silhouetteColor = Cesium.Color.YELLOW;
         model.silhouetteSize = 3.0;
         
-        console.log("🎯 MODEL EDIT MODE");
+        console.log(" MODEL EDIT MODE");
         console.log("  • Drag to move");
         console.log("  • Arrow Left/Right to rotate (±3°)");
         console.log("  • Arrow Up/Down to scale (±0.1)");
@@ -408,8 +435,19 @@ class ObjectEditor {
         }
 
         if (this.editingModel) {
-            if (this.editingModel._originalColor !== null) this.editingModel.color = this.editingModel._originalColor;
-            if (this.editingModel._originalSilhouette !== null) this.editingModel.silhouetteColor = this.editingModel._originalSilhouette;
+            // Restore original appearance or set to undefined if there was no original
+            if (this.editingModel._originalColor !== null) {
+                this.editingModel.color = this.editingModel._originalColor;
+            } else {
+                this.editingModel.color = undefined;
+            }
+            
+            if (this.editingModel._originalSilhouette !== null) {
+                this.editingModel.silhouetteColor = this.editingModel._originalSilhouette;
+            } else {
+                this.editingModel.silhouetteColor = undefined;
+            }
+            
             this.editingModel.silhouetteSize = this.editingModel._originalSilhouetteSize;
             this.editingModel = null;
         }
@@ -465,10 +503,10 @@ class ObjectEditor {
             }
             
             // POLYGON CONTROLS
-            if (this.editingEntity) {
+            if (this.editingEntity && this.editingEntity.polygon) {
                 const isProtected = this.isProtectedEntity(this.editingEntity);
                 const h = this.editingEntity.polygon.extrudedHeight || 0;
-                
+
                 
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
@@ -513,7 +551,7 @@ class ObjectEditor {
                         // Delete from database if it has an ID
                         if (entityToRemove.polygonId && typeof polygonAPI !== 'undefined') {
                             polygonAPI.deletePolygon(entityToRemove)
-                                .then(() => console.log('✓ Polygon deleted from database'))
+                                .then(() => console.log('Polygon deleted from database'))
                                 .catch(err => console.error('Failed to delete polygon from database:', err));
                         }
                         
@@ -554,6 +592,61 @@ class ObjectEditor {
                 } else if (e.key === 'ArrowRight') {
                     e.preventDefault();
                     this.rotatePolygon(3);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.stopEditing();
+                }
+                return;
+            }
+            
+            // CORRIDOR CONTROLS
+            if (this.editingEntity && this.editingEntity.corridor) {
+                const isProtected = this.isProtectedEntity(this.editingEntity);
+                
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    e.preventDefault();
+                    if (isProtected) return console.log("Protected corridor - cannot delete");
+                    
+                    if (this.hoveredVertex) {
+                        this.deleteVertex(this.hoveredVertex);
+                    } else if (this.editingEntity) {
+                        const ok = window.confirm ? window.confirm('Delete the selected corridor?') : true;
+                        if (!ok) return;
+                        
+                        const entityToRemove = this.editingEntity;
+                        this.stopEditing(true); // Pass true to skip auto-save
+                        
+                        try {
+                            this.viewer.entities.remove(entityToRemove);
+                            
+                            // Remove from bounds tracking
+                            if (typeof boundsChecker !== 'undefined') {
+                                boundsChecker.removeEntityFromTracking(entityToRemove);
+                            }
+                            
+                            const sid = entityToRemove.properties?.serverId;
+                            if (sid != null && window.serverPolygonEntities) {
+                                window.serverPolygonEntities.delete(sid);
+                            }
+                            
+                            // Update occupation stats after deletion
+                            if (typeof window.updateOccupationStats === 'function') {
+                                setTimeout(() => window.updateOccupationStats(), 100);
+                            }
+                        } catch (e) {
+                            console.warn('Error removing corridor:', e);
+                        }
+                        if (window.clearPolygonInfo) window.clearPolygonInfo();
+                    }
+                } else if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    this.rotateCorridor(90);
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    this.rotateCorridor(-3);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    this.rotateCorridor(3);
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     this.stopEditing();
@@ -692,63 +785,69 @@ class ObjectEditor {
      */
     handleDoubleClick(event) {
     const picked = this.viewer.scene.pick(event.position);
-    if (!Cesium.defined(picked) || !picked.id) return false;
+    if (!Cesium.defined(picked)) return false;
 
-    // PRIORITY 1: Polygon editing
-    if (this.editMode && this.editingEntity) {
-        if (this.isProtectedEntity(this.editingEntity)) return false;
+    // PRIORITY 1: Already editing something - handle vertex/edge operations
+    if (this.editMode && (this.editingEntity || this.editingModel)) {
+        // If editing a polygon/corridor, handle vertex operations
+        if (this.editingEntity && picked.id) {
+            if (this.isProtectedEntity(this.editingEntity)) return false;
 
-        // Clicked on vertex → add vertex
-        if (picked.id.properties?.isVertex) {
-            const idx = picked.id.properties.vertexIndex;
-            this.addVertexBetween(idx, (idx + 1) % this.vertexEntities.length);
-            return true;
-        }
-
-        // If clicked on polygon or line edges → add vertex
-        let targetEntity = picked.id;
-        if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
-            targetEntity = picked.id._parentEntity;
-        }
-
-        if (targetEntity === this.editingEntity) {
-            const ray = this.viewer.camera.getPickRay(event.position);
-            const clickedPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
-            if (!Cesium.defined(clickedPos)) return false;
-
-            let closestEdge = { index: 0, distance: Infinity };
-            for (let i = 0; i < this.vertexEntities.length; i++) {
-                const nextIdx = (i + 1) % this.vertexEntities.length;
-                const v1 = this.vertexEntities[i].position.getValue ? this.vertexEntities[i].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[i].position;
-                const v2 = this.vertexEntities[nextIdx].position.getValue ? this.vertexEntities[nextIdx].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[nextIdx].position;
-
-                const edge = Cesium.Cartesian3.subtract(v2, v1, new Cesium.Cartesian3());
-                const edgeLen = Cesium.Cartesian3.magnitude(edge);
-                const toClick = Cesium.Cartesian3.subtract(clickedPos, v1, new Cesium.Cartesian3());
-
-                let t = Cesium.Cartesian3.dot(toClick, edge) / (edgeLen * edgeLen);
-                t = Math.max(0, Math.min(1, t));
-
-                const closestPoint = Cesium.Cartesian3.add(
-                    v1,
-                    Cesium.Cartesian3.multiplyByScalar(edge, t, new Cesium.Cartesian3()),
-                    new Cesium.Cartesian3()
-                );
-
-                const distance = Cesium.Cartesian3.distance(clickedPos, closestPoint);
-                if (distance < closestEdge.distance) closestEdge = { index: i, distance };
-            }
-
-            if (closestEdge.distance < 50) {
-                this.addVertexBetween(closestEdge.index, (closestEdge.index + 1) % this.vertexEntities.length);
+            // Clicked on vertex → add vertex
+            if (picked.id.properties?.isVertex) {
+                const idx = picked.id.properties.vertexIndex;
+                this.addVertexBetween(idx, (idx + 1) % this.vertexEntities.length);
                 return true;
             }
-        }
 
+            // If clicked on polygon or line edges → add vertex
+            let targetEntity = picked.id;
+            if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) {
+                targetEntity = picked.id._parentEntity;
+            }
+
+            if (targetEntity === this.editingEntity) {
+                const ray = this.viewer.camera.getPickRay(event.position);
+                const clickedPos = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+                if (!Cesium.defined(clickedPos)) return false;
+
+                let closestEdge = { index: 0, distance: Infinity };
+                for (let i = 0; i < this.vertexEntities.length; i++) {
+                    const nextIdx = (i + 1) % this.vertexEntities.length;
+                    const v1 = this.vertexEntities[i].position.getValue ? this.vertexEntities[i].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[i].position;
+                    const v2 = this.vertexEntities[nextIdx].position.getValue ? this.vertexEntities[nextIdx].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[nextIdx].position;
+
+                    const edge = Cesium.Cartesian3.subtract(v2, v1, new Cesium.Cartesian3());
+                    const edgeLen = Cesium.Cartesian3.magnitude(edge);
+                    const toClick = Cesium.Cartesian3.subtract(clickedPos, v1, new Cesium.Cartesian3());
+
+                    let t = Cesium.Cartesian3.dot(toClick, edge) / (edgeLen * edgeLen);
+                    t = Math.max(0, Math.min(1, t));
+
+                    const closestPoint = Cesium.Cartesian3.add(
+                        v1,
+                        Cesium.Cartesian3.multiplyByScalar(edge, t, new Cesium.Cartesian3()),
+                        new Cesium.Cartesian3()
+                    );
+
+                    const distance = Cesium.Cartesian3.distance(clickedPos, closestPoint);
+                    if (distance < closestEdge.distance) closestEdge = { index: i, distance };
+                }
+
+                if (closestEdge.distance < 50) {
+                    this.addVertexBetween(closestEdge.index, (closestEdge.index + 1) % this.vertexEntities.length);
+                    return true;
+                }
+            }
+        }
+        
+        // If editing a model, double-click does nothing (already editing)
         return false;
     }
 
-    // PRIORITY 2: Not in edit mode → start editing
+    // PRIORITY 2: Not editing yet → start editing clicked object
+    if (!picked.id && !picked.primitive) return false;
+    
     // MODEL
     if (picked.primitive && (picked.primitive instanceof Cesium.Model || (picked.primitive.modelMatrix && !picked.id))) {
         this.startEditingModel(picked.primitive);
@@ -756,7 +855,7 @@ class ObjectEditor {
     }
 
     // POLYGON
-    if (picked.id.polygon) {
+    if (picked.id && picked.id.polygon) {
         let targetEntity = picked.id;
         if (picked.id.properties?.isGreenRoofOverlay && picked.id._parentEntity) targetEntity = picked.id._parentEntity;
         this.startEditingPolygon(targetEntity);
@@ -764,7 +863,7 @@ class ObjectEditor {
     }
 
     // LINE
-    if (Cesium.defined(picked) && picked.id?.corridor && !picked.id.properties?.isVertex) {
+    if (picked.id && picked.id.corridor && !picked.id.properties?.isVertex) {
         this.startEditingLine(picked.id);
         return true;
     }
