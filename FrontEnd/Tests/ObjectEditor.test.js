@@ -216,7 +216,7 @@ global.updateModelType = vi.fn();
       editor.deleteVertex(editor.vertexEntities[0]);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Protected polygon')
+        expect.stringContaining('Protected entity')
       );
       expect(mockViewer.entities.remove).not.toHaveBeenCalled();
     });

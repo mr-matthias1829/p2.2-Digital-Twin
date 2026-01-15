@@ -222,7 +222,8 @@ public class CalculationServiceImpl implements CalculationService {
             for (OccupationRequest.PolygonArea polygon : request.getPolygonAreas()) {
                 // Check if all vertices are inside the Spoordok polygon
                 if (isPolygonInsideSpoordok(polygon.getPositions(), request.getSpoordokPositions())) {
-                    double area = calculateAreaFromPositions(polygon.getPositions());
+                    // Use pre-calculated corridor area if provided, otherwise calculate from positions
+                    double area = polygon.getCorridorArea() != null ? polygon.getCorridorArea() : calculateAreaFromPositions(polygon.getPositions());
 
                     // If has nature on top, add to nature on top counter
                     if (Boolean.TRUE.equals(polygon.getHasNatureOnTop())) {

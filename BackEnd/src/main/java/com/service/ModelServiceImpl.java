@@ -10,6 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Implementation of ModelService.
+ * Currently uses in-memory storage (will be replaced with database later).
+ */
 @Service
 public class ModelServiceImpl implements ModelService {
 

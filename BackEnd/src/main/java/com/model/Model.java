@@ -60,11 +60,20 @@ public class Model {
         this.modelKey = modelKey;
     }
 
-    // Getters and Setters
+    /**
+     * Gets the unique identifier.
+     *
+     * @return the id
+     */
     public Long getId() {
         return id;
     }
 
+    /**
+     * Sets the unique identifier.
+     *
+     * @param id the id to set
+     */
     public void setId(Long id) {
         this.id = id;
     }
@@ -82,34 +91,74 @@ public class Model {
         }
     }
 
+    /**
+     * Gets the height above ground.
+     *
+     * @return the height in meters
+     */
     public Double getHeight() {
         return height;
     }
 
+    /**
+     * Sets the height above ground.
+     *
+     * @param height the height in meters to set
+     */
     public void setHeight(Double height) {
         this.height = height;
     }
 
+    /**
+     * Gets the rotation angle.
+     *
+     * @return the rotation in degrees
+     */
     public Double getRotation() {
         return rotation;
     }
 
+    /**
+     * Sets the rotation angle.
+     *
+     * @param rotation the rotation in degrees to set
+     */
     public void setRotation(Double rotation) {
         this.rotation = rotation;
     }
 
+    /**
+     * Gets the scale factor.
+     *
+     * @return the scale factor
+     */
     public Double getScale() {
         return scale;
     }
 
+    /**
+     * Sets the scale factor.
+     *
+     * @param scale the scale factor to set
+     */
     public void setScale(Double scale) {
         this.scale = scale;
     }
 
+    /**
+     * Gets the type classification.
+     *
+     * @return the type
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Sets the type classification.
+     *
+     * @param type the type to set
+     */
     public void setType(String type) {
         this.type = type;
     }
@@ -122,14 +171,33 @@ public class Model {
         this.personality = personality;
     }
 
+    public String getPersonality() {
+        return personality;
+    }
+
+    public void setPersonality(String personality) {
+        this.personality = personality;
+    }
+
+    
     public String getModelKey() {
         return modelKey;
     }
 
+    /**
+     * Sets the model key reference.
+     *
+     * @param modelKey the model key to set
+     */
     public void setModelKey(String modelKey) {
         this.modelKey = modelKey;
     }
 
+    /**
+     * Returns a string representation of the Model.
+     *
+     * @return a string containing all field values
+     */
     @Override
     public String toString() {
         return "Model{" +
