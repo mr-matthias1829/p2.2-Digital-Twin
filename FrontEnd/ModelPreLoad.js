@@ -27,23 +27,28 @@ const Folder = "Models";
 
 /**
  * Preloads all application models asynchronously
- * Models are cached for instant spawning later
+ * Models are cached for instant spawning later (avoids loading delays during gameplay)
+ * 
+ * Preloading happens once at application startup and stores models in memory.
+ * This improves user experience by eliminating loading delays when placing models.
  * 
  * @async
  * @function preloadModels
- * @returns {Promise<void>} Resolves when all models are loaded
+ * @returns {Promise<void>} Resolves when all models are loaded and cached
  * 
  * @example
  * await preloadModels();
  * // Now models can be spawned instantly
  * spawnModel('man', {lon: 5.79, lat: 53.19});
- * // The method only has to be used once, after which it's preloaded forever until reloaded
+ * spawnModel('tree', {lon: 5.79, lat: 53.19});
+ * // The method only needs to be called once - models stay cached until page reload
  */
 async function preloadModels() {
+    // Define all models to preload
+    // Format: [id, file name, {scale, buildtype}]
     const models = [
-        // Format: [id, file name, {scale, buildtype}]
         // The id is used later to fetch the model, also known as the key
-        // The file name is used to find the model
+        // The file name is used to find the model in the Models folder
         // Scale and buildtype are properties of the model
         ["man", "Cesium_Man.glb", { scale: 1.0, buildType: "nature" }],
         ["building", "strange_building.glb", { scale: 3, buildType: "detached_house" }],
@@ -53,7 +58,7 @@ async function preloadModels() {
         ["lamp", "Lamp.glb", { scale: 0.45, buildType: "road" }],
         ["bench", "Bench.glb", { scale: 0.5, buildType: "road" }],
         ["bush", "Bush.glb", { scale: 0.37, buildType: "nature" }]
-        // Some models spawn in oversized. Scale's stated here are set based to roughly get them to a reasonable size
+        // Some models spawn in oversized. Scales stated here are set to get them to a reasonable size
     ];
 
     // Record order exactly as written

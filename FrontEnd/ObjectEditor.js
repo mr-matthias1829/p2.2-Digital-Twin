@@ -18,30 +18,56 @@
 class ObjectEditor {
     /**
      * Creates an object editor for the given Cesium viewer
+     * The editor allows interactive manipulation of polygons, corridors, and 3D models
      * @param {import('cesium').Viewer} viewer - Cesium viewer instance
      */
     constructor(viewer) {
-        /** @type {import('cesium').Viewer} */
+        /** @type {import('cesium').Viewer} Cesium viewer reference */
         this.viewer = viewer;
+        
+        /** @type {boolean} Whether editor is currently active */
         this.editMode = false;
-        this.editingEntity = null; // polygon or line
+        
+        /** @type {Cesium.Entity|null} Currently edited polygon or line entity */
+        this.editingEntity = null;
+        
+        /** @type {Cesium.Model|null} Currently edited 3D model primitive */
         this.editingModel = null;
+        
+        /** @type {Cesium.Entity[]} Array of red vertex markers for polygon/corridor editing */
         this.vertexEntities = [];
+        
+        /** @type {Cesium.Color|null} Original polygon color before editing (for restoration) */
         this.originalMaterial = null;
+        
+        /** @type {Cesium.Entity|null} The vertex currently being dragged */
         this.draggedVertex = null;
+        
+        /** @type {Cesium.Entity|null} The vertex currently under mouse cursor (for hover effects) */
         this.hoveredVertex = null;
+        
+        /** @type {Cesium.Cartesian3|null} Starting position for drag operations */
         this.moveStart = null;
+        
+        /** @type {Function|null} Callback function notified when edit mode changes */
         this.onEditModeChanged = null;
+        
+        // Initialize keyboard shortcuts (Arrow keys, Delete, R, Escape)
         this.setupKeyboardControls();
     }
 
-    // Helper: mark certain entities as protected
+    // Helper: mark certain entities as protected (cannot be edited or deleted)
+    // Protected entities include the Spoordok boundary polygon
     isProtectedEntity(entity) {
         if (!entity) return false;
         try {
+            // Check if entity has isSpoordok property set to true
             if (entity.properties?.isSpoordok) return true;
+            // Also check by name for backwards compatibility
             if (entity.name === 'Spoordok') return true;
-        } catch (e) {}
+        } catch (e) {
+            // Ignore errors from missing properties
+        }
         return false;
     }
 
@@ -49,11 +75,14 @@ class ObjectEditor {
 
     /**
      * Starts editing a polygon entity (adds vertex markers)
+     * Creates red vertex markers at each polygon corner for interactive editing
+     * Users can drag vertices to reshape, add new vertices, or delete existing ones
      * @param {import('cesium').Entity} entity - Polygon entity to edit
      * @returns {void}
      */
     startEditingPolygon(entity) {
         if (!entity.polygon) return console.log("No polygon found");
+        // Delegate to generic editing function that handles both polygons and lines
         this._startEditingGeneric(entity, 'polygon');
     }
 
@@ -160,59 +189,84 @@ class ObjectEditor {
     }
 
     /**
-     * Rotates the currently edited polygon
-     * @param {number} degrees - Rotation angle in degrees
+     * Rotates the currently edited polygon around its center point
+     * Uses East-North-Up coordinate system for accurate geographic rotation
+     * @param {number} degrees - Rotation angle in degrees (positive = counterclockwise)
      */
     rotatePolygon(degrees) {
+        // Validate we're editing a polygon
         if (!this.editingEntity?.polygon) return;
+        
+        // Get current vertex positions (from vertex markers)
         const positions = this.vertexEntities.map(v => 
             v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
         );
         if (!positions.length) return;
         
+        // Calculate geometric center (centroid) of polygon
         const center = positions.reduce((sum, pos) => 
-            Cesium.Cartesian3.add(sum, pos, sum), new Cesium.Cartesian3()
+            Cesium.Cartesian3.add(sum, pos, sum), new Cesium.Cartesian3()  // Sum all positions
         );
-        Cesium.Cartesian3.divideByScalar(center, positions.length, center);
+        Cesium.Cartesian3.divideByScalar(center, positions.length, center);  // Average = center
         
+        // Create rotation matrix in East-North-Up coordinate system
+        // This ensures rotation is aligned with the Earth's surface at the polygon location
         const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
-        const rotation = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(degrees));
+        const rotation = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(degrees));  // Z-axis = vertical
         const inverseTransform = Cesium.Matrix4.inverse(transform, new Cesium.Matrix4());
         
+        // Rotate each vertex around the center point
         const newPositions = positions.map(pos => {
+            // Transform to local coordinates (relative to center)
             const localPos = Cesium.Matrix4.multiplyByPoint(inverseTransform, pos, new Cesium.Cartesian3());
+            // Apply rotation in local space
             const rotatedLocal = Cesium.Matrix3.multiplyByVector(rotation, localPos, new Cesium.Cartesian3());
+            // Transform back to world coordinates
             return Cesium.Matrix4.multiplyByPoint(transform, rotatedLocal, new Cesium.Cartesian3());
         });
         
+        // Update vertex marker positions
         this.vertexEntities.forEach((v, i) => v.position = newPositions[i]);
+        
+        // Update the actual polygon geometry
         this.updatePolygonFromVertices();
+        
         console.log(`↻ Rotated ${degrees}°`);
     }
 
     /**
      * Updates polygon geometry from current vertex positions
+     * This is called after any vertex manipulation (drag, add, delete, rotate)
+     * Also triggers validation, green roof updates, and info display refresh
      * @private
      */
     updatePolygonFromVertices() {
+        // Safety check
         if (!this.editingEntity || !this.vertexEntities.length) return;
+        
+        // Extract current positions from all vertex markers
         const positions = this.vertexEntities.map(v => 
             v.position.getValue ? v.position.getValue(Cesium.JulianDate.now()) : v.position
         );
+        
+        // Update the polygon's hierarchy with new geometry
         this.editingEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(positions);
         
-        // Check bounds and mark if out of bounds
+        // Check bounds and mark if out of bounds (red outline if outside Spoordok)
         if (typeof boundsChecker !== 'undefined') {
             boundsChecker.validateAndMarkPolygon(this.editingEntity, this.viewer);
         }
         
-        // Update green roof overlay if it exists
+        // Update green roof overlay if it exists (green overlay follows polygon shape)
         if (typeof updateGreenRoofVisualization === 'function') {
             updateGreenRoofVisualization(this.editingEntity);
         }
         
+        // Refresh info panel to show updated area/volume calculations
         if (window.showPolygonInfo) {
-            try { window.showPolygonInfo(this.editingEntity); } catch (e) {}
+            try { window.showPolygonInfo(this.editingEntity); } catch (e) {
+                // Ignore errors if info panel is unavailable
+            }
         }
     }
 
@@ -255,58 +309,88 @@ class ObjectEditor {
 
     /**
      * Adds a new vertex between two existing vertices
+     * Used when user double-clicks on a polygon edge to add a control point
      * @param {number} index1 - First vertex index
      * @param {number} index2 - Second vertex index
      */
     addVertexBetween(index1, index2) {
+        // Safety check - must be in edit mode with vertices
         if (!this.editMode || !this.vertexEntities.length) return;
 
+        // Get positions of the two vertices we're adding between
         const pos1 = this.vertexEntities[index1].position.getValue ? this.vertexEntities[index1].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[index1].position;
         const pos2 = this.vertexEntities[index2].position.getValue ? this.vertexEntities[index2].position.getValue(Cesium.JulianDate.now()) : this.vertexEntities[index2].position;
+        
+        // Handle dynamic properties
         const cart1 = pos1.getValue ? pos1.getValue(Cesium.JulianDate.now()) : pos1;
         const cart2 = pos2.getValue ? pos2.getValue(Cesium.JulianDate.now()) : pos2;
+        
+        // Calculate midpoint between the two vertices (linear interpolation)
         const midpoint = Cesium.Cartesian3.lerp(pos1, pos2, 0.5, new Cesium.Cartesian3());
 
+        // Insert new vertex marker at the midpoint
         this.vertexEntities.splice(index2, 0, this.viewer.entities.add({
             position: midpoint,
             point: {
                 pixelSize: 20,
-                color: Cesium.Color.RED,
+                color: Cesium.Color.RED,  // Match existing vertex style
                 outlineColor: Cesium.Color.WHITE,
                 outlineWidth: 3,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,  // Always visible
             },
             properties: { isVertex: true, vertexIndex: index2 }
         }));
 
+        // Update all vertex indices to maintain correct ordering
         this.vertexEntities.forEach((v, i) => v.properties.vertexIndex = i);
 
+        // Update the geometry with the new vertex
         if (this.editingEntity.polygon) this.updatePolygonFromVertices();
         if (this.editingEntity?.corridor) this.updateLineFromVertices();
+        
         console.log(`+ Added vertex between ${index1} and ${index2}`);
     }
 
     /**
-     * Deletes a vertex from the polygon (minimum 3 vertices required)
+     * Deletes a vertex from the polygon or corridor
+     * Minimum vertex requirements: 3 for polygons, 2 for corridors
+     * Protected entities (Spoordok) cannot have vertices deleted
      * @param {import('cesium').Entity} vertexEntity - Vertex entity to delete
      */
     deleteVertex(vertexEntity) {
+        // Safety check - must be in edit mode
         if (!this.editMode) return;
 
-        const minVertices = this.editingEntity?.corridor ? 2 : 3;
+        // Determine minimum vertices based on entity type
+        const minVertices = this.editingEntity?.corridor ? 2 : 3;  // Corridor needs 2, polygon needs 3
+        
+        // Prevent deletion if at minimum vertex count
         if (!this.editMode || this.vertexEntities.length <= minVertices) {
             return console.log(`⚠ Cannot delete - minimum ${minVertices} vertices required`);
         }
-        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) return console.log("Protected entity - cannot delete vertex");
+        
+        // Prevent deletion from protected entities (Spoordok boundary)
+        if (this.editingEntity && this.isProtectedEntity(this.editingEntity)) {
+            return console.log("Protected entity - cannot delete vertex");
+        }
 
+        // Find the vertex in our array
         const index = this.vertexEntities.indexOf(vertexEntity);
-        if (index === -1) return;
+        if (index === -1) return;  // Vertex not found
+        
+        // Remove vertex marker from scene
         this.viewer.entities.remove(vertexEntity);
+        
+        // Remove from vertex array
         this.vertexEntities.splice(index, 1);
+        
+        // Re-index remaining vertices to maintain correct order
         this.vertexEntities.forEach((v, i) => v.properties.vertexIndex = i);
 
+        // Update the geometry after deletion
         if (this.editingEntity.polygon) this.updatePolygonFromVertices();
         if (this.editingEntity?.corridor) this.updateLineFromVertices();
+        
         console.log(`✗ Deleted vertex ${index}`);
     }
 
@@ -340,7 +424,8 @@ class ObjectEditor {
     // === MODEL EDITING ===
 
     /**
-     * Starts editing a 3D model
+     * Starts editing a 3D model (tree, bench, lamp, etc.)
+     * Highlights the model in yellow and enables drag, rotate, and scale operations
      * @param {import('cesium').Model} model - Model primitive to edit
      */
     startEditingModel(model) {
@@ -348,22 +433,27 @@ class ObjectEditor {
         if (typeof drawingMode !== 'undefined' && drawingMode !== "edit") {
             return;
         }
+        
+        // Stop any current editing operation first
         if (this.editMode) this.stopEditing();
         
+        // Enter edit mode
         this.editMode = true;
         this.editingModel = model;
-        this._emitEditModeChanged();
+        this._emitEditModeChanged();  // Notify UI
         
-        // Highlight model with yellow
+        // Save original appearance for restoration later
         model._originalColor = model.color ? Cesium.Color.clone(model.color) : null;
         model._originalSilhouette = model.silhouetteColor ? Cesium.Color.clone(model.silhouetteColor) : null;
         model._originalSilhouetteSize = model.silhouetteSize || 0;
         
-        model.color = Cesium.Color.YELLOW.withAlpha(0.6);
-        model.silhouetteColor = Cesium.Color.YELLOW;
-        model.silhouetteSize = 3.0;
+        // Highlight model with yellow color and outline
+        model.color = Cesium.Color.YELLOW.withAlpha(0.6);  // Yellow tint
+        model.silhouetteColor = Cesium.Color.YELLOW;        // Yellow outline
+        model.silhouetteSize = 3.0;                          // Thick outline for visibility
         
-        console.log(" MODEL EDIT MODE");
+        // Display help text for model editing controls
+        console.log("🎯 MODEL EDIT MODE");
         console.log("  • Drag to move");
         console.log("  • Arrow Left/Right to rotate (±3°)");
         console.log("  • Arrow Up/Down to scale (±0.1)");

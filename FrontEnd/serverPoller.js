@@ -1,18 +1,22 @@
 /**
- * Monitors backend server connection status
+ * Monitors backend server connection status with periodic polling
+ * Provides real-time connection status updates to the UI
  * @class serverPoller
- * @description Polls the Spring Boot API endpoint to track connectivity
+ * @description Polls the Spring Boot API endpoint every 10 seconds to track connectivity
+ * This helps users know when backend features (save, load, calculations) are available
  * @example
  * const poller = new serverPoller(); // localhost has a default defined, arguments optional
  * await poller.checkConnection(); // Manual check
+ * // Poller automatically starts checking every 10 seconds
  */
 class serverPoller {
     /**
      * Creates a server connection monitor
+     * Automatically starts polling every 10 seconds
      * @param {string} [apiBaseUrl='http://localhost:8081'] - Spring Boot API base URL
      */
     constructor(apiBaseUrl = 'http://localhost:8081') {
-        /** @type {string} API base URL */
+        /** @type {string} API base URL (Spring Boot backend) */
         this.apiBase = apiBaseUrl;
         
         /** @type {Map} Unused - kept for backward compatibility */

@@ -130,14 +130,15 @@ function addBuildType(key, id, properties) {
     };
 }
 
-// Function to fetch a property of a type
-// Handy because a type might not have a certain value defined, after which it will fallback to the default type
-
 /**
- * Gets a property from a building type with fallback logic, looking through 3 cases
+ * Gets a property from a building type with fallback logic
+ * Implements a 3-tier lookup system for robust property retrieval:
+ * 1. Try the specific type's property
+ * 2. Fall back to DEFAULT type's property
+ * 3. Return null if neither exists
  * @function getTypeProperty
  * @param {string} key - Type key (e.g., "commercial_building") or "none"
- * @param {TypeProperty} propertyName - Property to retrieve
+ * @param {TypeProperty} propertyName - Property to retrieve (e.g., 'color', 'cost')
  * @returns {*} Property value, DEFAULT fallback value, or null if not found
  * 
  * @example
@@ -145,9 +146,10 @@ function addBuildType(key, id, properties) {
  * const cost = getTypeProperty('none', 'cost'); // Falls back to DEFAULT
  */
 function getTypeProperty(key, propertyName) {
-    const type = buildTypes[key];
+    const type = buildTypes[key];  // Look up the type
 
-    // Case 1: Type exists AND property exists
+    // Case 1: Type exists AND property exists on that type
+    // This is the ideal case - return the specific property value
     if (type && type[propertyName] !== undefined) {
         return type[propertyName];
     }

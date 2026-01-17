@@ -6,25 +6,34 @@
     
     /**
      * Check if a point is inside a polygon using ray casting algorithm
+     * The algorithm works by casting a horizontal ray from the point to infinity
+     * and counting how many times it intersects the polygon edges.
+     * Odd number of intersections = inside, even = outside
      * @param {Object} point - {x, y, z} Cartesian3 coordinates
-     * @param {Array} polygonPositions - Array of Cartesian3 positions
-     * @returns {boolean} - true if point is inside polygon
+     * @param {Array} polygonPositions - Array of Cartesian3 positions defining polygon boundary
+     * @returns {boolean} - true if point is inside polygon, false otherwise
      */
     function isPointInsidePolygon(point, polygonPositions) {
+        // Validate inputs
         if (!point || !polygonPositions || polygonPositions.length < 3) {
             return false;
         }
 
-        let intersections = 0;
+        let intersections = 0;  // Count of ray intersections with polygon edges
         const n = polygonPositions.length;
 
+        // Check each edge of the polygon
         for (let i = 0; i < n; i++) {
-            const p1 = polygonPositions[i];
-            const p2 = polygonPositions[(i + 1) % n];
+            const p1 = polygonPositions[i];  // First vertex of edge
+            const p2 = polygonPositions[(i + 1) % n];  // Second vertex (wraps to 0 at end)
 
-            // Check if the ray from point to the right intersects the edge
+            // Check if the ray from point to the right intersects this edge
+            // Edge must span the point's y-coordinate
             if ((p1.y > point.y) !== (p2.y > point.y)) {
+                // Calculate x-coordinate of intersection point
                 const xIntersection = (p2.x - p1.x) * (point.y - p1.y) / (p2.y - p1.y) + p1.x;
+                
+                // If intersection is to the right of the point, count it
                 if (point.x < xIntersection) {
                     intersections++;
                 }

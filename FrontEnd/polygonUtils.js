@@ -38,30 +38,38 @@
     let serverConnected = true;
 
     /**
-     * Call backend API to compute area and volume
-     * The backend performs the actual geometric calculations:
+     * Call backend API to compute area and volume for a polygon
+     * The backend performs the actual geometric calculations for accuracy:
      * 1. Area: Uses shoelace formula on ENU (East-North-Up) projected coordinates
      * 2. Volume: Multiplies area by height (simple extrusion volume)
      * 
-     * @param {Array<Cesium.Cartesian3>} positions - Array of 3D polygon vertices
+     * Backend calculation is more accurate than frontend approximation because:
+     * - Proper geodetic coordinate transformations
+     * - Accounts for Earth's curvature
+     * - Uses precise ellipsoid models
+     * 
+     * @param {Array<Cesium.Cartesian3>} positions - Array of 3D polygon vertices in world space
      * @param {number|null} height - Optional height for volume calculation (meters)
      * @returns {Promise<{area: number, volume: number|null, height: number|null}>} Calculation results
+     * @throws {Error} SERVER_DISCONNECTED if backend is unreachable
      */
     async function callBackendCalculation(positions, height) {
+        // Get API base URL from global config or use default
         const API_BASE = (window.POLYGONS_API_BASE && String(window.POLYGONS_API_BASE).replace(/\/$/, '')) || 'http://localhost:8081';
         const url = API_BASE + '/api/data/calculate';
         
-        // Convert Cartesian3 positions to plain objects for JSON
+        // Convert Cartesian3 positions to plain objects for JSON serialization
+        // Cesium objects can't be directly serialized
         const positionData = positions.map(p => ({
-            x: p.x,
-            y: p.y,
-            z: p.z
+            x: p.x,  // ECEF X coordinate
+            y: p.y,  // ECEF Y coordinate
+            z: p.z   // ECEF Z coordinate
         }));
 
         // Send polygon vertices and optional height to backend
         const requestBody = {
-            positions: positionData,  // Array of 3D points (x, y, z)
-            height: height            // Optional: height for volume calculation
+            positions: positionData,  // Array of 3D points in Earth-Centered Earth-Fixed coordinates
+            height: height            // Optional: height for volume calculation (null for area only)
         };
 
         try {

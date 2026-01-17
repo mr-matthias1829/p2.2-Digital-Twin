@@ -25,26 +25,37 @@ const stateChangeListeners = {};
 
 /**
  * Creates information panels (polygon info, data menu, occupation stats)
+ * These panels provide context-sensitive information about selected entities
+ * and overall area statistics for the Spoordok boundary
  * @function createInfoPanels
  */
 function createInfoPanels() {
+    // Helper function to create and append panel elements
     const createPanel = (id, attrs) => {
-        const el = document.createElement(attrs.tag || 'div');
+        const el = document.createElement(attrs.tag || 'div');  // Default to div if no tag specified
         el.id = id;
         if (attrs.className) el.className = attrs.className;
-        if (attrs.innerHTML) el.innerHTML = attrs.innerHTML;
-        if (attrs.textContent) el.textContent = attrs.textContent;
-        if (attrs.onclick) el.onclick = attrs.onclick;
+        if (attrs.innerHTML) el.innerHTML = attrs.innerHTML;  // HTML content
+        if (attrs.textContent) el.textContent = attrs.textContent;  // Plain text content
+        if (attrs.onclick) el.onclick = attrs.onclick;  // Click handler
+        // Set accessibility and custom attributes
         Object.entries(attrs.attributes || {}).forEach(([k, v]) => el.setAttribute(k, v));
-        document.body.appendChild(el);
+        document.body.appendChild(el);  // Add to document
         return el;
     };
 
+    // Panel for displaying selected polygon/corridor details (bottom-right)
     createPanel('polygonInfo', {attributes: {'aria-live': 'polite', 'title': 'Polygon informatie'}});
+    
+    // Panel for data analysis and calculations (right side)
     createPanel('dataMenu', {attributes: {'aria-live': 'polite', 'title': 'Data & Analysis'}});
+    
+    // Toggle button for occupation statistics panel
     createPanel('occupationToggle', {tag: 'button', textContent: '📊', onclick: toggleOccupation});
+    
+    // Panel showing occupation statistics (area usage breakdown)
     createPanel('occupationInfo', {
-        className: 'collapsed',
+        className: 'collapsed',  // Start hidden
         innerHTML: `
             <h3>Spoordok Occupation</h3>
             <div class="stat">Spoordok Area: <span id="spoordokArea">--</span> m²</div>
@@ -108,61 +119,81 @@ function createStaticUI() {
  * Of course, we use statements to check what actually should go into the container on rebuild
  * This is effectively as close as to a refresh we can get
  * 
+ * This function is called whenever UI state changes (mode switch, edit mode toggle, etc.)
  * @function refreshDynamicUI
  */
 function refreshDynamicUI() {
     const uiContainer = document.getElementById("myUI");
+    
+    // Remove existing dynamic UI elements to start fresh
     const oldDynamic = document.getElementById("dynamicUI");
     if (oldDynamic) uiContainer.removeChild(oldDynamic);
 
+    // Create new dynamic container for mode-specific UI
     const dynamicContainer = document.createElement("div");
     dynamicContainer.id = "dynamicUI";
 
+    // Show/hide data menu based on current mode
     if (UIState.modeSelect === "data") {
-        showDataMenu();
+        showDataMenu();  // Data mode shows analysis panel
     } else {
-        hideDataMenu();
+        hideDataMenu();  // Other modes hide it
     }
 
+    // Add type selector dropdown when in polygon drawing mode
     if (UIState.modeSelect === "polygon") {
+        // Filter out 'poly' and include all other building types
         dynamicContainer.appendChild(createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:"));
     }
+    
+    // Add model selector dropdown when in model placement mode
     if (UIState.modeSelect === "model") {
         dynamicContainer.appendChild(createDropdown("modelselect", getAllModelIDs(), "Model:"));
     }
 
+    // Add edit mode specific content (help text, type editors)
     editorDynamicContainerContent(dynamicContainer);
+    
+    // Attach the newly built dynamic UI to the main container
     uiContainer.appendChild(dynamicContainer);
 }
 
 /**
- * Creates a dropdown UI element
+ * Creates a dropdown UI element with label and select box
  * This is created since the code uses a handful of dropdowns, and this method makes it easier to create them
+ * Automatically wires up state change listeners for reactive UI updates
  * @function createDropdown
- * @param {string} id - Element ID
- * @param {string[]} options - Array of option values
- * @param {string} labeltxt - Label text
+ * @param {string} id - Element ID for the select element (also used as state key)
+ * @param {string[]} options - Array of option values to populate the dropdown
+ * @param {string} labeltxt - Label text displayed above the dropdown
  * @returns {HTMLDivElement} Container with label and select element
  */
 function createDropdown(id, options, labeltxt) {
+    // Create container div for label + select
     const container = document.createElement("div");
     container.style.marginBottom = "10px";
 
+    // Create label element
     const label = Object.assign(document.createElement("label"), {textContent: labeltxt, htmlFor: id});
     label.style.marginRight = "8px";
-    label.style.display = "block";
+    label.style.display = "block";  // Stack label above dropdown
     label.style.marginBottom = "6px";
 
+    // Create select element
     const select = Object.assign(document.createElement("select"), {id});
+    
+    // Populate options (value is lowercase, display text is original)
     options.forEach(opt => select.appendChild(Object.assign(document.createElement("option"), {value: opt.toLowerCase(), textContent: opt})));
 
+    // Wire up change event to update global UI state and notify listeners
     select.addEventListener("change", () => {
-        UIState[id] = select.value;
+        UIState[id] = select.value;  // Update global state
         console.log("UIState updated:", UIState);
+        // Notify all registered listeners for this state key
         stateChangeListeners[id]?.forEach(cb => cb(select.value));
     });
 
-    container.append(label, select);
+    container.append(label, select);  // Add both elements to container
     return container;
 }
 

@@ -1,41 +1,45 @@
 /**
  * mainInit.js - Initializes the Cesium viewer and sets up the application
  * 
- * This function handles:
+ * This is the PRIMARY initialization function that runs on page load.
+ * It handles the complete application startup sequence:
  * 1. Cesium viewer creation and configuration
- * 2. Base map setup (OpenStreetMap)
- * 3. Spoordok boundary polygon creation
- * 4. Building type loading and polygon synchronization
- * 5. Input handlers and editor setup
- * 6. Ollama analyzer initialization
+ * 2. Base map setup (OpenStreetMap tiles)
+ * 3. Spoordok boundary polygon creation (the main area boundary)
+ * 4. Building type loading from backend API
+ * 5. Polygon and corridor synchronization from database
+ * 6. Input handlers and editor setup
+ * 7. Ollama analyzer initialization (AI features)
  * 
- * Split from main.js to keep initialization logic separate
+ * Split from main.js to keep initialization logic separate from drawing/editing logic
  * 
  * @function setup
  * @global
  * @async
- * @requires Cesium
- * @requires ModelPreLoad.js
- * @requires ObjectEditor.js
- * @requires OllamaAnalyzer.js
- * @requires polygonAPI.js
+ * @requires Cesium - 3D globe library
+ * @requires ModelPreLoad.js - Preloads 3D models (trees, benches, etc.)
+ * @requires ObjectEditor.js - Enables polygon/model editing
+ * @requires OllamaAnalyzer.js - AI analysis features
+ * @requires polygonAPI.js - Backend communication for polygon data
  * 
  * @example
- * // Called automatically on DOMContentLoaded of main.js
- * // Can also be called manually for re-initialization, though unused for now
+ * // Called automatically on DOMContentLoaded in main.js
+ * // Can also be called manually for re-initialization (though unused for now)
  * setup();
  * 
  * @sideeffects
  * - Creates global viewer, Editor, Server, ollamaAnalyzer objects
- * - Modifies Cesium.Camera defaults
- * - Sets up screen space event handlers
- * - Clears existing polygons (if any, somehow) except Spoordok
+ * - Modifies Cesium.Camera defaults for initial view
+ * - Sets up screen space event handlers for user interaction
+ * - Clears existing polygons (if any) except Spoordok
  * - Starts polygon loading from database
  * 
  * @throws {Error} If Cesium fails to load or viewer creation fails
  * @throws {Error} If OpenStreetMap tiles are unavailable
  */
 function setup() {
+    // Start loading all 3D models in the background
+    // This ensures models are ready when user switches to Model mode
     preloadModels();
     
     const west = 5.798212900532118;
@@ -67,22 +71,27 @@ function setup() {
 
     viewer.scene.globe.maximumScreenSpaceError = 1;
     
+    // Create the Spoordok boundary polygon
+    // This is the main area boundary that constrains where users can place buildings
+    // The coordinates define the actual Spoordok area in Groningen, Netherlands
     const dokPolygon = viewer.entities.add({
-        name: "Spoordok",
+        name: "Spoordok",  // Used for identification
         polygon: {
+            // Define boundary vertices in counter-clockwise order
+            // Coordinates are [longitude, latitude] pairs in degrees
             hierarchy: Cesium.Cartesian3.fromDegreesArray([
-                5.787759928698073, 53.197831145908,
-                5.789123554275904, 53.19763995957844,
-                5.788934967759822, 53.19602353198474,
-                5.776937964005922, 53.194528716741345,
-                5.774587885853288, 53.196901277127026,
-                5.774703939093954, 53.1976225789762,
-                5.786410809746187, 53.19704032421097,
+                5.787759928698073, 53.197831145908,    // Northwest corner
+                5.789123554275904, 53.19763995957844,  // Northeast corner
+                5.788934967759822, 53.19602353198474,  // East side
+                5.776937964005922, 53.194528716741345, // Southeast corner
+                5.774587885853288, 53.196901277127026, // Southwest corner
+                5.774703939093954, 53.1976225789762,   // West side
+                5.786410809746187, 53.19704032421097,  // North side
             ]),
-            material: Cesium.Color.LIGHTGRAY,
+            material: Cesium.Color.LIGHTGRAY,  // Light gray fill
         },
         properties: {
-            isSpoordok: true
+            isSpoordok: true  // Mark as protected (cannot be edited or deleted)
         },
     });
 
