@@ -1,3 +1,26 @@
+/**
+ * OllamaAnalyzer integrates with the Ollama LLM to analyze the Cesium scene
+ * from the perspective of a "Cesium Man" model placed in the scene. It captures
+ * screenshots from the Cesium viewer, sends them to the Ollama model, and displays
+ * the AI's response as an overlay in the viewer.
+ *
+ * @class OllamaAnalyzer
+ * @param {Cesium.Viewer} viewer - The Cesium Viewer instance.
+ * @param {Object} options - Configuration options.
+ * @param {string} [options.ollamaUrl='http://localhost:11434'] - The base URL of the Ollama server.
+ * @param {Array} [options.models=['gemma3:4b', 'qwen3-vl:4b']] - List of Ollama models to choose from.
+ * @param {number} [options.interval=120000] - Interval in milliseconds for periodic analysis.
+ * @param {string} [options.prompt] - The prompt to send to the Ollama model.
+ * 
+ * @example
+ * const analyzer = new OllamaAnalyzer(viewer, {
+ *     ollamaUrl: 'http://localhost:11434',
+ *     models: ['gemma3:4b', 'qwen3-vl:4b'],
+ *     interval: 60000,
+ *     prompt: "Describe the environment
+ * });
+ */
+
 class OllamaAnalyzer{
     constructor(viewer, options = {}) {
         this.viewer = viewer;
