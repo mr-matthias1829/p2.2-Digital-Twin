@@ -1,21 +1,64 @@
+/**
+ * OllamaAnalyzer integrates with the Ollama LLM to analyze the Cesium scene
+ * from the perspective of a "Cesium Man" model placed in the scene. It captures
+ * screenshots from the Cesium viewer, sends them to the Ollama model, and displays
+ * the generated analysis.
+ * 
+ * @param {Cesium.Viewer} viewer - The Cesium Viewer instance.
+ * @param {Object} options - Configuration options for the analyzer.
+ * @param {string} options.ollamaUrl - The base URL of the Ollama server.
+ * @param {Array<string>} options.models - List of Ollama model names to use.
+ * @param {number} options.interval - Interval in milliseconds for periodic analysis.
+ * @param {string} options.prompt - The prompt to send to the Ollama model.
+ * 
+ * @example
+ * const analyzer = new OllamaAnalyzer(viewer, {
+ *     ollamaUrl: 'http://localhost:11434',
+ *     models: ['gemma3:4b', 'qwen3-vl:4b'],
+ *     interval: 120000,
+ *     prompt: "Describe the environment from the Cesium Man's perspective."
+ * });
+ * analyzer.selectCesiumMan(0); // Select the first
+ */
+
 class OllamaAnalyzer{
+    /**
+     * 
+     * @param {import('cesium').Viewer} viewer - Cesium Viewer instance 
+     * @param {string[]} options - options for the analyzer
+     */
     constructor(viewer, options = {}) {
+        /** @type {import('cesium').Viewer} - Cesium Viewer reference */
         this.viewer = viewer;
+        /** @type {string} - url to access ollama */
         this.ollamaUrl = options.ollamaUrl || 'http://localhost:11434';
+        /** @type {string[]} - models to choose from */
         this.models = options.models || [
             'gemma3:4b',
             'qwen3-vl:4b',
         ];
+        /** @type {string} - model picker from array */
         this.model = this.models[0];
+        /** @type {number} - analysis interval in ms */
         this.interval = options.interval || 120000;
+        /** @type {string} - prompt to send to ollama */
         this.prompt = options.prompt || "You are viewing this scene from the Cesium Man's perspective in Leeuwarden. Describe what you see in the environment and give your opinion about it in 2-3 sentences.";
+        /** @type {number|null} - Id for intervals*/
         this.intervalId = null;
+        /** @type {boolean} - is the analyzer running */
         this.isRunning = false;
+        /** @type {import('cesium').Primitive|null} - currently selected Cesium Man */
         this.selectedCesiumMan = null;
+        /** @type {Function|null} - callback for tracking */
         this.trackingCallback = null;
+        /** @type {Function|null} - function to remove tracking callback */
         this.removeTrackingCallback = null;
     }
 
+    /**
+     * shows all cesium men with their information
+     * @returns {string[]}
+     */
     findAllCesiumMen() {
         const cesiumMen = [];
         const primitives = this.viewer.scene.primitives;
@@ -29,6 +72,11 @@ class OllamaAnalyzer{
         return cesiumMen;
     }
 
+    /**
+     * will select a cesium man to eventually start tracking.
+     * @param {number} index - index of the cesium man to select
+     * @returns {boolean}
+     */
     selectCesiumMan(index = 0) {
         const cesiumMen = this.findAllCesiumMen();
 
@@ -49,7 +97,10 @@ class OllamaAnalyzer{
 
         return true;
     }
-
+    /**
+     * hovers around the selected cesium man.
+     * @returns {boolean}
+     */
     trackSelectedMan() {
         if (!this.selectedCesiumMan){
             console.warn("No Cesium Man selected to track.");
@@ -126,6 +177,10 @@ class OllamaAnalyzer{
         return false;
     }
 
+    /**
+     * shows a list of all cesium men in the scene
+     * @returns {string[]}
+     */
     listCesiumMen() {
         const cesiumMen = this.findAllCesiumMen();
 
@@ -143,6 +198,10 @@ class OllamaAnalyzer{
         return cesiumMen;
     }
 
+    /**
+     * snaps the camera to the selected cesium man in a first person view to make a screenshot.
+     * @returns {boolean}
+     */
     snapCameraToSelectedMan() {
         if (!this.selectedCesiumMan) {
             console.warn("No Cesium Man selected. Call selectCesiumMan(index) first.");
@@ -208,6 +267,10 @@ class OllamaAnalyzer{
         });
     }
 
+    /**
+     * sends screenshot to ollama and gets its response.
+     * @returns {Promise<void>}
+     */
     async analyzeWithOllama(){
         try{
             if (this.selectedCesiumMan != null) {
