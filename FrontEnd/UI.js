@@ -25,26 +25,37 @@ const stateChangeListeners = {};
 
 /**
  * Creates information panels (polygon info, data menu, occupation stats)
+ * These panels provide context-sensitive information about selected entities
+ * and overall area statistics for the Spoordok boundary
  * @function createInfoPanels
  */
 function createInfoPanels() {
+    // Helper function to create and append panel elements
     const createPanel = (id, attrs) => {
-        const el = document.createElement(attrs.tag || 'div');
+        const el = document.createElement(attrs.tag || 'div');  // Default to div if no tag specified
         el.id = id;
         if (attrs.className) el.className = attrs.className;
-        if (attrs.innerHTML) el.innerHTML = attrs.innerHTML;
-        if (attrs.textContent) el.textContent = attrs.textContent;
-        if (attrs.onclick) el.onclick = attrs.onclick;
+        if (attrs.innerHTML) el.innerHTML = attrs.innerHTML;  // HTML content
+        if (attrs.textContent) el.textContent = attrs.textContent;  // Plain text content
+        if (attrs.onclick) el.onclick = attrs.onclick;  // Click handler
+        // Set accessibility and custom attributes
         Object.entries(attrs.attributes || {}).forEach(([k, v]) => el.setAttribute(k, v));
-        document.body.appendChild(el);
+        document.body.appendChild(el);  // Add to document
         return el;
     };
 
+    // Panel for displaying selected polygon/corridor details (bottom-right)
     createPanel('polygonInfo', {attributes: {'aria-live': 'polite', 'title': 'Polygon informatie'}});
+    
+    // Panel for data analysis and calculations (right side)
     createPanel('dataMenu', {attributes: {'aria-live': 'polite', 'title': 'Data & Analysis'}});
+    
+    // Toggle button for occupation statistics panel
     createPanel('occupationToggle', {tag: 'button', textContent: '📊', onclick: toggleOccupation});
+    
+    // Panel showing occupation statistics (area usage breakdown)
     createPanel('occupationInfo', {
-        className: 'collapsed',
+        className: 'collapsed',  // Start hidden
         innerHTML: `
             <h3>Spoordok Occupation</h3>
             <div class="stat">Spoordok Area: <span id="spoordokArea">--</span> m²</div>
@@ -108,61 +119,81 @@ function createStaticUI() {
  * Of course, we use statements to check what actually should go into the container on rebuild
  * This is effectively as close as to a refresh we can get
  * 
+ * This function is called whenever UI state changes (mode switch, edit mode toggle, etc.)
  * @function refreshDynamicUI
  */
 function refreshDynamicUI() {
     const uiContainer = document.getElementById("myUI");
+    
+    // Remove existing dynamic UI elements to start fresh
     const oldDynamic = document.getElementById("dynamicUI");
     if (oldDynamic) uiContainer.removeChild(oldDynamic);
 
+    // Create new dynamic container for mode-specific UI
     const dynamicContainer = document.createElement("div");
     dynamicContainer.id = "dynamicUI";
 
+    // Show/hide data menu based on current mode
     if (UIState.modeSelect === "data") {
-        showDataMenu();
+        showDataMenu();  // Data mode shows analysis panel
     } else {
-        hideDataMenu();
+        hideDataMenu();  // Other modes hide it
     }
 
+    // Add type selector dropdown when in polygon drawing mode
     if (UIState.modeSelect === "polygon") {
+        // Filter out 'poly' and include all other building types
         dynamicContainer.appendChild(createDropdown("objtype", ["none", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Type:"));
     }
+    
+    // Add model selector dropdown when in model placement mode
     if (UIState.modeSelect === "model") {
         dynamicContainer.appendChild(createDropdown("modelselect", getAllModelIDs(), "Model:"));
     }
 
+    // Add edit mode specific content (help text, type editors)
     editorDynamicContainerContent(dynamicContainer);
+    
+    // Attach the newly built dynamic UI to the main container
     uiContainer.appendChild(dynamicContainer);
 }
 
 /**
- * Creates a dropdown UI element
+ * Creates a dropdown UI element with label and select box
  * This is created since the code uses a handful of dropdowns, and this method makes it easier to create them
+ * Automatically wires up state change listeners for reactive UI updates
  * @function createDropdown
- * @param {string} id - Element ID
- * @param {string[]} options - Array of option values
- * @param {string} labeltxt - Label text
+ * @param {string} id - Element ID for the select element (also used as state key)
+ * @param {string[]} options - Array of option values to populate the dropdown
+ * @param {string} labeltxt - Label text displayed above the dropdown
  * @returns {HTMLDivElement} Container with label and select element
  */
 function createDropdown(id, options, labeltxt) {
+    // Create container div for label + select
     const container = document.createElement("div");
     container.style.marginBottom = "10px";
 
+    // Create label element
     const label = Object.assign(document.createElement("label"), {textContent: labeltxt, htmlFor: id});
     label.style.marginRight = "8px";
-    label.style.display = "block";
+    label.style.display = "block";  // Stack label above dropdown
     label.style.marginBottom = "6px";
 
+    // Create select element
     const select = Object.assign(document.createElement("select"), {id});
+    
+    // Populate options (value is lowercase, display text is original)
     options.forEach(opt => select.appendChild(Object.assign(document.createElement("option"), {value: opt.toLowerCase(), textContent: opt})));
 
+    // Wire up change event to update global UI state and notify listeners
     select.addEventListener("change", () => {
-        UIState[id] = select.value;
+        UIState[id] = select.value;  // Update global state
         console.log("UIState updated:", UIState);
+        // Notify all registered listeners for this state key
         stateChangeListeners[id]?.forEach(cb => cb(select.value));
     });
 
-    container.append(label, select);
+    container.append(label, select);  // Add both elements to container
     return container;
 }
 
@@ -387,6 +418,32 @@ function editorDynamicContainerContent(Con) {
         }
     }
 
+    if (what === "line" && Editor.editMode) {
+        // Corridor type selector
+        const objType = createDropdown("objtype", ["road", ...getAllTypeIds().filter(id => id !== "none" && id !== "poly")], "Road Type:");
+
+        const bt = Editor.editingEntity?.properties?.buildType;
+        const currentType = typeof bt?.getValue === "function" ? bt.getValue() : bt || "road";
+        objType.querySelector("select").value = currentType;
+
+        objType.querySelector("select").onchange = (e) => {
+            const newTypeId = e.target.value;
+            
+            if (Editor.editingEntity?.properties) {
+                Editor.editingEntity.properties.buildType = newTypeId;
+                console.log(`✓ Corridor type changed to: ${newTypeId}`);
+                
+                if (typeof updateOccupationStats === 'function') {
+                    setTimeout(() => updateOccupationStats(), 100);
+                }
+                
+                try { window.showPolygonInfo?.(Editor.editingEntity); } catch {}
+            }
+        };
+
+        Con.appendChild(objType);
+    }
+
     if (UIState.modeSelect === "edit") {
         const helpTexts = {
             base: "Double click on an object to start editing\nPress Esc or right-click to stop editing",
@@ -447,19 +504,48 @@ async function showPolygonDataInDataMenu(entity) {
 
     dataMenu.style.display = 'block';
 
-    // Get polygon properties
-    const props = entity.properties || {};
-    const buildType = props.buildType?.getValue ? props.buildType.getValue() : props.buildType;
-    const name = entity.polygonName || 'Unnamed Polygon';
-    const polygonId = entity.polygonId || props.polygonId?.getValue?.() || null;
+    const isCorridor = !!entity.corridor;
+    const isPolygon = !!entity.polygon;
 
-    // Calculate area and volume using the same method as polygonInfoDisplay (backend calculations)
+    // Get properties
+    const props = entity.properties || {};
+    let buildType = props.buildType?.getValue ? props.buildType.getValue() : props.buildType;
+    
+    // For corridors, default to 'road' if no type is set
+    if (isCorridor && (!buildType || buildType === 'none')) {
+        buildType = 'road';
+    }
+    
+    const name = entity.polygonName || entity.lineName || (isCorridor ? 'Unnamed Corridor' : 'Unnamed Polygon');
+    const polygonId = entity.polygonId || entity.lineId || props.polygonId?.getValue?.() || null;
+
+    // Calculate area and volume
     let area = 0;
     let volume = 0;
     let areaText = 'Calculating...';
     
-    // Use polygonUtils for accurate backend calculations
-    if (entity.polygon?.hierarchy && typeof window.polygonUtils !== 'undefined') {
+    // Handle corridors
+    if (isCorridor) {
+        let positions = entity.corridor.positions;
+        if (typeof positions?.getValue === 'function') {
+            positions = positions.getValue(Cesium.JulianDate.now());
+        }
+        
+        if (positions && positions.length >= 2) {
+            // Calculate corridor length
+            let length = 0;
+            for (let i = 0; i < positions.length - 1; i++) {
+                length += Cesium.Cartesian3.distance(positions[i], positions[i + 1]);
+            }
+            const width = 3.0;
+            area = length * width;
+            areaText = `${area.toFixed(2)} m² (${length.toFixed(2)}m × ${width}m)`;
+        } else {
+            areaText = 'N/A';
+        }
+    }
+    // Handle polygons - Use polygonUtils for accurate backend calculations
+    else if (entity.polygon?.hierarchy && typeof window.polygonUtils !== 'undefined') {
         try {
             // Get accurate area from backend
             const areaResult = await window.polygonUtils.computeAreaFromHierarchy(entity.polygon.hierarchy);
@@ -489,7 +575,7 @@ async function showPolygonDataInDataMenu(entity) {
         </div>
         <div class="data-menu-content">
             <div style="margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid #b896ff;">
-                <h4 style="margin: 0 0 8px 0; color: #b896ff; font-size: 14px; font-weight: 600;">Selected Polygon</h4>
+                <h4 style="margin: 0 0 8px 0; color: #b896ff; font-size: 14px; font-weight: 600;">Selected ${isCorridor ? 'Corridor' : 'Polygon'}</h4>
                 <div style="font-size: 12px; line-height: 1.8;">
                     <div><strong>Name:</strong> ${name}</div>
                     <div><strong>ID:</strong> ${polygonId || 'N/A'}</div>
@@ -513,10 +599,25 @@ async function showPolygonDataInDataMenu(entity) {
         </style>
     `;
 
-    // Fetch and display polygon data calculations if polygon has an ID
-    if (polygonId && area > 0 && typeof polygonDataCalculations !== 'undefined') {
-        polygonDataCalculations.getPolygonData(polygonId, area, volume)
-            .then(data => {
+    // Fetch and display data calculations if area > 0 and type is set
+    // Works for both polygons and corridors
+    if (area > 0 && buildType && buildType !== 'none' && typeof polygonDataCalculations !== 'undefined') {
+        // Use polygonId if available, otherwise use a temporary ID based on type
+        const dataId = polygonId || `temp_${buildType}_${Date.now()}`;
+        
+        // Determine if we should fetch corridor or polygon data
+        let dataPromise;
+        if (isCorridor) {
+            // For corridors, calculate length from area and width
+            const width = 3.0;
+            const length = area / width;
+            dataPromise = polygonDataCalculations.getCorridorData(dataId, length);
+        } else {
+            // For polygons, use regular polygon data
+            dataPromise = polygonDataCalculations.getPolygonData(dataId, area, volume);
+        }
+        
+        dataPromise.then(data => {
                 const resultsContainer = document.getElementById('calculationResults');
                 if (!resultsContainer) return;
 

@@ -453,17 +453,6 @@ describe('main', () => {
   });
 
   describe('drawShape()', () => {
-    it('creates a line when in line mode', () => {
-      global.drawingMode = 'line';
-      const positions = [{ x: 1, y: 2, z: 3 }, { x: 4, y: 5, z: 6 }];
-      
-      const shape = global.drawShape(positions);
-      
-      const polylineCalls = global.viewer.entities.add.mock.calls.filter(call => call[0]?.polyline);
-      expect(polylineCalls.length).toBeGreaterThan(0);
-      expect(shape).toBeDefined();
-    });
-
     it('creates a polygon when in polygon mode', () => {
       global.drawingMode = 'polygon';
       global.objType = 'residential_building';

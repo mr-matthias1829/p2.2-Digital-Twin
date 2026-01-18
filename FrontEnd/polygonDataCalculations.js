@@ -41,6 +41,42 @@
             return null;
         }
     }
+
+    /**
+     * Fetch calculated data for a corridor (cost, income, people, livability)
+     * @param {Number} corridorId - The database ID of the corridor
+     * @param {Number} length - The length of the corridor in meters
+     * @returns {Promise<Object>} Object containing cost, income, people, livability, measurement, and calculationBase
+     */
+    async function getCorridorData(corridorId, length) {
+        if (!corridorId) {
+            console.warn('No corridor ID provided for data calculation');
+            return null;
+        }
+        
+        if (!length || length === 0) {
+            console.warn('No length provided for data calculation');
+            return null;
+        }
+        
+        try {
+            let url = `${API_BASE}/api/data/corridors/${corridorId}/data?length=${length}`;
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch corridor data: HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            console.log(`✓ Corridor data fetched for ID ${corridorId}:`, data);
+            return data;
+        } catch (error) {
+            console.error('Error fetching corridor data:', error);
+            return null;
+        }
+    }
     
     /**
      * Format currency value to euros
@@ -66,6 +102,7 @@
     // Export functions to global scope
     window.polygonDataCalculations = {
         getPolygonData: getPolygonData,
+        getCorridorData: getCorridorData,
         formatCurrency: formatCurrency,
         formatNumber: formatNumber
     };
